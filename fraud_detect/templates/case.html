@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ case.case_id }}{% endblock %}
+{% block body %}
+
+<div class="panel">
+  <div style="display:flex; align-items:center; gap:12px">
+    <h2 style="margin:0">{{ case.case_id }}</h2>
+    {% if r.routing.value == "AUTO_CLEAR" %}
+      <span class="pill" style="background:#2e7d32">AUTO-CLEARED</span>
+    {% else %}
+      <span class="pill" style="background:#c62828">ESCALATED — HUMAN REVIEW</span>
+    {% endif %}
+    <span style="flex:1"></span>
+    <a class="btn" href="/pdf/{{ case.case_id }}" target="_blank">📄 View statement PDF</a>
+  </div>
+  <p class="muted" style="margin-top:8px">{{ r.summary }}</p>
+</div>
+
+<div class="grid">
+  <div class="panel" style="text-align:center">
+    <div class="muted">RISK SCORE</div>
+    <div class="score" style="color:{{ band_color[r.risk_band.value] }}">{{ r.risk_score }}</div>
+    <div class="pill" style="background:{{ band_color[r.risk_band.value] }}; margin-top:6px">{{ r.risk_band.value }}</div>
+    <div class="muted" style="font-size:11px; margin-top:8px">1–25 Low · 26–50 Medium · 51–75 High · 76+ Very High</div>
+  </div>
+  <div class="panel" style="text-align:center">
+    <div class="muted">CONFIDENCE SCORE</div>
+    <div class="score">{{ r.confidence_score }}</div>
+    <div class="pill" style="background:#37474f; margin-top:6px">{{ r.confidence_band.value }}</div>
+    <div class="muted" style="font-size:11px; margin-top:8px">How certain the AI is of the risk call.<br>Low confidence forces human review.</div>
+  </div>
+</div>
+
+<div class="panel">
+  <h3 style="margin-top:0">Statement details</h3>
+  <div class="grid">
+    <div>
+      <div class="kv"><span class="muted">Account holder</span><span>{{ r.account_holder or "—" }}</span></div>
+      <div class="kv"><span class="muted">UEN</span><span>{{ r.uen or "—" }}</span></div>
+    </div>
+    <div>
+      <div class="kv"><span class="muted">Statement period</span><span>{{ r.statement_period or "—" }}</span></div>
+      <div class="kv"><span class="muted">Routing reason</span><span>{{ r.routing.value }}</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h3 style="margin-top:0">Detected issues &amp; evidence <span class="muted">({{ r.findings|length }})</span></h3>
+  {% if r.findings %}
+  <table>
+    <thead><tr><th>Severity</th><th>Reason code</th><th>Issue &amp; evidence</th><th>Page / row</th></tr></thead>
+    <tbody>
+      {% for f in r.findings %}
+      <tr>
+        <td class="sev-{{ f.severity.value }}">{{ f.severity.value }}</td>
+        <td><code>{{ f.code }}</code></td>
+        <td><b>{{ f.title }}</b><div class="evidence">{{ f.evidence }}</div></td>
+        <td class="muted">{% if f.page %}p.{{ f.page }}{% endif %} {% if f.field %}<br>{{ f.field }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No issues detected. Clean statement — an approval recommendation was auto-generated.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h3 style="margin-top:0">Human decision</h3>
+  {% if case.review.decision.value != "PENDING" %}
+    <p><b>Decision:</b>
+      {% if case.review.decision.value == "REJECTED" %}<span class="sev-HIGH">REJECTED</span>
+      {% else %}<span class="sev-LOW">APPROVED</span>{% endif %}
+      by <b>{{ case.review.reviewer }}</b> on {{ case.review.reviewed_at }}</p>
+    <p><b>Reason:</b> {{ case.review.reason }}</p>
+    {% if case.review.feedback_for_training %}<p><b>Feedback for future training:</b> {{ case.review.feedback_for_training }}</p>{% endif %}
+  {% else %}
+    <p class="muted">The credit analyst reviews the statement, evidence and supporting documents,
+    then confirms the fraud concern (reject) or clears it (approve). Recording a reason keeps the
+    decision auditable (MAS FEAT). Feedback is captured to improve future screening.</p>
+    <form action="/case/{{ case.case_id }}/decide" method="post">
+      <div class="grid">
+        <div><label>Reviewer name</label><input name="reviewer" required placeholder="e.g. Jane Tan, Credit Risk"></div>
+        <div><label>Decision</label>
+          <select name="decision">
+            <option value="reject">Reject application (confirm tampering / unsuitable)</option>
+            <option value="approve">Approve application (clear the concern)</option>
+          </select>
+        </div>
+      </div>
+      <label>Reason (required, audited)</label>
+      <textarea name="reason" rows="2" required placeholder="Why you reached this decision"></textarea>
+      <label>Feedback for future model training (optional)</label>
+      <textarea name="feedback" rows="2" placeholder="e.g. false positive on currency symbol; row 8 was a genuine bank fee"></textarea>
+      <div style="margin-top:12px; display:flex; gap:10px">
+        <button class="btn danger" type="submit">Submit decision</button>
+        <a class="btn" href="/">Cancel</a>
+      </div>
+    </form>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h3 style="margin-top:0">Audit log</h3>
+  <table>
+    <thead><tr><th>Timestamp (UTC)</th><th>Event</th><th>Detail</th></tr></thead>
+    <tbody>
+      {% for e in case.audit_log %}
+      <tr><td class="muted">{{ e.ts }}</td><td><code>{{ e.event }}</code></td><td class="muted">{{ e.detail }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
