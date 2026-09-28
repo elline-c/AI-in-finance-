@@ -1,0 +1,33 @@
+{
+  "account_holder": "Zenith Global Ventures Pte Ltd",
+  "account_number": "998-112233-004",
+  "currency": "SGD",
+  "period_start": "2026-02-01",
+  "period_end": "2026-02-28",
+  "opening_balance": 12000.00,
+  "closing_balance": 250000.00,
+  "ocr_confidence": 0.94,
+  "total_pages": 4,
+  "unreadable_pages": 0,
+  "metadata": {
+    "author": "editor",
+    "creator_tool": "Adobe Photoshop 25.9 (Windows)",
+    "producer_tool": "Adobe Acrobat Pro DC",
+    "creation_date": "2026-02-10T14:22:00",
+    "modification_date": "2026-03-19T21:47:00"
+  },
+  "transactions": [
+    {"date": "2026-02-03", "description": "Cash deposit", "counterparty": "Cash", "amount": 9600.00, "balance": 21600.00},
+    {"date": "2026-02-05", "description": "Cash deposit", "counterparty": "Cash", "amount": 9400.00, "balance": 31000.00},
+    {"date": "2026-02-06", "description": "Cash deposit", "counterparty": "Cash", "amount": 9500.00, "balance": 40500.00},
+    {"date": "2026-02-09", "description": "Cash deposit", "counterparty": "Cash", "amount": 9700.00, "balance": 50200.00},
+    {"date": "2026-02-14", "description": "Incoming transfer [baseline-anomaly]", "counterparty": "Bluewater Holdings Ltd", "amount": 150000.00, "balance": 999999.00},
+    {"date": "2026-02-15", "description": "Outgoing transfer", "counterparty": "Offshore Nominee A", "amount": -149500.00, "balance": 50700.00},
+    {"date": "2026-02-20", "description": "Customer payment", "counterparty": "Unverified Vendor X", "amount": 8500.00, "balance": 59200.00},
+    {"date": "2026-02-25", "description": "Large business inflow", "counterparty": "Bluewater Holdings Ltd", "amount": 190800.00, "balance": 250000.00}
+  ],
+  "supporting_docs": [
+    {"doc_type": "screenshot", "references_txn_id": 4, "amount": 150000.00, "counterparty": "Bluewater Holdings Ltd"},
+    {"doc_type": "invoice", "references_txn_id": 99, "amount": 8500.00, "counterparty": "Unverified Vendor X"}
+  ]
+}

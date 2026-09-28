@@ -1,0 +1,33 @@
+{
+  "account_holder": "Meridian Logistics Pte Ltd",
+  "account_number": "012-345678-901",
+  "currency": "SGD",
+  "period_start": "2026-03-01",
+  "period_end": "2026-03-31",
+  "opening_balance": 50000.00,
+  "closing_balance": 61250.00,
+  "ocr_confidence": 0.98,
+  "total_pages": 3,
+  "unreadable_pages": 0,
+  "metadata": {
+    "author": "DBS Corporate Banking",
+    "creator_tool": "DBS eStatement Generator 4.2",
+    "producer_tool": "iText 7 (bank PDF service)",
+    "creation_date": "2026-04-02T03:15:00",
+    "modification_date": "2026-04-02T03:15:00"
+  },
+  "transactions": [
+    {"date": "2026-03-03", "description": "Customer payment INV-8801", "counterparty": "Harbourfront Retail", "amount": 8200.00, "balance": 58200.00},
+    {"date": "2026-03-07", "description": "Supplier payment", "counterparty": "PortPack Supplies", "amount": -3100.00, "balance": 55100.00},
+    {"date": "2026-03-12", "description": "Customer payment INV-8815", "counterparty": "Eastwind Trading", "amount": 6400.00, "balance": 61500.00},
+    {"date": "2026-03-15", "description": "Monthly office rent", "counterparty": "CapitaCommercial", "amount": -4200.00, "balance": 57300.00},
+    {"date": "2026-03-20", "description": "Payroll", "counterparty": "Payroll Run Mar", "amount": -9800.00, "balance": 47500.00},
+    {"date": "2026-03-24", "description": "Customer payment INV-8830", "counterparty": "Harbourfront Retail", "amount": 11250.00, "balance": 58750.00},
+    {"date": "2026-03-28", "description": "Utilities", "counterparty": "SP Group", "amount": -1500.00, "balance": 57250.00},
+    {"date": "2026-03-30", "description": "Customer payment INV-8841", "counterparty": "Eastwind Trading", "amount": 4000.00, "balance": 61250.00}
+  ],
+  "supporting_docs": [
+    {"doc_type": "invoice", "references_txn_id": 5, "amount": 11250.00, "counterparty": "Harbourfront Retail"},
+    {"doc_type": "receipt", "references_txn_id": 3, "amount": 4200.00, "counterparty": "CapitaCommercial"}
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "account_holder": "Cedar & Co Trading",
+  "account_number": "0451",
+  "currency": null,
+  "period_start": "2026-01-01",
+  "period_end": "2026-01-31",
+  "opening_balance": 8000.00,
+  "closing_balance": 14300.00,
+  "ocr_confidence": 0.62,
+  "total_pages": 5,
+  "unreadable_pages": 2,
+  "metadata": {
+    "author": "Maybank Business",
+    "creator_tool": "Maybank2E Statement Service",
+    "producer_tool": "PDFKit",
+    "creation_date": "2026-02-03T09:00:00",
+    "modification_date": "2026-02-03T09:00:00"
+  },
+  "transactions": [
+    {"date": "2026-01-05", "description": "Sales receipt", "counterparty": "Retail POS", "amount": 3200.00, "balance": 11200.00},
+    {"date": "01/12/2026", "description": "Supplier", "counterparty": "Woodlands Timber", "amount": -1900.00, "balance": 9300.00},
+    {"date": "2026-01-27", "description": "Sales receipt", "counterparty": "Retail POS", "amount": 5000.00, "balance": 14300.00}
+  ],
+  "supporting_docs": [
+    {"doc_type": "receipt", "references_txn_id": 0, "amount": 3200.00, "counterparty": "Retail POS"}
+  ]
+}
