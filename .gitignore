@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+
+.venv/
+.pytest_cache/
+data/
+samples/*.pdf

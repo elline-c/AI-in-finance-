@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block body %}
+
+<div class="panel">
+  <h2 style="margin-top:0">Screening queue</h2>
+  <p class="muted">Auto-cleared statements are shown for audit; escalated statements
+  await a credit analyst. The system never rejects an applicant on its own.</p>
+  <table>
+    <thead>
+      <tr><th>Case</th><th>Holder / UEN</th><th>Risk</th><th>Confidence</th>
+          <th>Routing</th><th>Decision</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in cases %}
+      {% set r = c.report %}
+      <tr>
+        <td><code>{{ c.case_id }}</code></td>
+        <td>{{ r.account_holder or "—" }}<br><span class="muted">{{ r.uen or "" }}</span></td>
+        <td><span class="pill" style="background:{{ band_color[r.risk_band.value] }}">{{ r.risk_score }} · {{ r.risk_band.value }}</span></td>
+        <td>{{ r.confidence_score }} · {{ r.confidence_band.value }}</td>
+        <td>{% if r.routing.value == "AUTO_CLEAR" %}<span class="sev-LOW">Auto-clear</span>{% else %}<span class="sev-HIGH">Human review</span>{% endif %}</td>
+        <td>{{ c.review.decision.value }}</td>
+        <td><a href="/case/{{ c.case_id }}">Open →</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted">No statements screened yet. Screen a sample below.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h3 style="margin-top:0">Screen a sample statement</h3>
+    <form action="/screen-sample" method="post">
+      <label>Sample path</label>
+      <select name="path">
+        <option value="samples/clean_201812345A.pdf">samples/clean_201812345A.pdf (clean)</option>
+        <option value="samples/tampered_200923456B.pdf">samples/tampered_200923456B.pdf (tampered)</option>
+      </select>
+      <div style="margin-top:12px"><button class="btn primary" type="submit">Run 4-agent screening</button></div>
+    </form>
+  </div>
+  <div class="panel">
+    <h3 style="margin-top:0">Upload a statement (PDF)</h3>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+      <input type="file" name="file" accept="application/pdf" required>
+      <div style="margin-top:12px"><button class="btn primary" type="submit">Upload &amp; screen</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
