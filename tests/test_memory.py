@@ -79,6 +79,20 @@ def test_cleared_pattern_reports_passed_before(store, tmp_path):
     assert "MEM_SIMILAR_PASSED_BEFORE" in _mem_codes(r2)
 
 
+def test_unreviewed_prior_case_is_not_used_as_memory(store, tmp_path):
+    """A prior case with NO human decision (PENDING) must not generate memory
+    findings — the system learns only from authorised/verified outcomes, so an
+    unverified AI suspicion never becomes a fact against a later applicant."""
+    gen1 = generate_tampered(str(tmp_path))
+    r1 = run_pipeline(gen1.path, store=store)
+    store.upsert_report(r1)        # stored, but NO reviewer decision recorded
+
+    r2 = run_pipeline(_reapply(gen1.path, tmp_path), store=store)
+    assert _mem_codes(r2) == set(), (
+        "PENDING (unreviewed) prior case must not trigger any memory finding"
+    )
+
+
 def test_memory_never_auto_rejects(store, tmp_path):
     gen1 = generate_tampered(str(tmp_path))
     r1 = run_pipeline(gen1.path, store=store)

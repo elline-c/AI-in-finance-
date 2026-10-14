@@ -1,22 +1,29 @@
-"""Node 5 — Cross-Case Memory Agent.
+"""Node 5 — Cross-Case Memory Agent (Historical Fraud Pattern Intelligence).
 
 Most fraud screening treats each statement in isolation. This agent gives the
 pipeline a *memory*: before a case is finalised it compares the current
-statement's transactions against every statement screened before (read back from
-the case store) and raises explainable findings when a similar
-transaction/entity has been seen in a *prior* case.
+statement's suspicious transactions against prior cases that a human reviewer has
+already decided on (read back from the case store) and raises explainable
+findings when a similar transaction/entity has been seen in a *verified* prior
+case.
+
+It learns only from **authorised historical evidence** — cases a reviewer has
+explicitly REJECTED or APPROVED. Cases still awaiting review (an AI screening
+with no human sign-off) are deliberately ignored, so an unverified AI suspicion
+never becomes a "fact" used against a later applicant.
 
 Why this matters:
-    * If a similar transaction was CLEARED before, a repeat may be an exploit
-      that already slipped past the control once — the report says so explicitly
-      ("a similar transaction passed the check previously in CASE-X").
-    * If a similar transaction was REJECTED before, this is a known-bad repeat.
-    * If the same counterparty/pattern recurs across many cases, that itself is
-      a signal worth a human's attention.
+    * If a similar transaction was REJECTED by a reviewer before, this is a
+      known-bad repeat.
+    * If a similar transaction was APPROVED (cleared) by a reviewer before, a
+      repeat may be an exploit of a route that already passed once — the report
+      says so explicitly ("a similar transaction was cleared previously in CASE-X").
+    * If the same counterparty/pattern recurs across many verified cases, that
+      itself is a signal worth a human's attention.
 
 Governance (MAS FEAT): this agent only *adds evidence and escalates*. It never
-auto-rejects, and every finding cites the prior case id so a reviewer can trace
-the link.
+auto-rejects, learns only from verified reviewer outcomes, and every finding
+cites the prior case id so a reviewer can trace the link.
 """
 from __future__ import annotations
 
@@ -80,7 +87,8 @@ def analyze(ing: IngestionResult, prior_memory: list[dict],
     """Cross-reference the current statement against prior-case fingerprints.
 
     ``prior_memory`` is the list returned by ``CaseStore.recall_prior_fingerprints``
-    — each item carries a prior case id, its human decision, and one fingerprint.
+    — each item carries a prior case id, its *verified* human decision, and one
+    fingerprint (by default only human-decided cases are recalled).
     ``current_findings`` are the visual/financial findings for this statement;
     when present, memory matching focuses on the rows those agents flagged.
     """
@@ -114,9 +122,11 @@ def analyze(ing: IngestionResult, prior_memory: list[dict],
             continue
         seen_keys.add(key)
 
+        # Only human-verified outcomes count as authorised evidence: a reviewer
+        # explicitly REJECTED or APPROVED the prior case. (recall_prior_fingerprints
+        # already excludes PENDING cases, so these are verified decisions.)
         rejected = [m for m in matches if m["decision"] == "REJECTED"]
-        cleared = [m for m in matches
-                   if m["decision"] == "APPROVED" or m["routing"] == "AUTO_CLEAR"]
+        cleared = [m for m in matches if m["decision"] == "APPROVED"]
         case_list = ", ".join(sorted({m["case_id"] for m in matches}))
 
         if rejected:
@@ -140,9 +150,9 @@ def analyze(ing: IngestionResult, prior_memory: list[dict],
                 severity=Severity.MEDIUM, weight=14, page=t.page,
                 field=f"row {t.index}",
                 evidence=(f"Transaction #{t.index} ('{t.description}', {amt}) closely "
-                          f"matches a transaction that previously PASSED screening in "
-                          f"case(s) {prior}. A similar transaction was able to pass the "
-                          f"check before — verify this is not a repeat exploit of the "
+                          f"matches a transaction a reviewer previously CLEARED "
+                          f"(approved) in case(s) {prior}. A similar transaction was "
+                          f"cleared before — verify this is not a repeat exploit of the "
                           f"same route/counterparty."),
             ))
 
@@ -158,8 +168,9 @@ def analyze(ing: IngestionResult, prior_memory: list[dict],
                 field=f"row {t.index}",
                 evidence=(f"The counterparty/amount for transaction #{t.index} "
                           f"('{t.description}', {amt}) has appeared in "
-                          f"{len(distinct_cases)} prior cases ({case_list}). Repeated "
-                          f"reuse of the same route across applications warrants review."),
+                          f"{len(distinct_cases)} prior reviewed cases ({case_list}). "
+                          f"Repeated reuse of the same route across applications "
+                          f"warrants review."),
             ))
 
     return AgentReport(agent=AGENT, findings=findings)

@@ -126,15 +126,24 @@ class CaseStore:
         return Case.model_validate(raw) if raw else None
 
     def recall_prior_fingerprints(
-        self, exclude_case_id: Optional[str] = None
+        self, exclude_case_id: Optional[str] = None,
+        authorised_only: bool = True,
     ) -> list[dict]:
-        """Return the transaction fingerprints of every *prior* case, each tagged
-        with the case id and the human decision on that case.
+        """Return the transaction fingerprints of prior cases, each tagged with
+        the case id and the human decision on that case.
 
-        This is the cross-case memory the memory node reads from: it lets a new
-        screening know whether a similar transaction has been seen (and cleared
-        or rejected) before. ``exclude_case_id`` skips the case currently being
-        screened so it never matches itself.
+        This is the "authorised historical evidence" the memory node (Node 5)
+        reads from: it lets a new screening know whether a similar transaction
+        has been seen (and verified) before.
+
+        ``authorised_only`` (default True) restricts the memory to cases a human
+        reviewer has actually decided on — REJECTED or APPROVED. Cases still
+        PENDING review (an AI screening with no human sign-off) are excluded, so
+        the system only learns from *verified reviewer outcomes* and never lets
+        an unverified AI suspicion become a fact used against a later applicant.
+
+        ``exclude_case_id`` skips the case currently being screened so it never
+        matches itself.
         """
         data = self._read()
         memory: list[dict] = []
@@ -142,13 +151,16 @@ class CaseStore:
             if exclude_case_id and cid == exclude_case_id:
                 continue
             case = Case.model_validate(raw)
-            decision = case.review.decision.value
-            routing = case.report.routing.value
+            decision = case.review.decision.value   # PENDING / APPROVED / REJECTED
+            if authorised_only and decision == ReviewDecision.PENDING.value:
+                # Not yet verified by a human -> not authorised evidence.
+                continue
+            routing = case.report.routing.value      # AUTO_CLEAR / HUMAN_REVIEW
             for fp in case.report.transaction_fingerprints:
                 memory.append({
                     "case_id": cid,
-                    "decision": decision,          # PENDING / APPROVED / REJECTED
-                    "routing": routing,            # AUTO_CLEAR / HUMAN_REVIEW
+                    "decision": decision,
+                    "routing": routing,
                     "account_holder": case.report.account_holder,
                     "fingerprint": fp,
                 })
