@@ -20,18 +20,30 @@ Conditional decisions (per the design):
 """
 from __future__ import annotations
 
-from .models import RiskReport
-from .nodes import financial_logic, ingestion, risk_synthesis, visual_forensics
+from .models import AgentReport, RiskReport
+from .nodes import (
+    financial_logic,
+    ingestion,
+    risk_synthesis,
+    security,
+    visual_forensics,
+)
 
 
 def run_pipeline(pdf_path: str) -> RiskReport:
-    # Node 1
+    # Node 1 — ingestion: extract the (untrusted) document text, metadata, etc.
     ing = ingestion.ingest(pdf_path)
+    # Security layer — scan the extracted text for embedded instructions and
+    # record their location + extracted text as evidence. The text is never
+    # obeyed; it is only inspected and reported.
+    security_report = AgentReport(agent=security.AGENT, findings=security.scan(ing))
     # Nodes 2 & 3 (independent; both consume the ingestion result)
     visual_report = visual_forensics.analyze(ing)
     financial_report = financial_logic.analyze(ing)
     # Node 4
-    report = risk_synthesis.synthesize(ing, [visual_report, financial_report])
+    report = risk_synthesis.synthesize(
+        ing, [security_report, visual_report, financial_report]
+    )
     return report
 
 

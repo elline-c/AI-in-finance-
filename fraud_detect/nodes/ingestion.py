@@ -25,6 +25,7 @@ from ..models import (
     Finding,
     FontUsage,
     IngestionResult,
+    PageText,
     Severity,
     Transaction,
 )
@@ -178,6 +179,7 @@ def ingest(path: str) -> IngestionResult:
         source_path=path,
         page_count=page_count,
         raw_text=raw_text,
+        page_texts=[PageText(page=pno, text=txt) for pno, txt in page_texts],
         metadata=metadata,
         fonts=fonts,
         account_holder=holder,
