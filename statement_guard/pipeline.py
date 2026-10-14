@@ -1,7 +1,7 @@
-"""Orchestrator: wires the four worker nodes into the sequenced pipeline and
+"""Orchestrator: wires the worker nodes into the sequenced pipeline and
 produces the final auditable report.
 
-    Node1 -> Node2 -> Node3 -> Node4 -> routing decision
+    Node0 (anti-hack gate) -> Node1 -> Node2 -> Node3 -> Node4 -> routing
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from typing import Any
 from .contracts import Finding
 from .nodes.financial_logic import FinancialLogicAgent
 from .nodes.ingestion import IngestionAgent
+from .nodes.input_integrity import InputIntegrityAgent
 from .nodes.risk_synthesis import RiskSynthesisAgent
 from .nodes.visual_forensics import VisualForensicsAgent
 
@@ -18,8 +19,14 @@ from .nodes.visual_forensics import VisualForensicsAgent
 def screen_statement(raw: dict[str, Any]) -> dict[str, Any]:
     """Run one statement through the full pipeline and return an audit report."""
 
-    # Node 1 — ingestion & preprocessing
-    stmt, findings = IngestionAgent().run(raw)
+    # Node 0 — input integrity / anti-hack gate (runs before anything trusts
+    # the payload). Returns a sanitized copy and any anti-tamper findings; a
+    # CRITICAL finding here guarantees escalation via the routing rules.
+    raw, findings = InputIntegrityAgent().run(raw)
+
+    # Node 1 — ingestion & preprocessing (now operating on sanitized input)
+    stmt, ingest_findings = IngestionAgent().run(raw)
+    findings += ingest_findings
 
     # Node 2 — visual forensics
     findings += VisualForensicsAgent().run(stmt)
