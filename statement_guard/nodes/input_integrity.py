@@ -81,9 +81,33 @@ _INJECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("js_uri", re.compile(r"javascript\s*:", re.IGNORECASE)),
     ("template_inject", re.compile(r"\{\{.*?\}\}|\{%.*?%\}|\$\{.*?\}")),
     ("sql_meta", re.compile(r"(;\s*drop\s+table|union\s+select|--\s|/\*)", re.IGNORECASE)),
-    # Classic "ignore your instructions" style payload — harmless here (no LLM)
-    # but a strong signal of a probing attacker, worth flagging.
-    ("prompt_inject", re.compile(r"ignore\s+(all\s+)?previous\s+instructions", re.IGNORECASE)),
+]
+
+# Instruction-injection ("prompt injection") signatures. In this rule-based
+# system there is no LLM to hijack, so these strings are INERT DATA — they can
+# never become instructions. But their presence is a strong, deliberate attack
+# signal: a company statement never contains text telling the reviewer to lower
+# the risk or suppress findings. We detect these separately, capture the exact
+# location + offending text as evidence, and raise a dedicated CRITICAL finding.
+_PROMPT_INJECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    ("override_instructions", re.compile(
+        r"ignore\s+(all\s+)?(previous|prior|above|the\s+following)\s+instructions",
+        re.IGNORECASE)),
+    ("disregard", re.compile(
+        r"disregard\s+(all\s+)?(previous|prior|above|your|the)\b", re.IGNORECASE)),
+    ("force_low_risk", re.compile(
+        r"mark\s+(this|the)?.{0,30}?(as\s+)?(low[\s-]*risk|safe|clean|approved?|not\s+fraud)",
+        re.IGNORECASE)),
+    ("suppress_findings", re.compile(
+        r"(do\s*not|don'?t|never)\s+(report|flag|record|raise|log|escalate)\b",
+        re.IGNORECASE)),
+    ("force_approval", re.compile(
+        r"(auto[\s-]*clear|approve\s+(this|the)\s+(loan|application|statement))",
+        re.IGNORECASE)),
+    ("role_hijack", re.compile(
+        r"\b(you\s+are\s+now|act\s+as|system\s*:|as\s+an?\s+ai)\b", re.IGNORECASE)),
+    ("instruction_marker", re.compile(
+        r"###\s*(instruction|system|prompt)|\[/?(system|inst)\]", re.IGNORECASE)),
 ]
 
 # Control characters (except tab/newline/carriage-return) have no place in
@@ -181,26 +205,25 @@ class InputIntegrityAgent:
         )
 
         # --- 5. deep string sanitization + injection detection ----------- #
-        inj_hits: dict[str, int] = {}
-        oversized = {"count": 0}
-        clean = _sanitize_strings(clean, inj_hits, oversized)
+        ctx = _ScrubContext()
+        clean = _sanitize_strings(clean, ctx)
 
-        if oversized["count"]:
+        if ctx.oversized:
             findings.append(
                 Finding(
                     self.node,
                     "AH_OVERSIZED_FIELD",
                     "Oversized text field(s) truncated",
                     Severity.MEDIUM,
-                    f"{oversized['count']} field(s) exceeded the {MAX_STRING_LEN}-"
+                    f"{ctx.oversized} field(s) exceeded the {MAX_STRING_LEN}-"
                     "char limit and were truncated. Over-long fields are used to "
                     "exhaust memory or hide payloads.",
-                    {"truncated_fields": oversized["count"], "limit": MAX_STRING_LEN},
+                    {"truncated_fields": ctx.oversized, "limit": MAX_STRING_LEN},
                 )
             )
 
-        if inj_hits:
-            total = sum(inj_hits.values())
+        if ctx.inj_hits:
+            total = sum(ctx.inj_hits.values())
             findings.append(
                 Finding(
                     self.node,
@@ -210,9 +233,39 @@ class InputIntegrityAgent:
                     "Suspicious markup/script/injection signatures were found in "
                     "free-text fields and were neutralized (HTML-escaped, control "
                     "characters stripped). Categories: "
-                    + ", ".join(f"{k}×{v}" for k, v in sorted(inj_hits.items()))
+                    + ", ".join(f"{k}×{v}" for k, v in sorted(ctx.inj_hits.items()))
                     + ". Legitimate bank statement text does not contain these.",
-                    {"categories": inj_hits, "total_matches": total},
+                    {"categories": ctx.inj_hits, "total_matches": total},
+                )
+            )
+
+        # --- 6. embedded instruction / prompt injection ------------------ #
+        # The crux of the "hidden instructions in the document" attack: text
+        # that tries to command the system to lower the risk or hide findings.
+        # It is INERT DATA here (no LLM), so it cannot change any agent's
+        # instructions or permissions — but we record WHERE and WHAT as
+        # evidence and raise a CRITICAL finding so it escalates to a human.
+        if ctx.prompt_hits:
+            cats = sorted({h["category"] for h in ctx.prompt_hits})
+            findings.append(
+                Finding(
+                    self.node,
+                    "AH_EMBEDDED_INSTRUCTION",
+                    "Embedded instruction / prompt-injection in document text",
+                    Severity.CRITICAL,
+                    "The document contains text attempting to instruct the "
+                    "screening system (e.g. to mark the application low-risk or "
+                    "suppress findings). This content is treated as untrusted "
+                    "DATA and cannot alter any agent's instructions, permissions, "
+                    "or the risk score. It is recorded here as evidence of a "
+                    "deliberate tampering attempt and forces human review. "
+                    "Categories: " + ", ".join(cats) + ".",
+                    {
+                        "attempts": len(ctx.prompt_hits),
+                        "categories": cats,
+                        # location + extracted text for each hit (step 2):
+                        "evidence": ctx.prompt_hits[:20],
+                    },
                 )
             )
 
@@ -334,18 +387,60 @@ def _count_keys(obj: Any) -> int:
     return 0
 
 
-def _scrub_string(s: str, inj_hits: dict[str, int], oversized: dict[str, int]) -> str:
-    """Normalize, size-cap, detect injection, strip control chars, HTML-escape."""
+class _ScrubContext:
+    """Threads sanitization state (injection tallies, oversized counter, and
+    located prompt-injection evidence) through the recursive walk."""
+
+    __slots__ = ("inj_hits", "oversized", "prompt_hits")
+
+    def __init__(self) -> None:
+        self.inj_hits: dict[str, int] = {}
+        self.oversized: int = 0
+        # Each entry: {location, category, extracted_text} — step 2 of the
+        # anti-hack flow: record WHERE and WHAT, as auditable evidence.
+        self.prompt_hits: list[dict[str, str]] = []
+
+
+def _snippet(s: str, match: re.Match[str], span: int = 60) -> str:
+    """Extract the offending text around a match for the evidence record."""
+    start = max(0, match.start() - span)
+    end = min(len(s), match.end() + span)
+    frag = s[start:end].strip()
+    if start > 0:
+        frag = "…" + frag
+    if end < len(s):
+        frag = frag + "…"
+    return frag
+
+
+def _scrub_string(s: str, ctx: _ScrubContext, location: str) -> str:
+    """Normalize, size-cap, detect injection, strip control chars, HTML-escape.
+
+    ``location`` is the dotted field path (e.g. ``transactions[2].description``)
+    so prompt-injection evidence can point to exactly where the payload was.
+    """
     # Unicode-normalize to fold homoglyph/compatibility tricks.
     s = unicodedata.normalize("NFKC", s)
 
     if len(s) > MAX_STRING_LEN:
         s = s[:MAX_STRING_LEN]
-        oversized["count"] += 1
+        ctx.oversized += 1
 
+    # Markup/script/SQL injection (neutralized by escaping below).
     for name, pattern in _INJECTION_PATTERNS:
         if pattern.search(s):
-            inj_hits[name] = inj_hits.get(name, 0) + 1
+            ctx.inj_hits[name] = ctx.inj_hits.get(name, 0) + 1
+
+    # Instruction/prompt injection — record location + extracted text as
+    # evidence. This text is INERT DATA; recording it never executes it.
+    for name, pattern in _PROMPT_INJECTION_PATTERNS:
+        m = pattern.search(s)
+        if m:
+            ctx.prompt_hits.append({
+                "location": location,
+                "category": name,
+                "extracted_text": _snippet(s, m),
+            })
 
     # Strip control characters (log/terminal injection).
     s = _CONTROL_CHARS_RE.sub("", s)
@@ -363,12 +458,13 @@ def _scrub_string(s: str, inj_hits: dict[str, int], oversized: dict[str, int]) -
     return s
 
 
-def _sanitize_strings(
-    obj: Any, inj_hits: dict[str, int], oversized: dict[str, int]
-) -> Any:
-    """Recursively sanitize every string, and clamp absurd numeric magnitudes."""
+def _sanitize_strings(obj: Any, ctx: _ScrubContext, location: str = "") -> Any:
+    """Recursively sanitize every string, and clamp absurd numeric magnitudes.
+
+    Tracks the dotted ``location`` of each value for evidence purposes.
+    """
     if isinstance(obj, str):
-        return _scrub_string(obj, inj_hits, oversized)
+        return _scrub_string(obj, ctx, location or "<root>")
     if isinstance(obj, bool):
         return obj
     if isinstance(obj, float):
@@ -382,11 +478,15 @@ def _sanitize_strings(
             return int(math.copysign(MAX_ABS_AMOUNT, obj))
         return obj
     if isinstance(obj, dict):
-        return {
-            _scrub_string(str(k), inj_hits, oversized) if isinstance(k, str) else k:
-            _sanitize_strings(v, inj_hits, oversized)
-            for k, v in obj.items()
-        }
+        out = {}
+        for k, v in obj.items():
+            child = f"{location}.{k}" if location else str(k)
+            key = _scrub_string(str(k), ctx, child) if isinstance(k, str) else k
+            out[key] = _sanitize_strings(v, ctx, child)
+        return out
     if isinstance(obj, list):
-        return [_sanitize_strings(v, inj_hits, oversized) for v in obj]
+        return [
+            _sanitize_strings(v, ctx, f"{location}[{i}]")
+            for i, v in enumerate(obj)
+        ]
     return obj

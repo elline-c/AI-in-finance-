@@ -12,6 +12,7 @@ from .contracts import Finding
 from .nodes.financial_logic import FinancialLogicAgent
 from .nodes.ingestion import IngestionAgent
 from .nodes.input_integrity import InputIntegrityAgent
+from .nodes.policy_engine import PolicyEngine
 from .nodes.risk_synthesis import RiskSynthesisAgent
 from .nodes.visual_forensics import VisualForensicsAgent
 
@@ -34,8 +35,21 @@ def screen_statement(raw: dict[str, Any]) -> dict[str, Any]:
     # Node 3 — financial logic & validation
     findings += FinancialLogicAgent().run(stmt)
 
-    # Node 4 — risk scoring & synthesis + routing
+    # Node 4 — risk scoring & synthesis (recommends a score + routing)
     summary = RiskSynthesisAgent().run(findings, stmt.data_quality)
+
+    # Node 5 — policy engine: the authoritative decision gate. It consumes only
+    # validated findings + the summary (never the raw document), applies hard
+    # safe-direction overrides, and logs any instruction-injection attempt. It
+    # can escalate but never relax, and never lowers the risk score — so the
+    # document cannot talk its way into an auto-clear.
+    policy = PolicyEngine().decide(summary, findings)
+    summary["decision"] = policy["final_decision"]
+    summary["policy_overrides"] = policy["policy_overrides"]
+    if policy["policy_overrides"]:
+        summary["routing_reasons"] = (
+            summary.get("routing_reasons", []) + policy["policy_overrides"]
+        )
 
     return {
         "case": {
@@ -47,6 +61,7 @@ def screen_statement(raw: dict[str, Any]) -> dict[str, Any]:
         },
         "data_quality": stmt.data_quality.to_dict(),
         "summary": summary,
+        "policy": policy,
         "findings": [f.to_dict() for f in _sort_findings(findings)],
     }
 
