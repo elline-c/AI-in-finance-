@@ -97,10 +97,18 @@ class FontUsage(BaseModel):
     fonts: dict[str, int] = Field(default_factory=dict)  # font name -> glyph count
 
 
+class PageText(BaseModel):
+    """Extracted text for a single page (used by the security layer so it can
+    report the exact page an embedded instruction was found on)."""
+    page: int
+    text: str
+
+
 class IngestionResult(BaseModel):
     source_path: str
     page_count: int
     raw_text: str
+    page_texts: list[PageText] = Field(default_factory=list)
     metadata: DocumentMetadata
     fonts: list[FontUsage] = Field(default_factory=list)
 
