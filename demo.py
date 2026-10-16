@@ -50,7 +50,14 @@ def _print_report(r) -> None:
 
 
 def main() -> None:
-    store = CaseStore("data/cases.json")
+    # Fresh store each run so this demo is reproducible. The cross-case memory
+    # agent (Node 5) is showcased separately in demo_memory.py.
+    from pathlib import Path
+
+    store_path = Path("data/cases.json")
+    if store_path.exists():
+        store_path.unlink()
+    store = CaseStore(str(store_path))
 
     samples = [
         ("Clean statement", generate_clean("samples")),
@@ -64,7 +71,7 @@ def main() -> None:
         print("#" * 78)
         print(f"#  {label}")
         print("#" * 78)
-        r = run_pipeline(gen.path)
+        r = run_pipeline(gen.path, store=store)
         store.upsert_report(r)
         _print_report(r)
         reports.append((label, r, gen))

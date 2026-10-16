@@ -174,3 +174,55 @@ The value shown is the **end-to-end shape**: ingestion → multi-agent detection
 explainable risk + confidence → routed human review with an audit trail — with
 clear seams where production OCR, image-forensics, ML scoring, and real reference
 data would slot in.
+
+---
+
+## Node 5 — Historical Fraud Pattern Intelligence & Feedback Loop
+
+By default each statement is screened in isolation. The optional **Cross-Case
+Memory Agent** gives the pipeline a *memory* across submissions: before a case is
+finalised it compares the current statement's **suspicious** transactions against
+prior cases **a human reviewer has already decided on** (recalled from the case
+store) and flags repeats.
+
+This answers a question a single-case screener cannot: *"have we seen this
+suspicious transaction/entity before — and did a reviewer clear it or stop it?"*
+
+**Learns only from authorised historical evidence.** Matching uses only cases a
+reviewer has explicitly **REJECTED** or **APPROVED**. Cases still awaiting review
+(an AI screening with no human sign-off) are ignored — so an unverified AI
+suspicion never becomes a "fact" used against a later applicant. This is the
+feedback loop: verified reviewer outcomes feed forward to make future flags more
+informative.
+
+| Situation | Reason code | Severity |
+|-----------|-------------|----------|
+| A near-identical transaction was **rejected** by a reviewer in a prior case | `MEM_RECURRING_KNOWN_BAD` | HIGH |
+| A similar suspicious transaction was **approved/cleared** by a reviewer before | `MEM_SIMILAR_PASSED_BEFORE` | MEDIUM |
+| The same counterparty/amount recurs across **many** reviewed prior cases | `MEM_HIGH_FREQUENCY_PATTERN` | MEDIUM |
+
+**How it stays precise and auditable**
+- Only transactions already flagged by Node 2/Node 3 are fingerprinted, so routine
+  payroll/utility payments never enter memory or create noise.
+- A fingerprint = normalized counterparty + bucketed amount + direction, so a
+  lightly-tweaked repeat (e.g. 149,500 vs 150,000, or "Shell Co" vs "Shell Co Pte Ltd")
+  still matches.
+- Every finding **cites the prior case id**, so a reviewer can trace the link.
+- It only *adds evidence and escalates* — it never auto-rejects (MAS FEAT preserved).
+
+**How it is wired**
+`run_pipeline(pdf_path, store=my_store)` activates the memory agent (it needs a
+`CaseStore` to recall prior cases from). Called without a store, the pipeline
+behaves exactly as the 4-node version.
+
+**See it in action**
+```bash
+python demo_memory.py
+```
+This screens a tampered statement, records a human REJECT, then re-submits the
+same doctored statement as a new application — and Node 5 reports that each
+suspicious transaction was seen (and rejected) before, citing the earlier case.
+
+**Tests:** `tests/test_memory.py` covers recurrence detection (rejected + cleared
+paths), fingerprint normalization, auditability (prior case id cited), and that
+the machine never auto-rejects.

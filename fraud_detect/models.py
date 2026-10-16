@@ -137,6 +137,27 @@ class AgentReport(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# Cross-case memory
+# --------------------------------------------------------------------------- #
+class TxnFingerprint(BaseModel):
+    """A compact, comparable signature of one transaction/entity.
+
+    Two transactions are considered "similar" when their fingerprints match on
+    counterparty + amount_band + direction (see memory node). Stored on each
+    RiskReport so future cases can be cross-referenced against this one.
+    """
+    counterparty: str = ""        # normalized (lower-case, suffixes stripped)
+    amount_band: str = "na"       # bucketed amount, e.g. "145,000-150,000"
+    direction: str = "na"         # credit | debit | na
+    pattern_tag: str = ""         # e.g. "RAPID_PASS_THROUGH" / "STRUCTURING"
+
+    def key(self) -> str:
+        """Match key — intentionally excludes pattern_tag so a plain repeat of
+        the same counterparty+amount matches a prior flagged one too."""
+        return f"{self.counterparty}|{self.amount_band}|{self.direction}"
+
+
+# --------------------------------------------------------------------------- #
 # Node 4 — synthesis
 # --------------------------------------------------------------------------- #
 class RiskReport(BaseModel):
@@ -156,6 +177,10 @@ class RiskReport(BaseModel):
 
     findings: list[Finding] = Field(default_factory=list)
     summary: str = ""
+
+    # Cross-case memory: fingerprints of this case's transactions, persisted so
+    # that future screenings can detect recurrence of the same entity/amount.
+    transaction_fingerprints: list[TxnFingerprint] = Field(default_factory=list)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

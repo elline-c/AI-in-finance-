@@ -29,6 +29,8 @@ from .nodes import (
     visual_forensics,
 )
 
+def run_pipeline(pdf_path: str, store: Optional[CaseStore] = None) -> RiskReport:
+    """Run one statement through the full pipeline.
 
 def run_pipeline(pdf_path: str) -> RiskReport:
     # Node 1 — ingestion: extract the (untrusted) document text, metadata, etc.

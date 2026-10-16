@@ -13,9 +13,68 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from .models import Case, ReviewDecision, ReviewRecord, RiskReport
+from .models import Case, ReviewDecision, ReviewRecord, RiskReport, TxnFingerprint
 
 _LOCK = threading.Lock()
+
+
+# --------------------------------------------------------------------------- #
+# Cross-case memory: fingerprinting helpers
+# --------------------------------------------------------------------------- #
+# Entity suffixes stripped when normalizing a counterparty name, so that
+# "Offshore Nominee A Pte Ltd" and "Offshore Nominee A" match.
+_ENTITY_SUFFIXES = (
+    "pte ltd", "pte. ltd.", "pte ltd.", "pte",
+    "ltd", "ltd.", "llc", "llp", "inc", "inc.", "co", "co.",
+    "limited", "corporation", "corp", "corp.",
+)
+
+# Amount bucket size (SGD). Amounts in the same bucket are treated as "similar",
+# so 150,000 and 149,500 collapse to the same fingerprint.
+_AMOUNT_BUCKET = 5_000.0
+
+
+def normalize_counterparty(name: Optional[str]) -> str:
+    """Lower-case, strip punctuation and common entity suffixes."""
+    if not name:
+        return ""
+    s = name.lower().strip()
+    for ch in (",", ".", "/", "\\", "-", "_"):
+        s = s.replace(ch, " ")
+    tokens = [t for t in s.split() if t]
+    # Drop trailing entity-type tokens (pte, ltd, llc, ...).
+    while tokens and " ".join(tokens[-2:]) in _ENTITY_SUFFIXES:
+        tokens = tokens[:-2]
+    while tokens and tokens[-1] in {s.replace(" ", "") for s in _ENTITY_SUFFIXES}:
+        tokens = tokens[:-1]
+    return " ".join(tokens)
+
+
+def _amount_band(amount: Optional[float]) -> str:
+    """Bucket an amount to the *nearest* bucket centre.
+
+    Rounding (rather than flooring) means two amounts that are close but sit
+    either side of a bucket boundary — e.g. 149,500 and 150,000 — still collapse
+    to the same band, so a lightly-tweaked repeat amount still matches.
+    """
+    if amount is None:
+        return "na"
+    centre = round(abs(amount) / _AMOUNT_BUCKET) * _AMOUNT_BUCKET
+    return f"~{centre:,.0f}"
+
+
+def fingerprint(counterparty: Optional[str], amount: Optional[float],
+                pattern_tag: str = "") -> TxnFingerprint:
+    """Build a comparable fingerprint for one transaction/entity."""
+    direction = "na"
+    if amount is not None:
+        direction = "credit" if amount >= 0 else "debit"
+    return TxnFingerprint(
+        counterparty=normalize_counterparty(counterparty),
+        amount_band=_amount_band(amount),
+        direction=direction,
+        pattern_tag=pattern_tag,
+    )
 
 
 class CaseStore:
@@ -65,6 +124,47 @@ class CaseStore:
         data = self._read()
         raw = data.get(case_id)
         return Case.model_validate(raw) if raw else None
+
+    def recall_prior_fingerprints(
+        self, exclude_case_id: Optional[str] = None,
+        authorised_only: bool = True,
+    ) -> list[dict]:
+        """Return the transaction fingerprints of prior cases, each tagged with
+        the case id and the human decision on that case.
+
+        This is the "authorised historical evidence" the memory node (Node 5)
+        reads from: it lets a new screening know whether a similar transaction
+        has been seen (and verified) before.
+
+        ``authorised_only`` (default True) restricts the memory to cases a human
+        reviewer has actually decided on — REJECTED or APPROVED. Cases still
+        PENDING review (an AI screening with no human sign-off) are excluded, so
+        the system only learns from *verified reviewer outcomes* and never lets
+        an unverified AI suspicion become a fact used against a later applicant.
+
+        ``exclude_case_id`` skips the case currently being screened so it never
+        matches itself.
+        """
+        data = self._read()
+        memory: list[dict] = []
+        for cid, raw in data.items():
+            if exclude_case_id and cid == exclude_case_id:
+                continue
+            case = Case.model_validate(raw)
+            decision = case.review.decision.value   # PENDING / APPROVED / REJECTED
+            if authorised_only and decision == ReviewDecision.PENDING.value:
+                # Not yet verified by a human -> not authorised evidence.
+                continue
+            routing = case.report.routing.value      # AUTO_CLEAR / HUMAN_REVIEW
+            for fp in case.report.transaction_fingerprints:
+                memory.append({
+                    "case_id": cid,
+                    "decision": decision,
+                    "routing": routing,
+                    "account_holder": case.report.account_holder,
+                    "fingerprint": fp,
+                })
+        return memory
 
     def list_cases(self) -> list[Case]:
         data = self._read()
