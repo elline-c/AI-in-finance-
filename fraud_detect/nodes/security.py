@@ -39,23 +39,46 @@ AGENT = "SecurityLayer:InstructionScan"
 # Signatures of text that tries to instruct/command the screening system.
 # A genuine bank statement never contains sentences like these, so a match is a
 # strong, deliberate tampering signal rather than ordinary statement content.
-_INSTRUCTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
-    ("override_instructions", re.compile(
-        r"ignore\s+(all\s+)?(previous|prior|above|the\s+following)\s+instructions",
-        re.IGNORECASE)),
-    ("disregard", re.compile(
-        r"disregard\s+(all\s+)?(previous|prior|above|your|the)\b", re.IGNORECASE)),
-    ("force_low_risk", re.compile(
-        r"mark\s+(this|the)?.{0,40}?(as\s+)?(low[\s-]*risk|safe|clean|approved?|not\s+fraud)",
-        re.IGNORECASE)),
-    ("suppress_findings", re.compile(
-        r"(do\s*not|don'?t|never)\s+(report|flag|record|raise|log|escalate)\b",
-        re.IGNORECASE)),
-    ("force_approval", re.compile(
-        r"(auto[\s-]*clear|approve\s+(this|the)\s+(loan|application|statement))",
-        re.IGNORECASE)),
-    ("role_hijack", re.compile(
-        r"\b(you\s+are\s+now|act\s+as|system\s*:|as\s+an?\s+ai\b)", re.IGNORECASE)),
+# Each entry: (category code, human-readable label, compiled pattern).
+_INSTRUCTION_PATTERNS: list[tuple[str, str, re.Pattern[str]]] = [
+    (
+        "override_instructions",
+        "attempt to override the system's instructions",
+        re.compile(
+            r"ignore\s+(all\s+)?(previous|prior|above|the\s+following)\s+instructions",
+            re.IGNORECASE),
+    ),
+    (
+        "disregard",
+        "attempt to make the system disregard prior rules",
+        re.compile(r"disregard\s+(all\s+)?(previous|prior|above|your|the)\b",
+                   re.IGNORECASE),
+    ),
+    (
+        "force_low_risk",
+        "attempt to force a low-risk / approved outcome",
+        re.compile(
+            r"mark\s+(this|the)?.{0,40}?(as\s+)?(low[\s-]*risk|safe|clean|approved?|not\s+fraud)",
+            re.IGNORECASE),
+    ),
+    (
+        "suppress_findings",
+        "attempt to suppress reporting of findings",
+        re.compile(r"(do\s*not|don'?t|never)\s+(report|flag|record|raise|log|escalate)\b",
+                   re.IGNORECASE),
+    ),
+    (
+        "force_approval",
+        "attempt to force auto-approval of the application",
+        re.compile(r"(auto[\s-]*clear|approve\s+(this|the)\s+(loan|application|statement))",
+                   re.IGNORECASE),
+    ),
+    (
+        "role_hijack",
+        "attempt to reassign the system's role",
+        re.compile(r"\b(you\s+are\s+now|act\s+as|system\s*:|as\s+an?\s+ai\b)",
+                   re.IGNORECASE),
+    ),
 ]
 
 
@@ -74,7 +97,7 @@ def _snippet(text: str, match: re.Match[str], span: int = 80) -> str:
 def _scan_text(text: str, location: str, page: int | None) -> list[Finding]:
     """Scan one block of extracted text and return a finding per hit."""
     findings: list[Finding] = []
-    for category, pattern in _INSTRUCTION_PATTERNS:
+    for _category, label, pattern in _INSTRUCTION_PATTERNS:
         for m in pattern.finditer(text):
             findings.append(Finding(
                 agent=AGENT,
@@ -85,7 +108,7 @@ def _scan_text(text: str, location: str, page: int | None) -> list[Finding]:
                 page=page,
                 field=location,
                 evidence=(
-                    f"Suspicious instruction ({category}) found in {location}. "
+                    f"Detected an {label} in {location}. "
                     "This text is treated as untrusted document content and is "
                     "NOT obeyed by the screening system; it is recorded here as "
                     "evidence of a tampering attempt. "

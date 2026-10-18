@@ -1,10 +1,11 @@
-"""Orchestrator — wires the 4 worker nodes into a sequential pipeline.
+"""Orchestrator — wires the worker nodes into a sequential pipeline.
 
-    PDF ──► Node 1 Ingestion ──► Node 2 Visual Forensics ─┐
-                                 Node 3 Financial Logic ──┴─► Node 4 Risk Synthesis
-                                                                     │
-                                              risk & confidence ─────┤
-                                                                     ▼
+    PDF ──► Node 1 Ingestion ──► Security Layer (scan extracted text) ─┐
+                                 Node 2 Visual Forensics ──────────────┤
+                                 Node 3 Financial Logic ───────────────┴─► Node 4 Risk Synthesis
+                                                                                 │
+                                                          risk & confidence ─────┤
+                                                                                 ▼
                                    ┌───────────── routing ─────────────┐
                                    │                                   │
                           AUTO_CLEAR (low risk,               HUMAN_REVIEW (medium/high risk
@@ -16,7 +17,7 @@ Conditional decisions (per the design):
     * No significant issues            -> LOW risk    -> auto-clear
     * Some inconsistencies             -> MEDIUM risk -> human review
     * Strong tampering indicators      -> HIGH/VERY_HIGH -> human review
-    * Low AI confidence / poor data    -> human review regardless of risk band
+    * Embedded instruction / low confidence / poor data -> human review
 """
 from __future__ import annotations
 
