@@ -1,10 +1,11 @@
-"""Orchestrator — wires the 4 worker nodes into a sequential pipeline.
+"""Orchestrator — wires the worker nodes into a sequential pipeline.
 
-    PDF ──► Node 1 Ingestion ──► Node 2 Visual Forensics ─┐
-                                 Node 3 Financial Logic ──┴─► Node 4 Risk Synthesis
-                                                                     │
-                                              risk & confidence ─────┤
-                                                                     ▼
+    PDF ──► Node 1 Ingestion ──► Security Layer (scan extracted text) ─┐
+                                 Node 2 Visual Forensics ──────────────┤
+                                 Node 3 Financial Logic ───────────────┴─► Node 4 Risk Synthesis
+                                                                                 │
+                                                          risk & confidence ─────┤
+                                                                                 ▼
                                    ┌───────────── routing ─────────────┐
                                    │                                   │
                           AUTO_CLEAR (low risk,               HUMAN_REVIEW (medium/high risk
@@ -16,53 +17,66 @@ Conditional decisions (per the design):
     * No significant issues            -> LOW risk    -> auto-clear
     * Some inconsistencies             -> MEDIUM risk -> human review
     * Strong tampering indicators      -> HIGH/VERY_HIGH -> human review
-    * Low AI confidence / poor data    -> human review regardless of risk band
+    * Embedded instruction / low confidence / poor data -> human review
 """
 from __future__ import annotations
 
 from typing import Optional
 
-from .models import RiskReport
-from .nodes import financial_logic, ingestion, memory, risk_synthesis, visual_forensics
+from .models import AgentReport, RiskReport
+from .nodes import (
+    financial_logic,
+    ingestion,
+    memory,
+    risk_synthesis,
+    security,
+    visual_forensics,
+)
 from .store import CaseStore
 
 
 def run_pipeline(pdf_path: str, store: Optional[CaseStore] = None) -> RiskReport:
-    """Run one statement through the full pipeline.
+    """Run one statement through the full pipeline and return the risk report.
 
-    If a ``store`` is provided, the cross-case Memory agent (Node 5) is run: it
-    reads the fingerprints of all *prior* cases from the store and flags any
-    transaction that recurs from an earlier screening. Without a store the
-    pipeline behaves exactly as before (no memory).
+    When a ``store`` is supplied, the cross-case memory agent (Node 5) is run:
+    the current statement's suspicious transactions are compared against prior,
+    human-decided cases, and the resulting report carries fingerprints so future
+    screenings can recognise a recurrence.
     """
-    # Node 1
+    # Node 1 — ingestion: extract the (untrusted) document text, metadata, etc.
     ing = ingestion.ingest(pdf_path)
+
+    # Security layer — scan the extracted text for embedded instructions and
+    # record their location + extracted text as evidence. The text is never
+    # obeyed; it is only inspected and reported.
+    security_report = AgentReport(agent=security.AGENT, findings=security.scan(ing))
+
     # Nodes 2 & 3 (independent; both consume the ingestion result)
     visual_report = visual_forensics.analyze(ing)
     financial_report = financial_logic.analyze(ing)
-    agent_reports = [visual_report, financial_report]
 
-    # Findings from the forensic agents — used both to focus memory matching and
-    # to decide which (suspicious) transactions are worth remembering.
-    forensic_findings = visual_report.findings + financial_report.findings
+    reports = [security_report, visual_report, financial_report]
 
-    # Node 5 — cross-case memory (only when a store is available to recall from)
+    # Node 5 — cross-case memory (only when a store is provided). It matches the
+    # suspicious rows flagged by nodes 2 & 3 against prior verified cases.
+    detection_findings = visual_report.findings + financial_report.findings
     if store is not None:
-        current_id = risk_synthesis._case_id(ing.source_path)
-        prior_memory = store.recall_prior_fingerprints(exclude_case_id=current_id)
+        prior_memory = store.recall_prior_fingerprints()
         memory_report = memory.analyze(
-            ing, prior_memory,
-            current_case_id=current_id,
-            current_findings=forensic_findings,
+            ing, prior_memory, current_findings=detection_findings
         )
-        agent_reports.append(memory_report)
+        reports.append(memory_report)
 
-    # Node 4 — synthesis
-    report = risk_synthesis.synthesize(ing, agent_reports)
+    # Node 4 — risk synthesis
+    report = risk_synthesis.synthesize(ing, reports)
 
-    # Attach fingerprints of this case's *suspicious* transactions so future
-    # screenings can recall it (routine transactions are not remembered).
-    report.transaction_fingerprints = memory.build_fingerprints(ing, forensic_findings)
+    # Always attach fingerprints of this statement's suspicious transactions so
+    # the report can be persisted and recalled by future screenings, whether or
+    # not a store was passed to this run.
+    report.transaction_fingerprints = memory.build_fingerprints(
+        ing, detection_findings
+    )
+
     return report
 
 
