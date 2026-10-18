@@ -21,32 +21,62 @@ Conditional decisions (per the design):
 """
 from __future__ import annotations
 
+from typing import Optional
+
 from .models import AgentReport, RiskReport
 from .nodes import (
     financial_logic,
     ingestion,
+    memory,
     risk_synthesis,
     security,
     visual_forensics,
 )
+from .store import CaseStore
+
 
 def run_pipeline(pdf_path: str, store: Optional[CaseStore] = None) -> RiskReport:
-    """Run one statement through the full pipeline.
+    """Run one statement through the full pipeline and return the risk report.
 
-def run_pipeline(pdf_path: str) -> RiskReport:
+    When a ``store`` is supplied, the cross-case memory agent (Node 5) is run:
+    the current statement's suspicious transactions are compared against prior,
+    human-decided cases, and the resulting report carries fingerprints so future
+    screenings can recognise a recurrence.
+    """
     # Node 1 — ingestion: extract the (untrusted) document text, metadata, etc.
     ing = ingestion.ingest(pdf_path)
+
     # Security layer — scan the extracted text for embedded instructions and
     # record their location + extracted text as evidence. The text is never
     # obeyed; it is only inspected and reported.
     security_report = AgentReport(agent=security.AGENT, findings=security.scan(ing))
+
     # Nodes 2 & 3 (independent; both consume the ingestion result)
     visual_report = visual_forensics.analyze(ing)
     financial_report = financial_logic.analyze(ing)
-    # Node 4
-    report = risk_synthesis.synthesize(
-        ing, [security_report, visual_report, financial_report]
+
+    reports = [security_report, visual_report, financial_report]
+
+    # Node 5 — cross-case memory (only when a store is provided). It matches the
+    # suspicious rows flagged by nodes 2 & 3 against prior verified cases.
+    detection_findings = visual_report.findings + financial_report.findings
+    if store is not None:
+        prior_memory = store.recall_prior_fingerprints()
+        memory_report = memory.analyze(
+            ing, prior_memory, current_findings=detection_findings
+        )
+        reports.append(memory_report)
+
+    # Node 4 — risk synthesis
+    report = risk_synthesis.synthesize(ing, reports)
+
+    # Always attach fingerprints of this statement's suspicious transactions so
+    # the report can be persisted and recalled by future screenings, whether or
+    # not a store was passed to this run.
+    report.transaction_fingerprints = memory.build_fingerprints(
+        ing, detection_findings
     )
+
     return report
 
 
