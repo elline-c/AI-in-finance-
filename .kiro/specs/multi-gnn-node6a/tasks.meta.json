@@ -1,0 +1,196 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Scaffold the GNN subpackage and isolate heavy dependencies": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438259
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731449909
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731955926
+      }
+    ],
+    "2.1 Tests for the graph builder": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438291
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731974577
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792732439192
+      }
+    ],
+    "3. Vendor the minimal Multi-GNN model classes": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438339
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792732445239
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792733397113
+      }
+    ],
+    "4. Offline trainer with comparable reporting": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438363
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792733403126
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792734835847
+      }
+    ],
+    "5. Produce and persist the precomputed scores store": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438388
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792734842176
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792737067444
+      }
+    ],
+    "6.1 Fail-safe tests for the lookup adapter": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438408
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792737074130
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792743759174
+      }
+    ],
+    "7.1 Node 6a tests with a stub scores store": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438431
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792743765791
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792744014329
+      }
+    ],
+    "8. Thread the store through the pipeline": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438474
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792744020907
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792744234087
+      }
+    ],
+    "9. Offline evaluation write-up vs the GBM baseline": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438498
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792744240360
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792744400053
+      }
+    ],
+    "10. Documentation": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792731438523
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792744406014
+      },
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792744570638
+      }
+    ],
+    "2. Build the split-safe internal transfer graph": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792732439222
+      }
+    ],
+    "6. Live-path lookup adapter (no PyTorch)": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792743759241
+      }
+    ],
+    "7. Wire the GNN finding into Node 6a": [
+      {
+        "executionId": "f321be91-8f97-421c-9a9f-d786a9cce4e7",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792744014364
+      }
+    ]
+  }
+}

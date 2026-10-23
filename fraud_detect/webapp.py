@@ -21,6 +21,7 @@ from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from .ml.gnn import gnn_lookup
 from .models import ReviewDecision
 from .pipeline import run_pipeline
 from .store import CaseStore
@@ -58,6 +59,11 @@ def _safe_upload_destination(filename: str | None) -> Path:
 app = FastAPI(title="Bank Statement Tampering Screening")
 templates = Jinja2Templates(directory=str(BASE / "templates"))
 store = CaseStore(str(BASE.parent / "data" / "cases.json"))
+
+# Load the precomputed GNN graph-fraud scores once at startup (fail-safe: returns
+# None if the store is absent). gnn_lookup imports only joblib (no torch), so this
+# is safe in the live app and avoids re-reading the joblib file on every request.
+GNN_SCORES = gnn_lookup.load_scores()
 
 _BAND_COLOR = {
     "LOW": "#2e7d32", "MEDIUM": "#f9a825",
@@ -107,7 +113,7 @@ async def upload(file: UploadFile):
         dest.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail="Empty upload")
 
-    report = run_pipeline(str(dest))
+    report = run_pipeline(str(dest), gnn_scores=GNN_SCORES)
     store.upsert_report(report)
     return RedirectResponse(url=f"/case/{report.case_id}", status_code=303)
 
@@ -125,7 +131,7 @@ def screen_sample(name: str = Form(...)):
     target = (samples_dir / safe).resolve()
     if samples_dir not in target.parents or not target.is_file():
         raise HTTPException(status_code=404, detail="Sample not found")
-    report = run_pipeline(str(target))
+    report = run_pipeline(str(target), gnn_scores=GNN_SCORES)
     store.upsert_report(report)
     return RedirectResponse(url=f"/case/{report.case_id}", status_code=303)
 
