@@ -1,0 +1,12 @@
+# Offline / training-only dependencies for the Node 6a GNN extension.
+#
+# These are NOT required to run the live screening pipeline. The live path
+# (fraud_detect/ml/gnn/gnn_lookup.py) imports only joblib, which is already in
+# the core requirements.txt. Install this file only when training the GNN or
+# regenerating the precomputed scores store:
+#
+#     pip install -r requirements-gnn.txt
+#
+# A CPU build of torch is acceptable for this dataset size.
+torch>=2.2.0
+torch-geometric>=2.5.0

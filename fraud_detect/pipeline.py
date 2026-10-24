@@ -28,6 +28,8 @@ from .nodes import (
     financial_logic,
     ingestion,
     memory,
+    ml_statement,
+    ml_transaction,
     risk_synthesis,
     security,
     visual_forensics,
@@ -35,13 +37,32 @@ from .nodes import (
 from .store import CaseStore
 
 
-def run_pipeline(pdf_path: str, store: Optional[CaseStore] = None) -> RiskReport:
+def run_pipeline(
+    pdf_path: str,
+    store: Optional[CaseStore] = None,
+    *,
+    txn_model=None,
+    statement_model=None,
+    gnn_scores=None,
+) -> RiskReport:
     """Run one statement through the full pipeline and return the risk report.
 
     When a ``store`` is supplied, the cross-case memory agent (Node 5) is run:
     the current statement's suspicious transactions are compared against prior,
     human-decided cases, and the resulting report carries fingerprints so future
     screenings can recognise a recurrence.
+
+    When ``txn_model`` and/or ``statement_model`` are supplied (trained ML
+    bundles), the optional ML nodes (Node 6a/6b) are run. They ADD explainable
+    findings alongside the rule-based nodes and never auto-reject. When no model
+    is supplied, the pipeline behaves exactly as before.
+
+    ``gnn_scores`` is the precomputed GNN graph-fraud store (loaded once by the
+    caller via ``fraud_detect.ml.gnn.gnn_lookup.load_scores``). When supplied, it
+    is threaded into Node 6a so the GNN path can add an ``ML_TXN_GNN_RISK`` finding
+    for an elevated account. Like every other node it only ADDS evidence and never
+    auto-rejects. When ``None`` (e.g. the store file is absent), the pipeline
+    behaves exactly as today.
     """
     # Node 1 — ingestion: extract the (untrusted) document text, metadata, etc.
     ing = ingestion.ingest(pdf_path)
@@ -56,6 +77,13 @@ def run_pipeline(pdf_path: str, store: Optional[CaseStore] = None) -> RiskReport
     financial_report = financial_logic.analyze(ing)
 
     reports = [security_report, visual_report, financial_report]
+
+    # Nodes 6a/6b — optional ML agents (only when a trained model is supplied).
+    # Each is fail-safe: a missing/invalid model yields no findings.
+    if txn_model is not None or gnn_scores is not None:
+        reports.append(ml_transaction.analyze(ing, txn_model, gnn_scores=gnn_scores))
+    if statement_model is not None:
+        reports.append(ml_statement.analyze(ing, statement_model))
 
     # Node 5 — cross-case memory (only when a store is provided). It matches the
     # suspicious rows flagged by nodes 2 & 3 against prior verified cases.

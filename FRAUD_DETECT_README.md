@@ -226,3 +226,82 @@ suspicious transaction was seen (and rejected) before, citing the earlier case.
 **Tests:** `tests/test_memory.py` covers recurrence detection (rejected + cleared
 paths), fingerprint normalization, auditability (prior case id cited), and that
 the machine never auto-rejects.
+
+---
+
+## Node 6a — GNN relational-AML signal (offline-only dependencies)
+
+The transaction-fraud agent (Node 6a) has an optional graph-neural-network
+extension under `fraud_detect/ml/gnn/`, adapted from
+[IBM/Multi-GNN](https://github.com/IBM/Multi-GNN) (Apache-2.0, vendored under
+`fraud_detect/ml/gnn/vendor/` with attribution in `PROVENANCE.md`). It captures
+the relational AML typologies the tabular model is weakest at (round-tripping,
+dormant reactivation, mule fan-in/out). It only **adds explainable evidence** and
+**never auto-rejects** — same governance stance as every other node.
+
+**The GNN is offline-batch, not live.** It trains on the full transaction graph
+and precomputes a per-account / per-edge risk store; at screening time Node 6a
+does an O(1) lookup instead of running the model.
+
+**Heavy dependencies are offline-only.** `torch` and `torch-geometric` live in a
+separate `requirements-gnn.txt` and are **not** needed to run the live screening
+pipeline — install them only to train the GNN or regenerate the scores store:
+
+```bash
+# Offline / training only — NOT required for the live pipeline:
+pip install -r requirements-gnn.txt
+```
+
+The live lookup path (`fraud_detect/ml/gnn/gnn_lookup.py`) imports only `joblib`,
+which is already in the core `requirements.txt`.
+
+**Offline vs live, concretely.**
+
+- *Offline (batch, has the whole graph).* `fraud_detect/ml/gnn/graph_builder.py`
+  builds a split-safe **INTERNAL-transfer** graph (accounts = nodes, INTERNAL
+  transfers = edges; leaky columns and cross-split edges are excluded).
+  `fraud_detect/ml/gnn/train_gnn.py` trains the vendored Multi-GNN backbone on that
+  graph **and** writes the precomputed scores store by running inference over all
+  splits.
+- *Live (per-statement, no graph).* Node 6a
+  (`ml_transaction.analyze(ing, model, gnn_scores=...)`) does an **O(1)
+  account-level lookup** via `gnn_lookup.score_account`, keyed on `ing.uen`. The
+  store is loaded once in `webapp.py` / `demo.py`; if it is absent the lookup
+  returns `None` and the pipeline behaves exactly as before (fail-safe).
+
+The live path only has `ing.uen` as a key, so the live contribution is coarse
+(account-level) while the offline model scores at the edge level — an honest gap.
+The full evaluation write-up (GNN test PR-AUC, recall-by-pattern vs the ~0.90 GBM
+baseline, and this live-vs-offline caveat) lives in
+`fraud_detect/ml/gnn/EVALUATION.md`.
+
+**Retrain and regenerate the scores store.** Install the offline deps first
+(`pip install -r requirements-gnn.txt`), then:
+
+```bash
+# Trains the GNN AND writes the precomputed models/gnn_scores.joblib store
+# (via inference over all splits):
+python -m fraud_detect.ml.gnn.train_gnn \
+    --data ~/Downloads/transaction_fraud_dataset \
+    --model gin --reverse_mp --ego --ports \
+    --out models/txn_fraud_gnn.pt \
+    --scores-out models/gnn_scores.joblib
+
+# GBM baseline trainer, for comparison:
+python -m fraud_detect.ml.train_transaction \
+    --data ~/Downloads/transaction_fraud_dataset \
+    --out models/txn_fraud_clf.joblib
+```
+
+**The new finding.** When the account lookup is elevated, Node 6a emits one
+`ML_TXN_GNN_RISK` finding (HIGH ≥ 0.80, MEDIUM ≥ 0.50) tagged with the agent
+sub-label `Node6a:MLTransaction:GNN`. It is **independent evidence** that flows
+into Node 4 corroboration alongside the GBM's `ML_TXN_FRAUD_LIKELIHOOD` — so
+GBM+GNN agreement naturally strengthens the risk call. Like every other node it
+only adds evidence for a reviewer and never auto-rejects.
+
+**Tests:** `tests/test_gnn_graph_builder.py` (split-safety, leaky-column and
+INTERNAL-only edge guards), `tests/test_gnn_lookup.py` (missing file / unknown key
+/ corrupt store all fail-safe to `None`), `tests/test_gnn_scores_store.py` (store
+shape + keying), and `tests/test_node6a_gnn.py` (elevated account → one finding at
+the right severity; no store → behavior unchanged; never auto-rejects).

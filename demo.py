@@ -15,6 +15,7 @@ Then start the reviewer UI:
 """
 from __future__ import annotations
 
+from fraud_detect.ml.gnn import gnn_lookup
 from fraud_detect.models import ReviewDecision
 from fraud_detect.pipeline import run_pipeline
 from fraud_detect.store import CaseStore
@@ -59,6 +60,10 @@ def main() -> None:
         store_path.unlink()
     store = CaseStore(str(store_path))
 
+    # Load the precomputed GNN graph-fraud scores once (fail-safe: None if absent).
+    # gnn_lookup imports only joblib (no torch), so this is safe here.
+    gnn_scores = gnn_lookup.load_scores()
+
     samples = [
         ("Clean statement", generate_clean("samples")),
         ("Borderline (formatting only)", generate_medium("samples")),
@@ -71,7 +76,7 @@ def main() -> None:
         print("#" * 78)
         print(f"#  {label}")
         print("#" * 78)
-        r = run_pipeline(gen.path, store=store)
+        r = run_pipeline(gen.path, store=store, gnn_scores=gnn_scores)
         store.upsert_report(r)
         _print_report(r)
         reports.append((label, r, gen))
