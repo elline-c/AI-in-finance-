@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ case.case_id }} · Pipeline stages{% endblock %}
+{% block body %}
+
+<div class="panel">
+  <h2 style="margin:0 0 4px">{{ case.case_id }} — pipeline stages</h2>
+  <p class="muted" style="margin:0">What each agent in the screening pipeline produced,
+  in order. Every finding carries a stable reason code and readable evidence (MAS FEAT).</p>
+</div>
+
+{% include "_case_nav.html" %}
+
+{% for title, blurb, items in stages %}
+<div class="panel">
+  <div class="stage-head">
+    <h3 style="margin:0">{{ title }}</h3>
+    {% if items %}
+      <span class="count hit">{{ items|length }} finding{{ "s" if items|length != 1 }}</span>
+    {% else %}
+      <span class="count ok">clear</span>
+    {% endif %}
+  </div>
+  <p class="muted" style="margin:6px 0 0">{{ blurb }}</p>
+
+  {% if items %}
+  <table style="margin-top:12px">
+    <thead><tr><th>Severity</th><th>Reason code</th><th>Issue &amp; evidence</th><th>Page / row</th></tr></thead>
+    <tbody>
+      {% for f in items %}
+      <tr>
+        <td class="sev-{{ f.severity.value }}">{{ f.severity.value }}</td>
+        <td><code>{{ f.code }}</code></td>
+        <td><b>{{ f.title }}</b><div class="evidence">{{ f.evidence }}</div></td>
+        <td class="muted">{% if f.page %}p.{{ f.page }}{% endif %}{% if f.field %}<br>{{ f.field }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted" style="margin-top:8px">No findings at this stage.</p>
+  {% endif %}
+</div>
+{% endfor %}
+
+<div class="panel">
+  <a class="btn primary" href="/case/{{ case.case_id }}">← Back to overview &amp; decision</a>
+</div>
+{% endblock %}

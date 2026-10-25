@@ -128,6 +128,19 @@ def customer_status(case: Case) -> dict:
                        "re-submit or provide an alternative statement."),
             "step": 3,
         }
+    if decision == ReviewDecision.NEEDS_INFO:
+        # Relay the reviewer's customer-safe message verbatim; no scores/evidence.
+        msg = (case.review.info_request or
+               "Please provide an additional or clearer bank statement so we can "
+               "complete our verification.")
+        return {
+            "key": "action_needed",
+            "label": "Action needed",
+            "tone": "warn",
+            "headline": "We need a little more information",
+            "detail": msg,
+            "step": 2,
+        }
 
     # No human decision yet — base the message on the automated routing, but
     # never reveal scores or that anything was "flagged".

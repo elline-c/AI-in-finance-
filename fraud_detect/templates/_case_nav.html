@@ -1,0 +1,9 @@
+{# Sub-navigation across the analyst review stages for one case.
+   Expects `case` and `active` (one of: overview, transactions, stages). #}
+<div class="tabs">
+  <a class="tab {% if active=='overview' %}on{% endif %}" href="/case/{{ case.case_id }}">Overview</a>
+  <a class="tab {% if active=='transactions' %}on{% endif %}" href="/case/{{ case.case_id }}/transactions">Flagged transactions</a>
+  <a class="tab {% if active=='stages' %}on{% endif %}" href="/case/{{ case.case_id }}/stages">Pipeline stages</a>
+  <span style="flex:1"></span>
+  <a class="btn" href="/pdf/{{ case.case_id }}" target="_blank">📄 Statement PDF</a>
+</div>

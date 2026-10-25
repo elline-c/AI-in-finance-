@@ -77,14 +77,33 @@ Conditional decisions (per the design):
 
 ## Human-in-the-loop review UI
 
-FastAPI app (`fraud_detect/webapp.py`) where a credit analyst can:
-- see the **screening queue** (auto-cleared vs escalated),
-- open a case and read the **risk score, confidence score, every detected issue
-  with its evidence and the relevant page/row**,
-- **view the statement PDF**,
-- **confirm** the concern (reject application) or **clear** it (approve), recording
-  a **reason** and optional **feedback for future model training**,
-- everything is written to a **case store + audit log** (`fraud_detect/store.py`).
+FastAPI app (`fraud_detect/webapp.py`) where a credit analyst works through each
+stage of a case:
+
+- **Screening queue** (`/`) — all cases (auto-cleared vs escalated); still-open
+  cases (awaiting a human, or awaiting the customer) sort to the top, highest risk
+  first. A status badge shows `PENDING` / `NEEDS INFO` / `APPROVED` / `REJECTED`.
+- **Case overview** (`/case/{id}`) — risk score, confidence score, a
+  **findings-by-pipeline-stage** summary, and the decision panel.
+- **Flagged transactions** (`/case/{id}/transactions`) — every parsed row joined
+  with the findings that cite it; flagged rows highlighted and listed first, each
+  with its reason code and evidence.
+- **Pipeline stages** (`/case/{id}/stages`) — what each agent produced
+  (Ingestion / Visual forensics / Financial logic / Cross-case memory / ML), with
+  a per-stage "clear" or finding count — so the analyst can see *which stage* fired.
+- **Statement PDF** (`/pdf/{id}`).
+- **Three analyst actions** on a case:
+  - **Request more information** → sets the case to **`NEEDS_INFO`** and stores a
+    *customer-safe* message that the customer portal relays (no scores/evidence).
+    A non-terminal state: the applicant can re-submit and the case returns to review.
+  - **Approve** (clear the concern) or **Reject** (confirm), each requiring a
+    **reason** and capturing optional **feedback for future model training**.
+- Everything is written to a **case store + audit log** (`fraud_detect/store.py`),
+  including `INFO_REQUESTED` events.
+
+> The machine never rejects on its own — only a human can approve, reject, or ask
+> for more information. See `CUSTOMER_PORTAL_README.md` for how these states appear
+> to the applicant.
 
 ---
 

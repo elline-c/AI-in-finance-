@@ -30,8 +30,14 @@ decision. Internal state is mapped to four neutral customer statuses:
 |----------------|---------------|
 | `AUTO_CLEAR` (no human decision yet) | **Verified** — passed automated checks, moving forward |
 | `HUMAN_REVIEW` (no human decision yet) | **Being reviewed** — routine specialist review, no action needed (never "suspected tampering") |
+| Human `NEEDS_INFO` | **Action needed** — relays the reviewer's customer-safe message (e.g. "please re-upload clearer pages 2–3"); the applicant can re-submit |
 | Human `APPROVED` | **Verified** |
 | Human `REJECTED` | **More information needed** — neutral request to re-submit / contact us (never a fraud accusation) |
+
+The analyst sets `NEEDS_INFO` from the case overview in the analyst app
+(`POST /case/{id}/request-info`); the message they type there is what the
+customer sees here, verbatim. Internal scores, evidence, and reason codes are
+never relayed.
 
 The machine never approves or rejects the customer; a person always makes the final
 call. This mirrors the MAS **FEAT** stance the rest of the system is built around.

@@ -10,11 +10,12 @@
     {% else %}
       <span class="pill" style="background:#c62828">ESCALATED — HUMAN REVIEW</span>
     {% endif %}
-    <span style="flex:1"></span>
-    <a class="btn" href="/pdf/{{ case.case_id }}" target="_blank">📄 View statement PDF</a>
+    <span class="badge b-{{ case.review.decision.value }}">{{ case.review.decision.value.replace("_"," ") }}</span>
   </div>
   <p class="muted" style="margin-top:8px">{{ r.summary }}</p>
 </div>
+
+{% include "_case_nav.html" %}
 
 <div class="grid">
   <div class="panel" style="text-align:center">
@@ -46,58 +47,83 @@
 </div>
 
 <div class="panel">
-  <h3 style="margin-top:0">Detected issues &amp; evidence <span class="muted">({{ r.findings|length }})</span></h3>
-  {% if r.findings %}
-  <table>
-    <thead><tr><th>Severity</th><th>Reason code</th><th>Issue &amp; evidence</th><th>Page / row</th></tr></thead>
-    <tbody>
-      {% for f in r.findings %}
-      <tr>
-        <td class="sev-{{ f.severity.value }}">{{ f.severity.value }}</td>
-        <td><code>{{ f.code }}</code></td>
-        <td><b>{{ f.title }}</b><div class="evidence">{{ f.evidence }}</div></td>
-        <td class="muted">{% if f.page %}p.{{ f.page }}{% endif %} {% if f.field %}<br>{{ f.field }}{% endif %}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">No issues detected. Clean statement — an approval recommendation was auto-generated.</p>
+  <div class="stage-head" style="margin-bottom:10px">
+    <h3 style="margin:0">Findings by pipeline stage</h3>
+    <a class="muted" href="/case/{{ case.case_id }}/stages" style="font-size:13px">full detail →</a>
+  </div>
+  {% for title, blurb, items in stages %}
+    {% if items %}
+    <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--line)">
+      <span class="count hit">{{ items|length }}</span>
+      <b>{{ title }}</b>
+      <span class="muted" style="font-size:13px">{{ blurb }}</span>
+    </div>
+    {% endif %}
+  {% endfor %}
+  {% if r.findings|length == 0 %}
+    <p class="muted">No issues detected across any stage. Clean statement.</p>
   {% endif %}
 </div>
 
 <div class="panel">
   <h3 style="margin-top:0">Human decision</h3>
-  {% if case.review.decision.value != "PENDING" %}
+
+  {% if case.review.decision.value in ("APPROVED", "REJECTED") %}
     <p><b>Decision:</b>
       {% if case.review.decision.value == "REJECTED" %}<span class="sev-HIGH">REJECTED</span>
       {% else %}<span class="sev-LOW">APPROVED</span>{% endif %}
       by <b>{{ case.review.reviewer }}</b> on {{ case.review.reviewed_at }}</p>
     <p><b>Reason:</b> {{ case.review.reason }}</p>
     {% if case.review.feedback_for_training %}<p><b>Feedback for future training:</b> {{ case.review.feedback_for_training }}</p>{% endif %}
+
   {% else %}
-    <p class="muted">The credit analyst reviews the statement, evidence and supporting documents,
-    then confirms the fraud concern (reject) or clears it (approve). Recording a reason keeps the
-    decision auditable (MAS FEAT). Feedback is captured to improve future screening.</p>
-    <form action="/case/{{ case.case_id }}/decide" method="post">
-      <div class="grid">
-        <div><label>Reviewer name</label><input name="reviewer" required placeholder="e.g. Jane Tan, Credit Risk"></div>
-        <div><label>Decision</label>
-          <select name="decision">
-            <option value="reject">Reject application (confirm tampering / unsuitable)</option>
-            <option value="approve">Approve application (clear the concern)</option>
-          </select>
-        </div>
-      </div>
-      <label>Reason (required, audited)</label>
-      <textarea name="reason" rows="2" required placeholder="Why you reached this decision"></textarea>
-      <label>Feedback for future model training (optional)</label>
-      <textarea name="feedback" rows="2" placeholder="e.g. false positive on currency symbol; row 8 was a genuine bank fee"></textarea>
-      <div style="margin-top:12px; display:flex; gap:10px">
-        <button class="btn danger" type="submit">Submit decision</button>
-        <a class="btn" href="/">Cancel</a>
-      </div>
-    </form>
+    {% if case.review.decision.value == "NEEDS_INFO" %}
+    <div class="panel" style="background:#2a2410; border-color:#6d5a16">
+      <p style="margin:0 0 6px"><span class="badge b-NEEDS_INFO">AWAITING CUSTOMER</span>
+        requested by <b>{{ case.review.reviewer }}</b> on {{ case.review.info_requested_at }}</p>
+      <p style="margin:0" class="muted">Message sent to applicant:</p>
+      <p style="margin:4px 0 0">“{{ case.review.info_request }}”</p>
+      {% if case.review.reason %}<p class="muted" style="margin-top:6px">Internal note: {{ case.review.reason }}</p>{% endif %}
+    </div>
+    <p class="muted">You can still record a final decision below once the applicant responds.</p>
+    {% else %}
+    <p class="muted">Review the statement, the flagged transactions and the stage evidence,
+    then either request more information from the applicant, or record a final decision.
+    Recording a reason keeps the decision auditable (MAS FEAT). The machine never rejects
+    on its own.</p>
+    {% endif %}
+
+    <div class="grid" style="align-items:start">
+      <!-- Request more information -->
+      <form action="/case/{{ case.case_id }}/request-info" method="post">
+        <h4 style="margin:4px 0 2px">Ask the applicant for more information</h4>
+        <label>Reviewer name</label>
+        <input name="reviewer" required placeholder="e.g. Jane Tan, Credit Risk">
+        <label>Message to the applicant <span class="muted">(customer-safe — no scores/evidence)</span></label>
+        <textarea name="message" rows="3" required
+          placeholder="e.g. Please re-upload a clearer copy of pages 2–3, or provide a statement covering Feb–Mar."></textarea>
+        <label>Internal note <span class="muted">(optional, not shown to customer)</span></label>
+        <textarea name="internal_note" rows="2" placeholder="e.g. scan quality too low to confirm balances"></textarea>
+        <div style="margin-top:12px"><button class="btn" type="submit">Request info → set NEEDS_INFO</button></div>
+      </form>
+
+      <!-- Final decision -->
+      <form action="/case/{{ case.case_id }}/decide" method="post">
+        <h4 style="margin:4px 0 2px">Record a final decision</h4>
+        <label>Reviewer name</label>
+        <input name="reviewer" required placeholder="e.g. Jane Tan, Credit Risk">
+        <label>Decision</label>
+        <select name="decision">
+          <option value="reject">Reject application (confirm tampering / unsuitable)</option>
+          <option value="approve">Approve application (clear the concern)</option>
+        </select>
+        <label>Reason (required, audited)</label>
+        <textarea name="reason" rows="2" required placeholder="Why you reached this decision"></textarea>
+        <label>Feedback for future model training (optional)</label>
+        <textarea name="feedback" rows="2" placeholder="e.g. false positive on currency symbol; row 8 was a genuine bank fee"></textarea>
+        <div style="margin-top:12px"><button class="btn danger" type="submit">Submit decision</button></div>
+      </form>
+    </div>
   {% endif %}
 </div>
 
