@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Track your application{% endblock %}
+{% block body %}
+
+<div class="card">
+  <h1>Track your application</h1>
+  <p class="lede">Enter the reference number from your confirmation to see the
+  latest status.</p>
+
+  <form action="/status" method="get">
+    <label for="ref">Reference number</label>
+    <div style="display:flex; gap:12px; align-items:stretch">
+      <input id="ref" name="ref" value="{{ ref }}" required
+             placeholder="e.g. CASE-2BF06D6D92" style="flex:1">
+      <button class="btn" type="submit">Check status</button>
+    </div>
+  </form>
+
+  {% if not_found %}
+  <div class="status tone-warn" style="margin-top:22px">
+    <div class="icon">!</div>
+    <div>
+      <h2>We couldn't find that reference</h2>
+      <p>Please double-check the reference number from your confirmation. If you
+      still can't find it, contact your relationship manager.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if case %}
+<div class="card">
+  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px">
+    <h2 style="margin:0">Application {{ case.case_id }}</h2>
+    <span class="hint">{{ case.report.account_holder or "" }}</span>
+  </div>
+
+  {% include "_status_block.html" %}
+
+  <div class="note" style="margin-top:20px">
+    Questions about your application? Reply to your confirmation email or contact
+    your relationship manager and quote reference <strong>{{ case.case_id }}</strong>.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

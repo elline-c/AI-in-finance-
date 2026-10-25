@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Apply for a corporate loan{% endblock %}
+{% block body %}
+
+<div class="card">
+  <h1>Corporate loan application</h1>
+  <p class="lede">Tell us about your business and upload a recent bank statement.
+  It takes about 3 minutes.</p>
+
+  <div class="steps" style="margin-top:20px">
+    <div class="step active"><div class="dot">1</div>Your details</div>
+    <div class="step"><div class="dot">2</div>Verification</div>
+    <div class="step"><div class="dot">3</div>Decision</div>
+  </div>
+
+  <form action="/apply" method="post" enctype="multipart/form-data">
+    <div class="row">
+      <div>
+        <label for="company_name">Registered company name</label>
+        <input id="company_name" name="company_name" required
+               placeholder="e.g. Meridian Trading Pte Ltd">
+      </div>
+      <div>
+        <label for="uen">UEN <span class="hint">(business reg. no.)</span></label>
+        <input id="uen" name="uen" required placeholder="e.g. 200923456B">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="contact_email">Contact email</label>
+        <input id="contact_email" name="contact_email" type="email" required
+               placeholder="you@company.com">
+      </div>
+      <div>
+        <label for="loan_amount">Loan amount <span class="hint">(optional)</span></label>
+        <input id="loan_amount" name="loan_amount" placeholder="e.g. SGD 500,000">
+      </div>
+    </div>
+
+    <label for="file">Bank statement (PDF)
+      <span class="hint">— a recent corporate account statement, up to 25&nbsp;MB</span>
+    </label>
+    <div class="file">
+      <input id="file" name="file" type="file" accept="application/pdf" required>
+    </div>
+
+    <div class="note" style="margin-top:18px">
+      <strong>What happens next?</strong> We run a quick, standard verification
+      check on your statement. Most applications are confirmed automatically.
+      If anything needs a closer look, one of our specialists reviews it — a
+      routine step, and a person always makes the final call.
+    </div>
+
+    <div style="margin-top:22px; display:flex; gap:12px; align-items:center">
+      <button class="btn" type="submit">Submit application</button>
+      <a class="btn secondary" href="/status">I already have a reference</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Your privacy</h2>
+  <ul class="plain">
+    <li>Your statement is used only to assess this loan application.</li>
+    <li>It is stored securely and access is restricted to our assessment team.</li>
+    <li>You can ask us about the status of your application at any time using
+        your reference number.</li>
+  </ul>
+</div>
+{% endblock %}

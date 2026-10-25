@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Application submitted{% endblock %}
+{% block body %}
+
+<div class="card">
+  <h1>Thank you — your application is in</h1>
+  <p class="lede">Keep your reference number safe. You can use it any time to
+  track your application.</p>
+
+  <div style="margin:18px 0">
+    <div class="hint" style="font-weight:600; margin-bottom:6px">Your reference number</div>
+    <span class="ref">{{ case.case_id }}</span>
+  </div>
+
+  {% include "_status_block.html" %}
+
+  <div style="margin-top:22px; display:flex; gap:12px">
+    <a class="btn" href="/status?ref={{ case.case_id }}">Track this application</a>
+    <a class="btn secondary" href="/">Start another application</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>What we received</h2>
+  <ul class="plain">
+    <li><strong>Company:</strong> {{ case.report.account_holder or "—" }}</li>
+    <li><strong>UEN:</strong> {{ case.report.uen or "—" }}</li>
+    {% if case.report.statement_period %}
+    <li><strong>Statement period:</strong> {{ case.report.statement_period }}</li>
+    {% endif %}
+    <li><strong>Submitted:</strong> {{ case.report.created_at.strftime("%d %b %Y, %H:%M UTC") }}</li>
+  </ul>
+  <div class="note" style="margin-top:14px">
+    We will email <strong>any updates</strong> to the address you provided. A
+    specialist always makes the final decision — nothing is approved or declined
+    automatically.
+  </div>
+</div>
+{% endblock %}
