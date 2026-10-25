@@ -16,6 +16,7 @@ Then start the reviewer UI:
 from __future__ import annotations
 
 from fraud_detect.ml.gnn import gnn_lookup
+from fraud_detect.nodes import ml_statement, ml_transaction
 from fraud_detect.models import ReviewDecision
 from fraud_detect.pipeline import run_pipeline
 from fraud_detect.store import CaseStore
@@ -64,6 +65,11 @@ def main() -> None:
     # gnn_lookup imports only joblib (no torch), so this is safe here.
     gnn_scores = gnn_lookup.load_scores()
 
+    # Load the trained ML models once (fail-safe: None if the .joblib is absent),
+    # so the optional ML nodes (6a/6b) run alongside the rule-based agents.
+    txn_model = ml_transaction.load_model()
+    statement_model = ml_statement.load_model()
+
     samples = [
         ("Clean statement", generate_clean("samples")),
         ("Borderline (formatting only)", generate_medium("samples")),
@@ -76,7 +82,7 @@ def main() -> None:
         print("#" * 78)
         print(f"#  {label}")
         print("#" * 78)
-        r = run_pipeline(gen.path, store=store, gnn_scores=gnn_scores)
+        r = run_pipeline(gen.path, store=store, txn_model=txn_model, statement_model=statement_model, gnn_scores=gnn_scores)
         store.upsert_report(r)
         _print_report(r)
         reports.append((label, r, gen))
