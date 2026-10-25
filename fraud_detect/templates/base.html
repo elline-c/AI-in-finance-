@@ -38,6 +38,21 @@
     .sev-HIGH { color:#ff8a80; } .sev-MEDIUM { color:#ffd54f; } .sev-LOW { color:#a5d6a7; } .sev-INFO { color:#90caf9; }
     code { background:#0d151d; padding:1px 6px; border-radius:5px; font-size:12px; }
     .evidence { font-size:13px; color:#c9d6e0; margin-top:4px; }
+    .tabs { display:flex; gap:6px; align-items:center; margin-bottom:16px; }
+    .tab { padding:8px 14px; border-radius:8px; border:1px solid var(--line);
+           background:#22303c; color:var(--muted); font-size:14px; }
+    .tab.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+    .tab:hover { text-decoration:none; color:var(--ink); }
+    .stage-head { display:flex; align-items:center; gap:10px; }
+    .count { font-size:12px; font-weight:700; padding:1px 9px; border-radius:999px;
+             background:#0d151d; border:1px solid var(--line); }
+    .count.hit { background:#c62828; border-color:#c62828; color:#fff; }
+    .count.ok { background:#1b5e20; border-color:#1b5e20; color:#fff; }
+    tr.flag td { background:rgba(198,40,40,.10); }
+    .num { text-align:right; font-variant-numeric:tabular-nums; }
+    .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; color:#fff; }
+    .b-PENDING{background:#546e7a}.b-NEEDS_INFO{background:#f9a825;color:#1b2733}
+    .b-APPROVED{background:#2e7d32}.b-REJECTED{background:#c62828}
   </style>
 </head>
 <body>

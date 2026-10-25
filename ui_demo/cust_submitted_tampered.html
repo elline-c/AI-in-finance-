@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Application submitted · Meridian Bank</title>
+  <style>
+    :root {
+      --bg:#f4f6fb; --card:#ffffff; --ink:#1b2733; --muted:#5e6e7e;
+      --line:#e3e8ef; --brand:#1a56db; --brand-dark:#123a94;
+      --ok:#1a7f4b; --ok-bg:#e8f6ee; --warn:#9a6700; --warn-bg:#fdf3e0;
+      --info:#1a56db; --info-bg:#e9f0fe; --shadow:0 1px 3px rgba(16,24,40,.08);
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+           background:var(--bg); color:var(--ink); line-height:1.5; }
+    a { color:var(--brand); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+
+    header { background:var(--card); border-bottom:1px solid var(--line); }
+    .bar { max-width:900px; margin:0 auto; padding:16px 24px; display:flex;
+           align-items:center; gap:12px; }
+    .logo { font-weight:800; font-size:18px; color:var(--brand); display:flex;
+            align-items:center; gap:8px; }
+    .logo .mark { width:26px; height:26px; border-radius:7px; background:var(--brand);
+                  color:#fff; display:grid; place-items:center; font-size:15px; }
+    .bar nav { margin-left:auto; display:flex; gap:20px; font-size:14px; }
+
+    main { max-width:900px; margin:0 auto; padding:32px 24px 56px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+            padding:28px; box-shadow:var(--shadow); margin-bottom:22px; }
+    h1 { font-size:26px; margin:0 0 6px; letter-spacing:-.01em; }
+    h2 { font-size:18px; margin:0 0 14px; }
+    .lede { color:var(--muted); font-size:15px; margin:0 0 4px; }
+
+    label { display:block; font-size:13px; font-weight:600; color:var(--ink);
+            margin:16px 0 6px; }
+    .hint { font-weight:400; color:var(--muted); font-size:12px; }
+    input, select { width:100%; padding:11px 13px; font-size:15px; color:var(--ink);
+            background:#fff; border:1px solid var(--line); border-radius:9px; }
+    input:focus, select:focus { outline:2px solid var(--brand); border-color:var(--brand); }
+    .file { border:1.5px dashed var(--line); border-radius:11px; padding:18px;
+            background:#fafbfe; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+    .btn { display:inline-block; border:0; cursor:pointer; font-size:15px;
+           font-weight:600; padding:12px 22px; border-radius:9px;
+           background:var(--brand); color:#fff; }
+    .btn:hover { background:var(--brand-dark); text-decoration:none; }
+    .btn.secondary { background:#eef2f8; color:var(--ink); }
+    .btn.secondary:hover { background:#e2e8f2; }
+
+    .ref { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:20px;
+           font-weight:700; letter-spacing:.04em; background:#f1f5fb;
+           border:1px solid var(--line); border-radius:9px; padding:10px 14px;
+           display:inline-block; }
+
+    .status { display:flex; gap:16px; align-items:flex-start; padding:18px;
+              border-radius:12px; border:1px solid var(--line); }
+    .status .icon { width:40px; height:40px; border-radius:50%; flex:none;
+                    display:grid; place-items:center; font-size:20px; }
+    .tone-ok   { background:var(--ok-bg);   border-color:#bfe6cf; }
+    .tone-ok   .icon { background:var(--ok);   color:#fff; }
+    .tone-info { background:var(--info-bg); border-color:#c9dbfb; }
+    .tone-info .icon { background:var(--info); color:#fff; }
+    .tone-warn { background:var(--warn-bg); border-color:#f3dcad; }
+    .tone-warn .icon { background:var(--warn); color:#fff; }
+    .status h2 { margin:0 0 4px; }
+    .status p { margin:0; color:var(--muted); font-size:14px; }
+
+    .steps { display:flex; gap:0; margin:4px 0 24px; counter-reset:s; }
+    .step { flex:1; text-align:center; position:relative; font-size:13px;
+            color:var(--muted); }
+    .step .dot { width:30px; height:30px; border-radius:50%; margin:0 auto 8px;
+                 background:#e3e8ef; color:#8a97a5; display:grid; place-items:center;
+                 font-weight:700; position:relative; z-index:1; }
+    .step::before { content:""; position:absolute; top:15px; left:-50%; width:100%;
+                    height:2px; background:#e3e8ef; z-index:0; }
+    .step:first-child::before { display:none; }
+    .step.done .dot, .step.active .dot { background:var(--brand); color:#fff; }
+    .step.done::before, .step.active::before { background:var(--brand); }
+    .step.active { color:var(--ink); font-weight:600; }
+
+    .note { font-size:13px; color:var(--muted); background:#f7f9fc;
+            border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+    .note strong { color:var(--ink); }
+    ul.plain { margin:8px 0 0; padding-left:18px; color:var(--muted); font-size:14px; }
+    ul.plain li { margin:4px 0; }
+    footer { max-width:900px; margin:0 auto; padding:8px 24px 36px;
+             color:var(--muted); font-size:12px; }
+    @media (max-width:560px){ .row{grid-template-columns:1fr} }
+  </style>
+</head>
+<body><div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a56db;color:#fff;font:600 12px system-ui;padding:6px 14px;text-align:center;letter-spacing:.02em">DEMO SNAPSHOT · Customer — Submitted (under review) · <a href="index.html" style="color:#fff;text-decoration:underline">demo index</a></div><div style="height:30px"></div>
+  <header>
+    <div class="bar">
+      <span class="logo"><span class="mark">M</span> Meridian Bank</span>
+      <nav>
+        <a href="apply.html">New application</a>
+        <a href="status_lookup.html">Track application</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+
+<div class="card">
+  <h1>Thank you — your application is in</h1>
+  <p class="lede">Keep your reference number safe. You can use it any time to
+  track your application.</p>
+
+  <div style="margin:18px 0">
+    <div class="hint" style="font-weight:600; margin-bottom:6px">Your reference number</div>
+    <span class="ref">CASE-4B3998A2F5</span>
+  </div>
+
+  
+
+
+<div class="steps">
+  <div class="step done">
+    <div class="dot">1</div>Submitted
+  </div>
+  <div class="step active">
+    <div class="dot">2</div>Verification
+  </div>
+  <div class="step ">
+    <div class="dot">3</div>Decision
+  </div>
+</div>
+
+<div class="status tone-warn">
+  <div class="icon">!</div>
+  <div>
+    <h2>We need a little more information</h2>
+    <p>Thank you for your application. Could you please re-upload a clearer copy of pages 2 and 3 of your statement, and confirm the account holder name as registered with ACRA?</p>
+  </div>
+</div>
+
+  <div style="margin-top:22px; display:flex; gap:12px">
+    <a class="btn" href="cust_status_needinfo.html">Track this application</a>
+    <a class="btn secondary" href="apply.html">Start another application</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>What we received</h2>
+  <ul class="plain">
+    <li><strong>Company:</strong> Meridian Trading Pte Ltd</li>
+    <li><strong>UEN:</strong> 200923456B</li>
+    
+    <li><strong>Statement period:</strong> 2025-01-01 to 2025-04-28</li>
+    
+    <li><strong>Submitted:</strong> 25 Oct 2026, 11:30 UTC</li>
+  </ul>
+  <div class="note" style="margin-top:14px">
+    We will email <strong>any updates</strong> to the address you provided. A
+    specialist always makes the final decision — nothing is approved or declined
+    automatically.
+  </div>
+</div>
+</main>
+  <footer>
+    Your documents are handled securely and used only to assess this application.
+    All verification decisions are made by our team — never automatically.
+  </footer>
+</body>
+</html>

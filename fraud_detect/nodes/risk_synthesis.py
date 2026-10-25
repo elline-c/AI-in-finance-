@@ -186,4 +186,8 @@ def synthesize(ing: IngestionResult, reports: Iterable[AgentReport]) -> RiskRepo
         routing_reason=routing_reason,
         findings=findings,
         summary=summary,
+        transactions=list(ing.transactions),
+        opening_balance=ing.opening_balance,
+        closing_balance=ing.closing_balance,
+        declared_currency=ing.declared_currency,
     )

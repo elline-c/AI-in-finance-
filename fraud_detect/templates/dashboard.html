@@ -20,7 +20,7 @@
         <td><span class="pill" style="background:{{ band_color[r.risk_band.value] }}">{{ r.risk_score }} · {{ r.risk_band.value }}</span></td>
         <td>{{ r.confidence_score }} · {{ r.confidence_band.value }}</td>
         <td>{% if r.routing.value == "AUTO_CLEAR" %}<span class="sev-LOW">Auto-clear</span>{% else %}<span class="sev-HIGH">Human review</span>{% endif %}</td>
-        <td>{{ c.review.decision.value }}</td>
+        <td><span class="badge b-{{ c.review.decision.value }}">{{ c.review.decision.value.replace("_"," ") }}</span></td>
         <td><a href="/case/{{ c.case_id }}">Open →</a></td>
       </tr>
       {% else %}

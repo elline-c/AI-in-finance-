@@ -1,0 +1,22 @@
+{# Reusable status card + progress tracker. Expects `status` and `case`. #}
+{% set icon = {"ok":"✓","info":"⏳","warn":"!"}[status.tone] %}
+
+<div class="steps">
+  <div class="step {% if status.step >= 1 %}done{% endif %}">
+    <div class="dot">1</div>Submitted
+  </div>
+  <div class="step {% if status.step > 2 %}done{% elif status.step == 2 %}active{% endif %}">
+    <div class="dot">2</div>Verification
+  </div>
+  <div class="step {% if status.step >= 3 %}active{% endif %}">
+    <div class="dot">3</div>Decision
+  </div>
+</div>
+
+<div class="status tone-{{ status.tone }}">
+  <div class="icon">{{ icon }}</div>
+  <div>
+    <h2>{{ status.headline }}</h2>
+    <p>{{ status.detail }}</p>
+  </div>
+</div>

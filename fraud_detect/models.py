@@ -44,7 +44,8 @@ class Routing(str, Enum):
 
 
 class ReviewDecision(str, Enum):
-    PENDING = "PENDING"
+    PENDING = "PENDING"             # screened, awaiting a human reviewer
+    NEEDS_INFO = "NEEDS_INFO"       # reviewer has asked the customer for more info
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
 
@@ -178,6 +179,14 @@ class RiskReport(BaseModel):
     findings: list[Finding] = Field(default_factory=list)
     summary: str = ""
 
+    # Parsed transaction rows, persisted so the analyst "review flagged
+    # transactions" screen can show each row alongside the findings that cite it.
+    # Optional (defaults to empty) so older stored reports still validate.
+    transactions: list[Transaction] = Field(default_factory=list)
+    opening_balance: Optional[float] = None
+    closing_balance: Optional[float] = None
+    declared_currency: Optional[str] = None
+
     # Cross-case memory: fingerprints of this case's transactions, persisted so
     # that future screenings can detect recurrence of the same entity/amount.
     transaction_fingerprints: list[TxnFingerprint] = Field(default_factory=list)
@@ -196,6 +205,11 @@ class ReviewRecord(BaseModel):
     reviewed_at: Optional[datetime] = None
     # Feedback captured to improve future model training (per the plan).
     feedback_for_training: Optional[str] = None
+    # When the reviewer requests more information (NEEDS_INFO), the customer-safe
+    # message they want relayed to the applicant is stored here so the customer
+    # portal can show it. Never contains internal scores/evidence.
+    info_request: Optional[str] = None
+    info_requested_at: Optional[datetime] = None
 
 
 class Case(BaseModel):

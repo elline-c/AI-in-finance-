@@ -169,12 +169,50 @@ class CaseStore:
     def list_cases(self) -> list[Case]:
         data = self._read()
         cases = [Case.model_validate(v) for v in data.values()]
-        # Sort: pending human-review first, then by risk desc
+        # Sort: still-open cases (awaiting a human or awaiting the customer) first,
+        # then finalised ones; within each group, highest risk first.
+        _open = {ReviewDecision.PENDING, ReviewDecision.NEEDS_INFO}
         cases.sort(key=lambda c: (
-            c.review.decision != ReviewDecision.PENDING,
+            c.review.decision not in _open,
             -c.report.risk_score,
         ))
         return cases
+
+    def request_info(self, case_id: str, reviewer: str,
+                     message_to_customer: str,
+                     internal_note: Optional[str] = None) -> Optional[Case]:
+        """Reviewer asks the applicant for more information.
+
+        Sets the case to NEEDS_INFO and stores a *customer-safe* message (no
+        internal scores/evidence) that the customer portal relays. This is a
+        non-terminal state — the applicant can re-submit and the case returns to
+        review. The machine still never rejects on its own.
+        """
+        with _LOCK:
+            data = self._read()
+            raw = data.get(case_id)
+            if not raw:
+                return None
+            case = Case.model_validate(raw)
+            now = datetime.utcnow()
+            case.review = ReviewRecord(
+                case_id=case_id,
+                decision=ReviewDecision.NEEDS_INFO,
+                reviewer=reviewer,
+                reason=internal_note,
+                info_request=message_to_customer,
+                info_requested_at=now,
+                # preserve any prior training feedback
+                feedback_for_training=case.review.feedback_for_training,
+            )
+            case.audit_log.append({
+                "ts": now.isoformat(),
+                "event": "INFO_REQUESTED",
+                "detail": f"reviewer={reviewer}; message={message_to_customer}",
+            })
+            data[case_id] = json.loads(case.model_dump_json())
+            self._write(data)
+            return case
 
     def record_decision(self, case_id: str, decision: ReviewDecision,
                         reviewer: str, reason: str,

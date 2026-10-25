@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ case.case_id }} · Transactions{% endblock %}
+{% block body %}
+
+<div class="panel">
+  <h2 style="margin:0 0 4px">{{ case.case_id }} — flagged transactions</h2>
+  <p class="muted" style="margin:0">
+    {{ flagged }} of {{ rows|length }} parsed row(s) carry a finding. Flagged rows are
+    highlighted and listed first. Each flag cites the stage and evidence behind it.
+  </p>
+</div>
+
+{% include "_case_nav.html" %}
+
+<div class="panel">
+  <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kv"><span class="muted">Opening</span><span>{{ "{:,.2f}".format(r.opening_balance) if r.opening_balance is not none else "—" }}</span></div>
+    <div class="kv"><span class="muted">Closing</span><span>{{ "{:,.2f}".format(r.closing_balance) if r.closing_balance is not none else "—" }}</span></div>
+    <div class="kv"><span class="muted">Currency</span><span>{{ r.declared_currency or "—" }}</span></div>
+    <div class="kv"><span class="muted">Rows</span><span>{{ rows|length }}</span></div>
+  </div>
+</div>
+
+<div class="panel">
+  {% if rows %}
+  <table>
+    <thead>
+      <tr><th>#</th><th>Date</th><th>Description</th><th class="num">Amount</th>
+          <th class="num">Balance</th><th>Flags &amp; evidence</th></tr>
+    </thead>
+    <tbody>
+      {% for t, fs in rows %}
+      <tr class="{% if fs %}flag{% endif %}">
+        <td class="muted">{{ t.index }}</td>
+        <td>{{ t.date or t.date_raw or "—" }}</td>
+        <td>{{ t.description or "—" }}</td>
+        <td class="num">{% if t.amount is not none %}{{ "{:+,.2f}".format(t.amount) }}{% else %}—{% endif %}</td>
+        <td class="num">{% if t.balance is not none %}{{ "{:,.2f}".format(t.balance) }}{% else %}—{% endif %}</td>
+        <td>
+          {% if fs %}
+            {% for f in fs %}
+            <div style="margin-bottom:6px">
+              <span class="sev-{{ f.severity.value }}">{{ f.severity.value }}</span>
+              <code>{{ f.code }}</code> <b>{{ f.title }}</b>
+              <div class="evidence">{{ f.evidence }}</div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <span class="muted">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No transactions were parsed from this statement
+  (this itself is usually a data-quality finding — see the pipeline stages).</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <a class="btn primary" href="/case/{{ case.case_id }}">← Back to overview &amp; decision</a>
+</div>
+{% endblock %}
