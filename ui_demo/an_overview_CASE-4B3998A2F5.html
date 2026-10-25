@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CASE-4B3998A2F5</title>
+  <style>
+    :root { --bg:#0f1720; --panel:#182430; --ink:#e7edf3; --muted:#8fa3b3; --line:#26333f; --accent:#3b82f6; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           background:var(--bg); color:var(--ink); }
+    a { color:var(--accent); text-decoration:none; }
+    header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex;
+             align-items:center; gap:12px; background:var(--panel); }
+    header h1 { font-size:16px; margin:0; font-weight:600; }
+    header .tag { font-size:11px; color:var(--muted); border:1px solid var(--line);
+                  padding:2px 8px; border-radius:999px; }
+    main { padding:24px; max-width:1100px; margin:0 auto; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+             padding:18px 20px; margin-bottom:18px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    .pill { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px;
+            font-weight:700; color:#fff; }
+    .muted { color:var(--muted); }
+    .score { font-size:34px; font-weight:800; line-height:1; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    .kv { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+    .btn { display:inline-block; padding:9px 16px; border-radius:8px; border:1px solid var(--line);
+           background:#22303c; color:var(--ink); cursor:pointer; font-size:14px; }
+    .btn.primary { background:var(--accent); border-color:var(--accent); }
+    .btn.danger { background:#c62828; border-color:#c62828; }
+    .btn.ok { background:#2e7d32; border-color:#2e7d32; }
+    input, textarea, select { width:100%; padding:9px 11px; background:#0d151d; color:var(--ink);
+             border:1px solid var(--line); border-radius:8px; font-size:14px; }
+    label { font-size:12px; color:var(--muted); display:block; margin:10px 0 4px; }
+    .sev-HIGH { color:#ff8a80; } .sev-MEDIUM { color:#ffd54f; } .sev-LOW { color:#a5d6a7; } .sev-INFO { color:#90caf9; }
+    code { background:#0d151d; padding:1px 6px; border-radius:5px; font-size:12px; }
+    .evidence { font-size:13px; color:#c9d6e0; margin-top:4px; }
+    .tabs { display:flex; gap:6px; align-items:center; margin-bottom:16px; }
+    .tab { padding:8px 14px; border-radius:8px; border:1px solid var(--line);
+           background:#22303c; color:var(--muted); font-size:14px; }
+    .tab.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+    .tab:hover { text-decoration:none; color:var(--ink); }
+    .stage-head { display:flex; align-items:center; gap:10px; }
+    .count { font-size:12px; font-weight:700; padding:1px 9px; border-radius:999px;
+             background:#0d151d; border:1px solid var(--line); }
+    .count.hit { background:#c62828; border-color:#c62828; color:#fff; }
+    .count.ok { background:#1b5e20; border-color:#1b5e20; color:#fff; }
+    tr.flag td { background:rgba(198,40,40,.10); }
+    .num { text-align:right; font-variant-numeric:tabular-nums; }
+    .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; color:#fff; }
+    .b-PENDING{background:#546e7a}.b-NEEDS_INFO{background:#f9a825;color:#1b2733}
+    .b-APPROVED{background:#2e7d32}.b-REJECTED{background:#c62828}
+  </style>
+</head>
+<body><div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#0f766e;color:#fff;font:600 12px system-ui;padding:6px 14px;text-align:center;letter-spacing:.02em">DEMO SNAPSHOT · Analyst — Case overview (tampered) · <a href="index.html" style="color:#fff;text-decoration:underline">demo index</a></div><div style="height:30px"></div>
+  <header>
+    <h1>🛡️ Bank Statement Tampering Screening</h1>
+    <span class="tag">4-agent pipeline</span>
+    <span class="tag">human-in-the-loop</span>
+    <span style="flex:1"></span>
+    <a href="dashboard.html">Dashboard</a>
+  </header>
+  <main>
+
+<div class="panel">
+  <div style="display:flex; align-items:center; gap:12px">
+    <h2 style="margin:0">CASE-4B3998A2F5</h2>
+    
+      <span class="pill" style="background:#c62828">ESCALATED — HUMAN REVIEW</span>
+    
+    <span class="badge b-NEEDS_INFO">NEEDS INFO</span>
+  </div>
+  <p class="muted" style="margin-top:8px">15 finding(s) across the visual-forensics and financial-logic agents (11 high-severity). Risk 100/100 (VERY_HIGH); confidence 95/100 (VERY_HIGH). Confidence rationale: +10: independent agents corroborate the finding.</p>
+</div>
+
+
+<div class="tabs">
+  <a class="tab " href="an_overview_CASE-4B3998A2F5.html">Overview</a>
+  <a class="tab " href="an_transactions_CASE-4B3998A2F5.html">Flagged transactions</a>
+  <a class="tab " href="an_stages_CASE-4B3998A2F5.html">Pipeline stages</a>
+  <span style="flex:1"></span>
+  <a class="btn" href="index.html" target="_blank">📄 Statement PDF</a>
+</div>
+
+<div class="grid">
+  <div class="panel" style="text-align:center">
+    <div class="muted">RISK SCORE</div>
+    <div class="score" style="color:#c62828">100</div>
+    <div class="pill" style="background:#c62828; margin-top:6px">VERY_HIGH</div>
+    <div class="muted" style="font-size:11px; margin-top:8px">1–25 Low · 26–50 Medium · 51–75 High · 76+ Very High</div>
+  </div>
+  <div class="panel" style="text-align:center">
+    <div class="muted">CONFIDENCE SCORE</div>
+    <div class="score">95</div>
+    <div class="pill" style="background:#37474f; margin-top:6px">VERY_HIGH</div>
+    <div class="muted" style="font-size:11px; margin-top:8px">How certain the AI is of the risk call.<br>Low confidence forces human review.</div>
+  </div>
+</div>
+
+<div class="panel">
+  <h3 style="margin-top:0">Statement details</h3>
+  <div class="grid">
+    <div>
+      <div class="kv"><span class="muted">Account holder</span><span>Meridian Trading Pte Ltd</span></div>
+      <div class="kv"><span class="muted">UEN</span><span>200923456B</span></div>
+    </div>
+    <div>
+      <div class="kv"><span class="muted">Statement period</span><span>2025-01-01 to 2025-04-28</span></div>
+      <div class="kv"><span class="muted">Routing reason</span><span>HUMAN_REVIEW</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="stage-head" style="margin-bottom:10px">
+    <h3 style="margin:0">Findings by pipeline stage</h3>
+    <a class="muted" href="an_stages_CASE-4B3998A2F5.html" style="font-size:13px">full detail →</a>
+  </div>
+  
+    
+  
+    
+    <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--line)">
+      <span class="count hit">6</span>
+      <b>2 · Visual forensics</b>
+      <span class="muted" style="font-size:13px">Font/format inconsistencies and editing-software traces in the document.</span>
+    </div>
+    
+  
+    
+    <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--line)">
+      <span class="count hit">9</span>
+      <b>3 · Financial logic</b>
+      <span class="muted" style="font-size:13px">Balance reconciliation, period gaps, structuring and counterparty checks.</span>
+    </div>
+    
+  
+    
+  
+    
+  
+  
+</div>
+
+<div class="panel">
+  <h3 style="margin-top:0">Human decision</h3>
+
+  
+    
+    <div class="panel" style="background:#2a2410; border-color:#6d5a16">
+      <p style="margin:0 0 6px"><span class="badge b-NEEDS_INFO">AWAITING CUSTOMER</span>
+        requested by <b>Jane Tan, Credit Risk</b> on 2026-10-25 11:30:26.608506</p>
+      <p style="margin:0" class="muted">Message sent to applicant:</p>
+      <p style="margin:4px 0 0">“Thank you for your application. Could you please re-upload a clearer copy of pages 2 and 3 of your statement, and confirm the account holder name as registered with ACRA?”</p>
+      <p class="muted" style="margin-top:6px">Internal note: balance breaks on rows 4-7; scan/edit traces; UEN name mismatch</p>
+    </div>
+    <p class="muted">You can still record a final decision below once the applicant responds.</p>
+    
+
+    <div class="grid" style="align-items:start">
+      <!-- Request more information -->
+      <form onsubmit="return false" action="/case/CASE-4B3998A2F5/request-info" method="post">
+        <h4 style="margin:4px 0 2px">Ask the applicant for more information</h4>
+        <label>Reviewer name</label>
+        <input name="reviewer" required placeholder="e.g. Jane Tan, Credit Risk">
+        <label>Message to the applicant <span class="muted">(customer-safe — no scores/evidence)</span></label>
+        <textarea name="message" rows="3" required
+          placeholder="e.g. Please re-upload a clearer copy of pages 2–3, or provide a statement covering Feb–Mar."></textarea>
+        <label>Internal note <span class="muted">(optional, not shown to customer)</span></label>
+        <textarea name="internal_note" rows="2" placeholder="e.g. scan quality too low to confirm balances"></textarea>
+        <div style="margin-top:12px"><button class="btn" type="submit">Request info → set NEEDS_INFO</button></div>
+      </form>
+
+      <!-- Final decision -->
+      <form onsubmit="return false" action="/case/CASE-4B3998A2F5/decide" method="post">
+        <h4 style="margin:4px 0 2px">Record a final decision</h4>
+        <label>Reviewer name</label>
+        <input name="reviewer" required placeholder="e.g. Jane Tan, Credit Risk">
+        <label>Decision</label>
+        <select name="decision">
+          <option value="reject">Reject application (confirm tampering / unsuitable)</option>
+          <option value="approve">Approve application (clear the concern)</option>
+        </select>
+        <label>Reason (required, audited)</label>
+        <textarea name="reason" rows="2" required placeholder="Why you reached this decision"></textarea>
+        <label>Feedback for future model training (optional)</label>
+        <textarea name="feedback" rows="2" placeholder="e.g. false positive on currency symbol; row 8 was a genuine bank fee"></textarea>
+        <div style="margin-top:12px"><button class="btn danger" type="submit">Submit decision</button></div>
+      </form>
+    </div>
+  
+</div>
+
+<div class="panel">
+  <h3 style="margin-top:0">Audit log</h3>
+  <table>
+    <thead><tr><th>Timestamp (UTC)</th><th>Event</th><th>Detail</th></tr></thead>
+    <tbody>
+      
+      <tr><td class="muted">2026-10-25T11:30:26.599361</td><td><code>SCREENED</code></td><td class="muted">risk=100 (VERY_HIGH), confidence=95 (VERY_HIGH), routing=HUMAN_REVIEW</td></tr>
+      
+      <tr><td class="muted">2026-10-25T11:30:26.608506</td><td><code>INFO_REQUESTED</code></td><td class="muted">reviewer=Jane Tan, Credit Risk; message=Thank you for your application. Could you please re-upload a clearer copy of pages 2 and 3 of your statement, and confirm the account holder name as registered with ACRA?</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+</main>
+</body>
+</html>

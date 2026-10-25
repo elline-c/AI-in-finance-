@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CASE-4B3998A2F5 · Transactions</title>
+  <style>
+    :root { --bg:#0f1720; --panel:#182430; --ink:#e7edf3; --muted:#8fa3b3; --line:#26333f; --accent:#3b82f6; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           background:var(--bg); color:var(--ink); }
+    a { color:var(--accent); text-decoration:none; }
+    header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex;
+             align-items:center; gap:12px; background:var(--panel); }
+    header h1 { font-size:16px; margin:0; font-weight:600; }
+    header .tag { font-size:11px; color:var(--muted); border:1px solid var(--line);
+                  padding:2px 8px; border-radius:999px; }
+    main { padding:24px; max-width:1100px; margin:0 auto; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+             padding:18px 20px; margin-bottom:18px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    .pill { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px;
+            font-weight:700; color:#fff; }
+    .muted { color:var(--muted); }
+    .score { font-size:34px; font-weight:800; line-height:1; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    .kv { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+    .btn { display:inline-block; padding:9px 16px; border-radius:8px; border:1px solid var(--line);
+           background:#22303c; color:var(--ink); cursor:pointer; font-size:14px; }
+    .btn.primary { background:var(--accent); border-color:var(--accent); }
+    .btn.danger { background:#c62828; border-color:#c62828; }
+    .btn.ok { background:#2e7d32; border-color:#2e7d32; }
+    input, textarea, select { width:100%; padding:9px 11px; background:#0d151d; color:var(--ink);
+             border:1px solid var(--line); border-radius:8px; font-size:14px; }
+    label { font-size:12px; color:var(--muted); display:block; margin:10px 0 4px; }
+    .sev-HIGH { color:#ff8a80; } .sev-MEDIUM { color:#ffd54f; } .sev-LOW { color:#a5d6a7; } .sev-INFO { color:#90caf9; }
+    code { background:#0d151d; padding:1px 6px; border-radius:5px; font-size:12px; }
+    .evidence { font-size:13px; color:#c9d6e0; margin-top:4px; }
+    .tabs { display:flex; gap:6px; align-items:center; margin-bottom:16px; }
+    .tab { padding:8px 14px; border-radius:8px; border:1px solid var(--line);
+           background:#22303c; color:var(--muted); font-size:14px; }
+    .tab.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+    .tab:hover { text-decoration:none; color:var(--ink); }
+    .stage-head { display:flex; align-items:center; gap:10px; }
+    .count { font-size:12px; font-weight:700; padding:1px 9px; border-radius:999px;
+             background:#0d151d; border:1px solid var(--line); }
+    .count.hit { background:#c62828; border-color:#c62828; color:#fff; }
+    .count.ok { background:#1b5e20; border-color:#1b5e20; color:#fff; }
+    tr.flag td { background:rgba(198,40,40,.10); }
+    .num { text-align:right; font-variant-numeric:tabular-nums; }
+    .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; color:#fff; }
+    .b-PENDING{background:#546e7a}.b-NEEDS_INFO{background:#f9a825;color:#1b2733}
+    .b-APPROVED{background:#2e7d32}.b-REJECTED{background:#c62828}
+  </style>
+</head>
+<body><div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#0f766e;color:#fff;font:600 12px system-ui;padding:6px 14px;text-align:center;letter-spacing:.02em">DEMO SNAPSHOT · Analyst — Flagged transactions (tampered) · <a href="index.html" style="color:#fff;text-decoration:underline">demo index</a></div><div style="height:30px"></div>
+  <header>
+    <h1>🛡️ Bank Statement Tampering Screening</h1>
+    <span class="tag">4-agent pipeline</span>
+    <span class="tag">human-in-the-loop</span>
+    <span style="flex:1"></span>
+    <a href="dashboard.html">Dashboard</a>
+  </header>
+  <main>
+
+<div class="panel">
+  <h2 style="margin:0 0 4px">CASE-4B3998A2F5 — flagged transactions</h2>
+  <p class="muted" style="margin:0">
+    5 of 28 parsed row(s) carry a finding. Flagged rows are
+    highlighted and listed first. Each flag cites the stage and evidence behind it.
+  </p>
+</div>
+
+
+<div class="tabs">
+  <a class="tab " href="an_overview_CASE-4B3998A2F5.html">Overview</a>
+  <a class="tab " href="an_transactions_CASE-4B3998A2F5.html">Flagged transactions</a>
+  <a class="tab " href="an_stages_CASE-4B3998A2F5.html">Pipeline stages</a>
+  <span style="flex:1"></span>
+  <a class="btn" href="index.html" target="_blank">📄 Statement PDF</a>
+</div>
+
+<div class="panel">
+  <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kv"><span class="muted">Opening</span><span>55,000.00</span></div>
+    <div class="kv"><span class="muted">Closing</span><span>600,873.55</span></div>
+    <div class="kv"><span class="muted">Currency</span><span>SGD</span></div>
+    <div class="kv"><span class="muted">Rows</span><span>28</span></div>
+  </div>
+</div>
+
+<div class="panel">
+  
+  <table>
+    <thead>
+      <tr><th>#</th><th>Date</th><th>Description</th><th class="num">Amount</th>
+          <th class="num">Balance</th><th>Flags &amp; evidence</th></tr>
+    </thead>
+    <tbody>
+      
+      <tr class="flag">
+        <td class="muted">8</td>
+        <td>2025-02-04</td>
+        <td>Sales Settlement</td>
+        <td class="num">+8,122.10</td>
+        <td class="num">60,267.77</td>
+        <td>
+          
+            
+            <div style="margin-bottom:6px">
+              <span class="sev-HIGH">HIGH</span>
+              <code>FL_BALANCE_BREAK</code> <b>Running balance does not reconcile</b>
+              <div class="evidence">Row 8 (2025-02-04 Sales Settlement): expected balance 65,267.77 (prev 57,145.67 + 8,122.10) but statement shows 60,267.77. Discrepancy of -5,000.00 indicates an altered amount or balance.</div>
+            </div>
+            
+          
+        </td>
+      </tr>
+      
+      <tr class="flag">
+        <td class="muted">9</td>
+        <td>2025-02-06</td>
+        <td>DBS Merchant Payout</td>
+        <td class="num">+5,355.24</td>
+        <td class="num">70,623.01</td>
+        <td>
+          
+            
+            <div style="margin-bottom:6px">
+              <span class="sev-HIGH">HIGH</span>
+              <code>FL_BALANCE_BREAK</code> <b>Running balance does not reconcile</b>
+              <div class="evidence">Row 9 (2025-02-06 DBS Merchant Payout): expected balance 65,623.01 (prev 60,267.77 + 5,355.24) but statement shows 70,623.01. Discrepancy of 5,000.00 indicates an altered amount or balance.</div>
+            </div>
+            
+          
+        </td>
+      </tr>
+      
+      <tr class="flag">
+        <td class="muted">18</td>
+        <td>2025-02-19</td>
+        <td>Ninja Van SG</td>
+        <td class="num">+3,052.12</td>
+        <td class="num">87,434.79</td>
+        <td>
+          
+            
+            <div style="margin-bottom:6px">
+              <span class="sev-HIGH">HIGH</span>
+              <code>FL_BALANCE_BREAK</code> <b>Running balance does not reconcile</b>
+              <div class="evidence">Row 18 (2025-02-19 Ninja Van SG): expected balance 119,628.79 (prev 116,576.67 + 3,052.12) but statement shows 87,434.79. Discrepancy of -32,194.00 indicates an altered amount or balance.</div>
+            </div>
+            
+          
+        </td>
+      </tr>
+      
+      <tr class="flag">
+        <td class="muted">19</td>
+        <td>2025-02-22</td>
+        <td>M1 Limited</td>
+        <td class="num">-2,229.18</td>
+        <td class="num">117,399.61</td>
+        <td>
+          
+            
+            <div style="margin-bottom:6px">
+              <span class="sev-HIGH">HIGH</span>
+              <code>FL_BALANCE_BREAK</code> <b>Running balance does not reconcile</b>
+              <div class="evidence">Row 19 (2025-02-22 M1 Limited): expected balance 85,205.61 (prev 87,434.79 - 2,229.18) but statement shows 117,399.61. Discrepancy of 32,194.00 indicates an altered amount or balance.</div>
+            </div>
+            
+          
+        </td>
+      </tr>
+      
+      <tr class="flag">
+        <td class="muted">22</td>
+        <td>2025-02-26</td>
+        <td>INWARD TT UNKNOWN LLC</td>
+        <td class="num">+480,000.00</td>
+        <td class="num">592,868.98</td>
+        <td>
+          
+            
+            <div style="margin-bottom:6px">
+              <span class="sev-HIGH">HIGH</span>
+              <code>FL_SUDDEN_DEPOSIT</code> <b>Sudden deposit far above historical baseline</b>
+              <div class="evidence">Credit of 480,000.00 on 2025-02-26 (INWARD TT UNKNOWN LLC) is 4.0x the historical average monthly credit (120,000). Off-baseline inflow warrants review.</div>
+            </div>
+            
+            <div style="margin-bottom:6px">
+              <span class="sev-MEDIUM">MEDIUM</span>
+              <code>FL_UNVERIFIED_COUNTERPARTY</code> <b>Large inflow from unverified counterparty</b>
+              <div class="evidence">Large credit of 480,000.00 from &#39;INWARD TT UNKNOWN LLC&#39;, which does not match any known/recurring vendor and has shell-like naming.</div>
+            </div>
+            
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">0</td>
+        <td>2025-01-04</td>
+        <td>M1 Limited</td>
+        <td class="num">-2,945.32</td>
+        <td class="num">52,054.68</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">1</td>
+        <td>2025-01-05</td>
+        <td>Office Rental</td>
+        <td class="num">-930.67</td>
+        <td class="num">51,124.01</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">2</td>
+        <td>2025-01-06</td>
+        <td>M1 Limited</td>
+        <td class="num">-1,738.48</td>
+        <td class="num">49,385.53</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">3</td>
+        <td>2025-01-10</td>
+        <td>Customer Payment INV</td>
+        <td class="num">+2,545.64</td>
+        <td class="num">51,931.17</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">4</td>
+        <td>2025-01-14</td>
+        <td>DBS Merchant Payout</td>
+        <td class="num">+5,306.36</td>
+        <td class="num">57,237.53</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">5</td>
+        <td>2025-01-20</td>
+        <td>Office Rental</td>
+        <td class="num">-6,649.65</td>
+        <td class="num">50,587.88</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">6</td>
+        <td>2025-01-25</td>
+        <td>SP Services</td>
+        <td class="num">+8,798.17</td>
+        <td class="num">59,386.05</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">7</td>
+        <td>2025-01-30</td>
+        <td>CPF Board</td>
+        <td class="num">-2,240.38</td>
+        <td class="num">57,145.67</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">10</td>
+        <td>2025-02-09</td>
+        <td>Customer Payment INV</td>
+        <td class="num">+6,552.94</td>
+        <td class="num">77,175.95</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">11</td>
+        <td>2025-02-09</td>
+        <td>CASH DEPOSIT</td>
+        <td class="num">+9,800.00</td>
+        <td class="num">86,975.95</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">12</td>
+        <td>2025-02-10</td>
+        <td>CASH DEPOSIT</td>
+        <td class="num">+9,799.00</td>
+        <td class="num">96,774.95</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">13</td>
+        <td>2025-02-11</td>
+        <td>CASH DEPOSIT</td>
+        <td class="num">+9,798.00</td>
+        <td class="num">106,572.95</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">14</td>
+        <td>2025-02-12</td>
+        <td>CASH DEPOSIT</td>
+        <td class="num">+9,797.00</td>
+        <td class="num">116,369.95</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">15</td>
+        <td>2025-02-10</td>
+        <td>Office Rental</td>
+        <td class="num">-3,625.98</td>
+        <td class="num">112,743.97</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">16</td>
+        <td>2025-02-14</td>
+        <td>Comfort Transport</td>
+        <td class="num">-3,419.53</td>
+        <td class="num">109,324.44</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">17</td>
+        <td>2025-02-17</td>
+        <td>Sales Settlement</td>
+        <td class="num">+7,252.23</td>
+        <td class="num">116,576.67</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">20</td>
+        <td>2025-02-23</td>
+        <td>IRAS GST</td>
+        <td class="num">-1,405.25</td>
+        <td class="num">115,994.36</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">21</td>
+        <td>2025-02-25</td>
+        <td>Supplier Payment</td>
+        <td class="num">-3,125.38</td>
+        <td class="num">112,868.98</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">23</td>
+        <td>2025-03-01</td>
+        <td>Ninja Van SG</td>
+        <td class="num">+3,476.52</td>
+        <td class="num">596,345.50</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">24</td>
+        <td>2025-03-06</td>
+        <td>M1 Limited</td>
+        <td class="num">-760.71</td>
+        <td class="num">595,584.79</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">25</td>
+        <td>2025-04-18</td>
+        <td>SP Services</td>
+        <td class="num">+6,145.29</td>
+        <td class="num">601,730.08</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">26</td>
+        <td>2025-04-24</td>
+        <td>Supplier Payment</td>
+        <td class="num">-4,635.76</td>
+        <td class="num">597,094.32</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+      <tr class="">
+        <td class="muted">27</td>
+        <td>2025-04-28</td>
+        <td>Sales Settlement</td>
+        <td class="num">+3,779.23</td>
+        <td class="num">600,873.55</td>
+        <td>
+          
+            <span class="muted">—</span>
+          
+        </td>
+      </tr>
+      
+    </tbody>
+  </table>
+  
+</div>
+
+<div class="panel">
+  <a class="btn primary" href="an_overview_CASE-4B3998A2F5.html">← Back to overview &amp; decision</a>
+</div>
+</main>
+</body>
+</html>

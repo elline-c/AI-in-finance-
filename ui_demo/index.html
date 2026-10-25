@@ -1,0 +1,75 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Statement Screening — UI demo</title>
+<style>
+ body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      background:#f4f6fb;color:#1b2733;line-height:1.55}
+ .wrap{max-width:900px;margin:0 auto;padding:40px 24px 64px}
+ h1{font-size:28px;margin:0 0 6px} .lede{color:#5e6e7e;margin:0 0 28px}
+ .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+ .card{background:#fff;border:1px solid #e3e8ef;border-radius:14px;padding:22px;
+       box-shadow:0 1px 3px rgba(16,24,40,.08)}
+ .card h2{margin:0 0 4px;font-size:17px}
+ .tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;color:#fff}
+ .tc{background:#1a56db} .ta{background:#0f766e}
+ ol{margin:12px 0 0;padding-left:20px} li{margin:7px 0}
+ a{color:#1a56db;text-decoration:none} a:hover{text-decoration:underline}
+ .note{font-size:13px;color:#5e6e7e;background:#fff;border:1px solid #e3e8ef;
+       border-radius:12px;padding:16px 18px;margin-top:22px}
+ .flow{font-size:13px;color:#5e6e7e;margin:4px 0 0}
+ @media(max-width:620px){.cols{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<h1>🛡️ Bank Statement Screening — UI demo</h1>
+<p class="lede">Static snapshots of both user interfaces, rendered from real cases
+run through the actual screening pipeline. Click through — links work offline.</p>
+
+<div class="cols">
+  <div class="card">
+    <span class="tag tc">CUSTOMER</span>
+    <h2>Loan applicant portal</h2>
+    <p class="flow">The applicant's view. Never shows risk scores, evidence, or
+    "fraud" language — only neutral status.</p>
+    <ol>
+      <li><a href="apply.html">Apply</a> — submit company details + statement PDF</li>
+      <li><a href="cust_submitted_clean.html">Confirmation (clean)</a> → reference + "verified"</li>
+      <li><a href="cust_status_clean.html">Track status — verified</a></li>
+      <li><a href="cust_submitted_tampered.html">Confirmation (escalated)</a> → "being reviewed"</li>
+      <li><a href="cust_status_needinfo.html">Track status — action needed</a>
+          (analyst asked for more info)</li>
+      <li><a href="status_lookup.html">Track-by-reference form</a></li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <span class="tag ta">ANALYST</span>
+    <h2>Credit-analyst console</h2>
+    <p class="flow">The reviewer's view. Full scores, evidence, and the per-stage
+    workflow. The machine never rejects on its own.</p>
+    <ol>
+      <li><a href="dashboard.html">Screening queue</a> — all cases + status badges</li>
+      <li><a href="an_overview_CASE-4B3998A2F5.html">Case overview (tampered)</a> —
+          scores + findings-by-stage + decision panel</li>
+      <li><a href="an_transactions_CASE-4B3998A2F5.html">Flagged transactions</a> —
+          every row + the evidence that flagged it</li>
+      <li><a href="an_stages_CASE-4B3998A2F5.html">Pipeline stages</a> —
+          what each agent produced</li>
+      <li><a href="an_overview_CASE-7827E0CEA2.html">Case overview (clean)</a> —
+          auto-cleared, all stages "clear"</li>
+    </ol>
+  </div>
+</div>
+
+<div class="note">
+<b>The story these snapshots tell:</b> Meridian Trading uploads a
+<b>tampered</b> statement → the customer sees a calm "being reviewed"; the analyst
+sees the risk score, the flagged rows, and every stage's evidence, then
+<b>requests more information</b> → the customer now sees a neutral "action needed"
+with the reviewer's message, and can re-submit. Harbourline's <b>clean</b>
+statement is auto-cleared and the customer sees "verified".
+<br><br>
+<b>Static demo caveats:</b> forms don't submit (buttons are inert) and the
+"Statement PDF" link points back to this index — those need the live app:
+<code>uvicorn fraud_detect.webapp:app</code> and
+<code>uvicorn fraud_detect.customer_app:app</code>.
+</div>
+</div></body></html>

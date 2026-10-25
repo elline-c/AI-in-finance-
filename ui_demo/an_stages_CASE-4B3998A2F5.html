@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CASE-4B3998A2F5 · Pipeline stages</title>
+  <style>
+    :root { --bg:#0f1720; --panel:#182430; --ink:#e7edf3; --muted:#8fa3b3; --line:#26333f; --accent:#3b82f6; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           background:var(--bg); color:var(--ink); }
+    a { color:var(--accent); text-decoration:none; }
+    header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex;
+             align-items:center; gap:12px; background:var(--panel); }
+    header h1 { font-size:16px; margin:0; font-weight:600; }
+    header .tag { font-size:11px; color:var(--muted); border:1px solid var(--line);
+                  padding:2px 8px; border-radius:999px; }
+    main { padding:24px; max-width:1100px; margin:0 auto; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+             padding:18px 20px; margin-bottom:18px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    .pill { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px;
+            font-weight:700; color:#fff; }
+    .muted { color:var(--muted); }
+    .score { font-size:34px; font-weight:800; line-height:1; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    .kv { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+    .btn { display:inline-block; padding:9px 16px; border-radius:8px; border:1px solid var(--line);
+           background:#22303c; color:var(--ink); cursor:pointer; font-size:14px; }
+    .btn.primary { background:var(--accent); border-color:var(--accent); }
+    .btn.danger { background:#c62828; border-color:#c62828; }
+    .btn.ok { background:#2e7d32; border-color:#2e7d32; }
+    input, textarea, select { width:100%; padding:9px 11px; background:#0d151d; color:var(--ink);
+             border:1px solid var(--line); border-radius:8px; font-size:14px; }
+    label { font-size:12px; color:var(--muted); display:block; margin:10px 0 4px; }
+    .sev-HIGH { color:#ff8a80; } .sev-MEDIUM { color:#ffd54f; } .sev-LOW { color:#a5d6a7; } .sev-INFO { color:#90caf9; }
+    code { background:#0d151d; padding:1px 6px; border-radius:5px; font-size:12px; }
+    .evidence { font-size:13px; color:#c9d6e0; margin-top:4px; }
+    .tabs { display:flex; gap:6px; align-items:center; margin-bottom:16px; }
+    .tab { padding:8px 14px; border-radius:8px; border:1px solid var(--line);
+           background:#22303c; color:var(--muted); font-size:14px; }
+    .tab.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+    .tab:hover { text-decoration:none; color:var(--ink); }
+    .stage-head { display:flex; align-items:center; gap:10px; }
+    .count { font-size:12px; font-weight:700; padding:1px 9px; border-radius:999px;
+             background:#0d151d; border:1px solid var(--line); }
+    .count.hit { background:#c62828; border-color:#c62828; color:#fff; }
+    .count.ok { background:#1b5e20; border-color:#1b5e20; color:#fff; }
+    tr.flag td { background:rgba(198,40,40,.10); }
+    .num { text-align:right; font-variant-numeric:tabular-nums; }
+    .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; color:#fff; }
+    .b-PENDING{background:#546e7a}.b-NEEDS_INFO{background:#f9a825;color:#1b2733}
+    .b-APPROVED{background:#2e7d32}.b-REJECTED{background:#c62828}
+  </style>
+</head>
+<body><div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#0f766e;color:#fff;font:600 12px system-ui;padding:6px 14px;text-align:center;letter-spacing:.02em">DEMO SNAPSHOT · Analyst — Pipeline stages (tampered) · <a href="index.html" style="color:#fff;text-decoration:underline">demo index</a></div><div style="height:30px"></div>
+  <header>
+    <h1>🛡️ Bank Statement Tampering Screening</h1>
+    <span class="tag">4-agent pipeline</span>
+    <span class="tag">human-in-the-loop</span>
+    <span style="flex:1"></span>
+    <a href="dashboard.html">Dashboard</a>
+  </header>
+  <main>
+
+<div class="panel">
+  <h2 style="margin:0 0 4px">CASE-4B3998A2F5 — pipeline stages</h2>
+  <p class="muted" style="margin:0">What each agent in the screening pipeline produced,
+  in order. Every finding carries a stable reason code and readable evidence (MAS FEAT).</p>
+</div>
+
+
+<div class="tabs">
+  <a class="tab " href="an_overview_CASE-4B3998A2F5.html">Overview</a>
+  <a class="tab " href="an_transactions_CASE-4B3998A2F5.html">Flagged transactions</a>
+  <a class="tab " href="an_stages_CASE-4B3998A2F5.html">Pipeline stages</a>
+  <span style="flex:1"></span>
+  <a class="btn" href="index.html" target="_blank">📄 Statement PDF</a>
+</div>
+
+
+<div class="panel">
+  <div class="stage-head">
+    <h3 style="margin:0">1 · Ingestion &amp; data quality</h3>
+    
+      <span class="count ok">clear</span>
+    
+  </div>
+  <p class="muted" style="margin:6px 0 0">Reads the statement and flags missing/unreadable fields. Never guesses.</p>
+
+  
+  <p class="muted" style="margin-top:8px">No findings at this stage.</p>
+  
+</div>
+
+<div class="panel">
+  <div class="stage-head">
+    <h3 style="margin:0">2 · Visual forensics</h3>
+    
+      <span class="count hit">6 findings</span>
+    
+  </div>
+  <p class="muted" style="margin:6px 0 0">Font/format inconsistencies and editing-software traces in the document.</p>
+
+  
+  <table style="margin-top:12px">
+    <thead><tr><th>Severity</th><th>Reason code</th><th>Issue &amp; evidence</th><th>Page / row</th></tr></thead>
+    <tbody>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>VF_FONT_MISMATCH</code></td>
+        <td><b>Localised font inconsistency (possible altered text)</b><div class="evidence">Font &#39;Times-Bold&#39; appears in only 11 glyphs (0.7% of the document). Bank statements are typeset in a single family; an isolated foreign font is a common signature of digitally overwritten numbers/text.</div></td>
+        <td class="muted"></td>
+      </tr>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>VF_FONT_MISMATCH</code></td>
+        <td><b>Localised font inconsistency (possible altered text)</b><div class="evidence">Font &#39;Courier-Bold&#39; appears in only 12 glyphs (0.8% of the document). Bank statements are typeset in a single family; an isolated foreign font is a common signature of digitally overwritten numbers/text.</div></td>
+        <td class="muted"></td>
+      </tr>
+      
+      <tr>
+        <td class="sev-MEDIUM">MEDIUM</td>
+        <td><code>VF_DATE_FORMAT_MIX</code></td>
+        <td><b>Inconsistent date formats within one statement</b><div class="evidence">Multiple date formats detected in the transaction table: [&#39;dd/mm/yyyy&#39;, &#39;yyyy-mm-dd&#39;]. A single bank system emits one date format; mixing suggests rows were edited or spliced in.</div></td>
+        <td class="muted"></td>
+      </tr>
+      
+      <tr>
+        <td class="sev-MEDIUM">MEDIUM</td>
+        <td><code>VF_CURRENCY_MIX</code></td>
+        <td><b>Inconsistent currency notation</b><div class="evidence">Mixed currency notation found ([&#39;$-symbol&#39;, &#39;SGD&#39;]). Amounts within one account should use a single notation.</div></td>
+        <td class="muted"></td>
+      </tr>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>VF_EDIT_SOFTWARE</code></td>
+        <td><b>Image-editing software trace in metadata</b><div class="evidence">Document producer/creator metadata references &#39;photoshop&#39; (&#39;Adobe Photoshop 25.0 (Windows)&#39;). Genuine bank statements are produced by banking/report systems, not image editors.</div></td>
+        <td class="muted"></td>
+      </tr>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>VF_CREATION_BEFORE_PERIOD</code></td>
+        <td><b>Document created before the statement period</b><div class="evidence">File creation date 2024-01-02 predates the statement period start 2025-01-01. The file cannot legitimately exist before the period it reports.</div></td>
+        <td class="muted"></td>
+      </tr>
+      
+    </tbody>
+  </table>
+  
+</div>
+
+<div class="panel">
+  <div class="stage-head">
+    <h3 style="margin:0">3 · Financial logic</h3>
+    
+      <span class="count hit">9 findings</span>
+    
+  </div>
+  <p class="muted" style="margin:6px 0 0">Balance reconciliation, period gaps, structuring and counterparty checks.</p>
+
+  
+  <table style="margin-top:12px">
+    <thead><tr><th>Severity</th><th>Reason code</th><th>Issue &amp; evidence</th><th>Page / row</th></tr></thead>
+    <tbody>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>FL_BALANCE_BREAK</code></td>
+        <td><b>Running balance does not reconcile</b><div class="evidence">Row 8 (2025-02-04 Sales Settlement): expected balance 65,267.77 (prev 57,145.67 + 8,122.10) but statement shows 60,267.77. Discrepancy of -5,000.00 indicates an altered amount or balance.</div></td>
+        <td class="muted">p.1<br>row 8</td>
+      </tr>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>FL_BALANCE_BREAK</code></td>
+        <td><b>Running balance does not reconcile</b><div class="evidence">Row 9 (2025-02-06 DBS Merchant Payout): expected balance 65,623.01 (prev 60,267.77 + 5,355.24) but statement shows 70,623.01. Discrepancy of 5,000.00 indicates an altered amount or balance.</div></td>
+        <td class="muted">p.1<br>row 9</td>
+      </tr>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>FL_BALANCE_BREAK</code></td>
+        <td><b>Running balance does not reconcile</b><div class="evidence">Row 18 (2025-02-19 Ninja Van SG): expected balance 119,628.79 (prev 116,576.67 + 3,052.12) but statement shows 87,434.79. Discrepancy of -32,194.00 indicates an altered amount or balance.</div></td>
+        <td class="muted">p.1<br>row 18</td>
+      </tr>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>FL_BALANCE_BREAK</code></td>
+        <td><b>Running balance does not reconcile</b><div class="evidence">Row 19 (2025-02-22 M1 Limited): expected balance 85,205.61 (prev 87,434.79 - 2,229.18) but statement shows 117,399.61. Discrepancy of 32,194.00 indicates an altered amount or balance.</div></td>
+        <td class="muted">p.1<br>row 19</td>
+      </tr>
+      
+      <tr>
+        <td class="sev-MEDIUM">MEDIUM</td>
+        <td><code>FL_PERIOD_GAP</code></td>
+        <td><b>Unexplained gap in statement period</b><div class="evidence">43-day gap between 2025-03-06 and 2025-04-18 with no transactions. Continuous business accounts rarely go this long silent; may indicate removed pages/rows.</div></td>
+        <td class="muted">p.1</td>
+      </tr>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>FL_SUDDEN_DEPOSIT</code></td>
+        <td><b>Sudden deposit far above historical baseline</b><div class="evidence">Credit of 480,000.00 on 2025-02-26 (INWARD TT UNKNOWN LLC) is 4.0x the historical average monthly credit (120,000). Off-baseline inflow warrants review.</div></td>
+        <td class="muted">p.1<br>row 22</td>
+      </tr>
+      
+      <tr>
+        <td class="sev-MEDIUM">MEDIUM</td>
+        <td><code>FL_UNVERIFIED_COUNTERPARTY</code></td>
+        <td><b>Large inflow from unverified counterparty</b><div class="evidence">Large credit of 480,000.00 from &#39;INWARD TT UNKNOWN LLC&#39;, which does not match any known/recurring vendor and has shell-like naming.</div></td>
+        <td class="muted">p.1<br>row 22</td>
+      </tr>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>FL_STRUCTURING</code></td>
+        <td><b>Possible structuring below reporting threshold</b><div class="evidence">4 deposits fall in 9,500-10,000 (just under the 10,000 reporting threshold): #11(9,800), #12(9,799), #13(9,798), #14(9,797). Repeated near-threshold amounts suggest deliberate splitting.</div></td>
+        <td class="muted">p.1</td>
+      </tr>
+      
+      <tr>
+        <td class="sev-HIGH">HIGH</td>
+        <td><code>FL_UEN_NAME_MISMATCH</code></td>
+        <td><b>Account holder does not match ACRA record</b><div class="evidence">Statement holder &#39;Meridian Trading Pte Ltd&#39; does not match the ACRA record &#39;Skyline Logistics Pte Ltd&#39; for UEN 200923456B. May indicate a statement reused under a different company.</div></td>
+        <td class="muted"></td>
+      </tr>
+      
+    </tbody>
+  </table>
+  
+</div>
+
+<div class="panel">
+  <div class="stage-head">
+    <h3 style="margin:0">5 · Cross-case memory</h3>
+    
+      <span class="count ok">clear</span>
+    
+  </div>
+  <p class="muted" style="margin:6px 0 0">Matches suspicious rows against prior human-decided cases.</p>
+
+  
+  <p class="muted" style="margin-top:8px">No findings at this stage.</p>
+  
+</div>
+
+<div class="panel">
+  <div class="stage-head">
+    <h3 style="margin:0">6 · ML / GNN signals</h3>
+    
+      <span class="count ok">clear</span>
+    
+  </div>
+  <p class="muted" style="margin:6px 0 0">Optional machine-learning and graph-fraud signals (when models are loaded).</p>
+
+  
+  <p class="muted" style="margin-top:8px">No findings at this stage.</p>
+  
+</div>
+
+
+<div class="panel">
+  <a class="btn primary" href="an_overview_CASE-4B3998A2F5.html">← Back to overview &amp; decision</a>
+</div>
+</main>
+</body>
+</html>
