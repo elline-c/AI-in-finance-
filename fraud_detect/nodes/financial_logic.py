@@ -32,6 +32,8 @@ _BALANCE_TOL = 0.01           # rounding tolerance
 _GAP_DAYS = 25                # unexplained-gap threshold
 _STRUCTURING_WINDOW = 0.05    # within 5% below threshold
 _SUSPICIOUS_MULTIPLE = 3.0    # single credit > 3x avg monthly credit
+_MIN_PERIOD_MONTHS = 6        # corporate-loan policy: statements must cover >= 6 months
+_MAX_PERIOD_MONTHS = 12       # corporate-loan policy: statements must cover <= 12 months
 
 
 def _reconcile(ing: IngestionResult) -> list[Finding]:
@@ -92,6 +94,41 @@ def _period_continuity(ing: IngestionResult) -> list[Finding]:
                           f"transactions. Continuous business accounts rarely go this "
                           f"long silent; may indicate removed pages/rows."),
             ))
+    return findings
+
+
+def _period_length(ing: IngestionResult) -> list[Finding]:
+    """Flag when the declared statement period falls outside the required
+    6-12 month window. Missing dates are handled elsewhere (DQ_MISSING_PERIOD),
+    so we emit nothing when either bound is absent."""
+    findings: list[Finding] = []
+    start = ing.statement_period_start
+    end = ing.statement_period_end
+    if start is None or end is None:
+        return findings
+
+    # Whole-month span between the two dates. Simple and explainable: count the
+    # calendar months, then subtract one if the end day has not yet reached the
+    # start day (an incomplete final month).
+    months = (end.year - start.year) * 12 + (end.month - start.month)
+    if end.day < start.day:
+        months -= 1
+
+    if months < _MIN_PERIOD_MONTHS or months > _MAX_PERIOD_MONTHS:
+        too_short = months < _MIN_PERIOD_MONTHS
+        direction = "too short" if too_short else "too long"
+        consequence = ("selectively removed pages" if too_short
+                       else "padded pages")
+        findings.append(Finding(
+            agent=AGENT, code="FL_PERIOD_LENGTH",
+            title="Statement period outside the required 6\u201312 month window",
+            severity=Severity.MEDIUM, weight=12,
+            evidence=(f"Statement covers {start} to {end} ({months} months); "
+                      f"corporate-loan policy requires "
+                      f"{_MIN_PERIOD_MONTHS}\u2013{_MAX_PERIOD_MONTHS} months of "
+                      f"statements. A {direction} period may indicate "
+                      f"{consequence}."),
+        ))
     return findings
 
 
@@ -177,6 +214,7 @@ def analyze(ing: IngestionResult) -> AgentReport:
     findings += _reconcile(ing)
     findings += _closing_check(ing)
     findings += _period_continuity(ing)
+    findings += _period_length(ing)
     findings += _suspicious_transactions(ing)
     findings += _structuring(ing)
     findings += _entity_crosscheck(ing)
