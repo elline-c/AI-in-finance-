@@ -205,6 +205,13 @@ class RiskReport(BaseModel):
     closing_balance: Optional[float] = None
     declared_currency: Optional[str] = None
 
+    # Per-segment coverage summary (period + page range for each statement
+    # section found in the source PDF). A single-period statement yields exactly
+    # one segment; a combined multi-month PDF yields several. Optional (defaults
+    # to empty) so older stored reports still validate and single-segment cases
+    # render unchanged.
+    statement_segments: list[StatementSegment] = Field(default_factory=list)
+
     # Cross-case memory: fingerprints of this case's transactions, persisted so
     # that future screenings can detect recurrence of the same entity/amount.
     transaction_fingerprints: list[TxnFingerprint] = Field(default_factory=list)
