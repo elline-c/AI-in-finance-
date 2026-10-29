@@ -226,13 +226,29 @@ def _month_duplicate(ing: IngestionResult) -> list[Finding]:
 
 def _month_out_of_order(ing: IngestionResult) -> list[Finding]:
     """Flag segments within a single combined PDF that appear in a
-    non-chronological page order (a later page covers an earlier month)."""
+    non-chronological page order (a later page covers an earlier month).
+
+    Page-order inversion is only meaningful for a genuine in-file layout where
+    the segments occupy DISTINCT, physically-ordered pages (a combined PDF). In
+    a multi-file submission each standalone monthly file parses to a single
+    segment with the same ``page_start`` (all == 1), so list position is just
+    the arbitrary upload order and must NEVER drive a finding; that is the
+    whole point of the order-independence requirement. We therefore only run the
+    check when there are >= 2 segments whose ``page_start`` values are all
+    present and not all identical, and we iterate in true physical page order
+    (sorted by ``page_start``) rather than list-insertion order."""
     if len(ing.segments) < 2:
         return []
+    page_starts = [seg.page_start for seg in ing.segments]
+    if any(ps is None for ps in page_starts) or len(set(page_starts)) < 2:
+        # No distinct physical page positions: multi-file aggregate (all the
+        # same page) or missing page info. Coverage then depends only on the
+        # parsed dates, keeping multi-file screening order-independent.
+        return []
+    ordered_segments = sorted(ing.segments, key=lambda seg: seg.page_start)
     ordered = [
-        (seg.period_start, seg.period_end,
-         (seg.page_start if seg.page_start is not None else idx))
-        for idx, seg in enumerate(ing.segments, start=1)
+        (seg.period_start, seg.period_end, seg.page_start)
+        for seg in ordered_segments
     ]
     inversions = out_of_order_segments(ordered)
     findings: list[Finding] = []

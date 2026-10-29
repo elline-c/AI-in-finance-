@@ -305,3 +305,6 @@ def test_month_identification_is_order_independent(workdir):
     assert codes_fwd == codes_rev
     # the gap (March) is still detected irrespective of order
     assert "FL_MONTH_MISSING" in codes_fwd
+    # a multi-file set has no physical page order, so upload order must never
+    # raise an out-of-order finding (that would break order-independence)
+    assert "FL_MONTH_OUT_OF_ORDER" not in codes_fwd
