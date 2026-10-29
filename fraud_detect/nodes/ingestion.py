@@ -27,10 +27,17 @@ from ..models import (
     IngestionResult,
     PageText,
     Severity,
+    StatementSegment,
     Transaction,
 )
 
 AGENT = "Node1:Ingestion"
+
+# Matches every "Statement Period:" header; used with finditer so a combined
+# PDF with several monthly sections is split into one segment per header.
+_PERIOD_RE = re.compile(
+    r"Statement Period:\s*(\d{2}/\d{2}/\d{4})\s*-\s*(\d{2}/\d{2}/\d{4})"
+)
 
 # A row looks like: "04/01/2025 M1 Limited SGD-2,945.32 SGD52,054.68"
 # amount/balance may use SGD or S$ prefix and optional leading + / -.
@@ -120,11 +127,45 @@ def ingest(path: str) -> IngestionResult:
     account_number = _grab(r"Account No:\s*([0-9]+)", raw_text)
     currency = _grab(r"Currency:\s*([A-Za-z$]+)", raw_text)
 
+    # ---- statement period segmentation ------------------------------------
+    # Find EVERY "Statement Period:" header along with the page it sits on, so a
+    # combined PDF (several monthly statements stapled together) is split into
+    # one StatementSegment per header. We iterate page_texts (which preserves
+    # page attribution) rather than raw_text (which joins pages and loses it).
+    #
+    # A segment spans from the page its header is on up to the page just before
+    # the next header's page; the final segment runs to the last page. Month
+    # identity for each segment comes solely from its own printed dates.
+    raw_headers: list[tuple[int, Optional[date], Optional[date]]] = []
+    for page_no, text in page_texts:
+        for hm in _PERIOD_RE.finditer(text):
+            h_start, _ = _parse_date(hm.group(1))
+            h_end, _ = _parse_date(hm.group(2))
+            raw_headers.append((page_no, h_start, h_end))
+
+    segments: list[StatementSegment] = []
+    for i, (page_no, h_start, h_end) in enumerate(raw_headers):
+        if i + 1 < len(raw_headers):
+            next_page = raw_headers[i + 1][0]
+            page_end = max(page_no, next_page - 1)
+        else:
+            page_end = page_count
+        segments.append(StatementSegment(
+            period_start=h_start,
+            period_end=h_end,
+            page_start=page_no,
+            page_end=page_end,
+        ))
+
+    # Top-level period stays backward compatible: earliest start / latest end
+    # across all segments (for a single-header PDF this is just that header).
     period_start = period_end = None
-    pm = re.search(r"Statement Period:\s*(\d{2}/\d{2}/\d{4})\s*-\s*(\d{2}/\d{2}/\d{4})", raw_text)
-    if pm:
-        period_start, _ = _parse_date(pm.group(1))
-        period_end, _ = _parse_date(pm.group(2))
+    starts = [s.period_start for s in segments if s.period_start is not None]
+    ends = [s.period_end for s in segments if s.period_end is not None]
+    if starts:
+        period_start = min(starts)
+    if ends:
+        period_end = max(ends)
 
     opening_balance = _parse_money(_grab(r"Opening Balance:\s*([^\n]+)", raw_text) or "")
     closing_balance = _parse_money(_grab(r"Closing Balance:\s*([^\n]+)", raw_text) or "")
@@ -182,6 +223,7 @@ def ingest(path: str) -> IngestionResult:
         page_texts=[PageText(page=pno, text=txt) for pno, txt in page_texts],
         metadata=metadata,
         fonts=fonts,
+        segments=segments,
         account_holder=holder,
         uen=uen,
         account_number=account_number,
@@ -193,3 +235,15 @@ def ingest(path: str) -> IngestionResult:
         transactions=transactions,
         data_quality_findings=dq,
     )
+
+
+def ingest_many(paths: list[str]) -> list[IngestionResult]:
+    """Ingest a SET of statement files submitted as one application.
+
+    Additive convenience over ``ingest(path)``: it simply ingests each path and
+    returns the results. The returned list follows the input order purely as a
+    convenience — month identity is carried inside each result's parsed period
+    dates (and segments), NOT by list position, so screening the same files in
+    any order yields the same month identification and coverage findings.
+    """
+    return [ingest(p) for p in paths]

@@ -105,6 +105,20 @@ class PageText(BaseModel):
     text: str
 
 
+class StatementSegment(BaseModel):
+    """One contiguous statement section inside a (possibly combined) PDF.
+
+    A combined PDF can staple several monthly statements together; each printed
+    "Statement Period:" header starts a new segment. ``page_start`` / ``page_end``
+    delimit the pages that segment spans. All fields are Optional-with-default so
+    partially-parsed or hand-built segments still validate.
+    """
+    period_start: Optional[date_type] = None
+    period_end: Optional[date_type] = None
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+
+
 class IngestionResult(BaseModel):
     source_path: str
     page_count: int
@@ -112,6 +126,10 @@ class IngestionResult(BaseModel):
     page_texts: list[PageText] = Field(default_factory=list)
     metadata: DocumentMetadata
     fonts: list[FontUsage] = Field(default_factory=list)
+
+    # One entry per "Statement Period:" header found in the PDF. Empty for older
+    # stored reports / hand-built results; a single-period PDF yields exactly one.
+    segments: list[StatementSegment] = Field(default_factory=list)
 
     # Parsed statement header
     account_holder: Optional[str] = None
