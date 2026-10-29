@@ -13,6 +13,7 @@ The output is a strict, validated ``IngestionResult`` (the JSON contract).
 """
 from __future__ import annotations
 
+import os
 import re
 from datetime import date, datetime
 from typing import Optional
@@ -143,6 +144,7 @@ def ingest(path: str) -> IngestionResult:
             h_end, _ = _parse_date(hm.group(2))
             raw_headers.append((page_no, h_start, h_end))
 
+    source_name = os.path.basename(path)
     segments: list[StatementSegment] = []
     for i, (page_no, h_start, h_end) in enumerate(raw_headers):
         if i + 1 < len(raw_headers):
@@ -155,6 +157,7 @@ def ingest(path: str) -> IngestionResult:
             period_end=h_end,
             page_start=page_no,
             page_end=page_end,
+            source=source_name,
         ))
 
     # Top-level period stays backward compatible: earliest start / latest end

@@ -117,6 +117,12 @@ class StatementSegment(BaseModel):
     period_end: Optional[date_type] = None
     page_start: Optional[int] = None
     page_end: Optional[int] = None
+    # Basename of the file this segment was ingested from. Used only for
+    # human-readable evidence on a MULTI-FILE submission (so duplicate-month
+    # evidence can name the colliding files); never used for month identity.
+    # Optional-with-default so single-file/combined-PDF and hand-built segments
+    # are unchanged.
+    source: Optional[str] = None
 
 
 class IngestionResult(BaseModel):

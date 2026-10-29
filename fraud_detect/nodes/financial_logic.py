@@ -150,8 +150,20 @@ def _segment_periods(ing: IngestionResult):
     """
     periods = []
     if ing.segments:
+        # A MULTI-FILE submission has segments originating from distinct files
+        # (distinct ``source`` basenames); a single-file / combined PDF has one
+        # source shared by every segment. When the sources genuinely differ we
+        # label each segment by its file name so duplicate-month evidence can
+        # say WHICH files collide; otherwise we keep the existing page-based
+        # wording for the single-file combined-PDF case.
+        distinct_sources = {
+            seg.source for seg in ing.segments if seg.source is not None
+        }
+        use_source_labels = len(distinct_sources) > 1
         for i, seg in enumerate(ing.segments, start=1):
-            if seg.page_start is not None and seg.page_end is not None:
+            if use_source_labels and seg.source is not None:
+                label = seg.source
+            elif seg.page_start is not None and seg.page_end is not None:
                 if seg.page_start == seg.page_end:
                     label = f"page {seg.page_start}"
                 else:
@@ -212,7 +224,10 @@ def _month_duplicate(ing: IngestionResult) -> list[Finding]:
     dupes = duplicate_months(labelled)
     findings: list[Finding] = []
     for ym, sources in dupes:
-        where = ", ".join(str(s) for s in sources)
+        # Sort the colliding source labels so the evidence (and therefore the
+        # finding) is identical regardless of the order the files/segments were
+        # submitted in — this keeps FL_MONTH_DUPLICATE order-independent.
+        where = ", ".join(sorted(str(s) for s in sources))
         findings.append(Finding(
             agent=AGENT, code="FL_MONTH_DUPLICATE",
             title="Duplicate / overlapping month in statement coverage",

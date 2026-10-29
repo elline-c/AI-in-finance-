@@ -197,11 +197,17 @@ def _combined_ingestion_from_files(results):
     from that file's parsed period dates (NOT its position in ``results``)."""
     segments = []
     for r in results:
-        # each standalone monthly file parses to exactly one segment
-        segments.append(r.segments[0] if r.segments else StatementSegment(
-            period_start=r.statement_period_start,
-            period_end=r.statement_period_end,
-        ))
+        # each standalone monthly file parses to exactly one segment; carry its
+        # originating file name through so multi-file duplicate-month evidence
+        # can name the colliding files (ingestion already sets segment.source).
+        if r.segments:
+            segments.append(r.segments[0])
+        else:
+            segments.append(StatementSegment(
+                period_start=r.statement_period_start,
+                period_end=r.statement_period_end,
+                source=os.path.basename(r.source_path),
+            ))
     return _ingestion_from_segments(segments)
 
 
@@ -249,6 +255,14 @@ def test_duplicate_month_flags_fl_month_duplicate(workdir):
     dupes = [f for f in findings if f.code == "FL_MONTH_DUPLICATE"]
     assert dupes, "expected FL_MONTH_DUPLICATE for the repeated month"
     assert any("February 2024" in f.evidence for f in dupes)
+    # evidence must NAME the two colliding files (not just a page label), so a
+    # reviewer can tell which uploads collide on the duplicated month.
+    feb = [f for f in dupes if "February 2024" in f.evidence]
+    assert any(
+        "stmt_2024_duplicate_01.pdf" in f.evidence
+        and "stmt_2024_duplicate_02.pdf" in f.evidence
+        for f in feb
+    ), f"duplicate evidence should name both colliding files, got: {[f.evidence for f in feb]}"
 
 
 # ---- (4) OUT-OF-ORDER ------------------------------------------------------ #
