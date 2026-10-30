@@ -155,6 +155,51 @@ def _build_transactions(rng: random.Random, start: date, opening: float,
     return txns
 
 
+def _add_months(d: date, months: int) -> date:
+    """``d`` shifted forward by ``months`` calendar months (day clamped to the
+    target month's length)."""
+    total = d.year * 12 + (d.month - 1) + months
+    year, month0 = divmod(total, 12)
+    month = month0 + 1
+    return date(year, month, min(d.day, calendar.monthrange(year, month)[1]))
+
+
+def _build_transactions_spanning(rng: random.Random, start: date, opening: float,
+                                 months: int) -> list[_Txn]:
+    """Transactions every 1-6 days from ``start`` until the statement spans exactly
+    ``months`` whole months, ending on ``start + months`` months.
+
+    Spacing never exceeds 6 days, so the result stays well inside Node 3's 25-day
+    unexplained-gap threshold. A closing transaction is added on the target end
+    date when the random spacing does not land on it, so the declared period is
+    exactly ``months`` long as Node 3's period-length rule counts it (this
+    assumes ``start`` is the 1st, so the end day is never earlier than the start
+    day).
+    """
+    target_end = _add_months(start, months)
+    txns: list[_Txn] = []
+    bal = opening
+    dt = start
+    while True:
+        dt = dt + timedelta(days=rng.randint(1, 6))
+        if dt > target_end:
+            break
+        if rng.random() < 0.5:
+            amt = round(rng.uniform(500, 9000), 2)
+            desc = rng.choice(_CREDIT_DESCS)
+        else:
+            amt = -round(rng.uniform(300, 7000), 2)
+            desc = rng.choice(_DEBIT_DESCS)
+        bal = round(bal + amt, 2)
+        txns.append(_Txn(dt=dt, desc=desc, amount=amt, balance=bal))
+    if not txns or txns[-1].dt < target_end:
+        amt = round(rng.uniform(500, 9000), 2)
+        bal = round(bal + amt, 2)
+        txns.append(_Txn(dt=target_end, desc=rng.choice(_CREDIT_DESCS),
+                         amount=amt, balance=bal))
+    return txns
+
+
 def _build_month_txns(rng: random.Random, year: int, month: int, opening: float,
                       n: int = 6) -> list[_Txn]:
     """A small set of transactions whose dates all fall inside one calendar
@@ -197,15 +242,24 @@ def _render_pdf(path: Path, *, holder: str, uen: str, account_no: str,
         c.drawString(20 * mm, height - 25 * mm, "OCBC-STYLE BANK  |  Corporate Statement")
         c.setFont("Helvetica", 9)
         y = height - 33 * mm
-        for line in [
-            f"Account Holder: {holder}",
-            f"UEN: {uen}",
-            f"Account No: {account_no}",
-            f"Statement Period: {period_start:%d/%m/%Y} - {period_end:%d/%m/%Y}",
-            f"Currency: {currency}",
-            f"Opening Balance: {opening:,.2f}",
-            f"Page {page_no}",
-        ]:
+        # One statement prints its details block once, on page 1. Continuation
+        # pages carry only a page marker: ingestion treats every "Statement
+        # Period:" header as the start of a separate statement segment, so
+        # repeating it would make one multi-page statement look like several
+        # copies of the same months (FL_MONTH_DUPLICATE).
+        if page_no == 1:
+            lines = [
+                f"Account Holder: {holder}",
+                f"UEN: {uen}",
+                f"Account No: {account_no}",
+                f"Statement Period: {period_start:%d/%m/%Y} - {period_end:%d/%m/%Y}",
+                f"Currency: {currency}",
+                f"Opening Balance: {opening:,.2f}",
+                f"Page {page_no}",
+            ]
+        else:
+            lines = [f"Account No: {account_no}  (continued)", f"Page {page_no}"]
+        for line in lines:
             c.drawString(20 * mm, y, line)
             y -= 5 * mm
         # column headers
@@ -433,7 +487,15 @@ def generate_monthly_set(
     return MonthlySet(files=files, kind=kind)
 
 
-def generate_clean(out_dir: str, seed: int = 1, uen: str = "201812345A") -> GeneratedStatement:
+def generate_clean(out_dir: str, seed: int = 1, uen: str = "201812345A",
+                   months: int = 9) -> GeneratedStatement:
+    """A statement with no planted issues.
+
+    ``months`` is the span, in whole months, between the declared period start and
+    end (default 9). Node 3 requires 6-12 months under corporate-loan policy, so
+    the default is comfortably inside that window; pass a value outside it to
+    generate a statement the period-length rule should flag.
+    """
     rng = random.Random(seed)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -441,7 +503,7 @@ def generate_clean(out_dir: str, seed: int = 1, uen: str = "201812345A") -> Gene
     holder = ACRA_REGISTRY[uen]
     start = date(2025, 3, 1)
     opening = 42000.0
-    txns = _build_transactions(rng, start, opening, n=22)
+    txns = _build_transactions_spanning(rng, start, opening, months)
     end = txns[-1].dt
 
     path = out / f"clean_{uen}.pdf"
