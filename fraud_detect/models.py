@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # --------------------------------------------------------------------------- #
@@ -48,6 +48,21 @@ class ReviewDecision(str, Enum):
     NEEDS_INFO = "NEEDS_INFO"       # reviewer has asked the customer for more info
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
+
+
+class CreditDecision(str, Enum):
+    """The banker / loan officer's FINAL lending decision.
+
+    Distinct from ReviewDecision (which is the fraud-screening outcome). A banker
+    only reaches this stage once the document's authenticity is settled: the
+    analyst cleared the fraud concern (APPROVED) or the statement auto-cleared.
+    The screening decides whether the document can be *trusted*; the banker
+    decides whether to *lend*.
+    """
+    PENDING = "PENDING"             # fraud-cleared, awaiting the loan officer
+    APPROVED = "APPROVED"           # loan approved
+    DECLINED = "DECLINED"           # loan declined on credit grounds
+    REFERRED = "REFERRED"           # escalated to a senior officer / credit committee
 
 
 # --------------------------------------------------------------------------- #
@@ -212,9 +227,32 @@ class ReviewRecord(BaseModel):
     info_requested_at: Optional[datetime] = None
 
 
+class CreditRecord(BaseModel):
+    """The banker / loan officer's final lending decision on a fraud-cleared case."""
+    case_id: str
+    decision: CreditDecision = CreditDecision.PENDING
+    officer: Optional[str] = None
+    rationale: Optional[str] = None
+    # Optional credit inputs the officer may capture for the file.
+    approved_amount: Optional[float] = None     # amount actually approved (may differ from requested)
+    conditions: Optional[str] = None            # covenants / conditions attached to an approval
+    decided_at: Optional[datetime] = None
+
+
 class Case(BaseModel):
     """Everything persisted about one submitted statement."""
     case_id: str
     report: RiskReport
     review: ReviewRecord
+    # The banker's lending decision. Optional/defaulted so older stored cases
+    # (persisted before this field existed) still validate.
+    credit: CreditRecord = Field(default_factory=lambda: CreditRecord(case_id=""))
     audit_log: list[dict] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _sync_credit_case_id(self) -> "Case":
+        # Backfill the credit record's case_id (for cases created before the
+        # credit stage existed, or when the default factory was used).
+        if self.credit and not self.credit.case_id:
+            self.credit.case_id = self.case_id
+        return self

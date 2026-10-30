@@ -13,7 +13,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from .models import Case, ReviewDecision, ReviewRecord, RiskReport, TxnFingerprint
+from .models import (
+    Case,
+    CreditDecision,
+    CreditRecord,
+    ReviewDecision,
+    ReviewRecord,
+    RiskReport,
+    Routing,
+    TxnFingerprint,
+)
 
 _LOCK = threading.Lock()
 
@@ -235,6 +244,82 @@ class CaseStore:
                 "ts": datetime.utcnow().isoformat(),
                 "event": f"HUMAN_{decision.value}",
                 "detail": f"reviewer={reviewer}; reason={reason}",
+            })
+            data[case_id] = json.loads(case.model_dump_json())
+            self._write(data)
+            return case
+
+    # ---- banker / loan-officer stage ----------------------------------- #
+    @staticmethod
+    def fraud_is_cleared(case: Case) -> bool:
+        """True when a case is safe to put in front of a loan officer.
+
+        A banker should only make a lending call once the document's authenticity
+        is settled — i.e. the fraud analyst APPROVED (cleared) it, or it
+        auto-cleared with no human concern. A REJECTED or still-open fraud case
+        never reaches the banker.
+        """
+        decision = case.review.decision
+        if decision == ReviewDecision.APPROVED:
+            return True
+        if (decision == ReviewDecision.PENDING
+                and case.report.routing == Routing.AUTO_CLEAR):
+            return True
+        return False
+
+    def list_credit_queue(self) -> list[Case]:
+        """Cases whose fraud concern is cleared, for the banker's queue.
+
+        Sorted: cases still awaiting a lending decision first, then by requested
+        confidence/risk so the cleanest, highest-confidence files surface first.
+        """
+        data = self._read()
+        cases = [Case.model_validate(v) for v in data.values()]
+        cleared = [c for c in cases if self.fraud_is_cleared(c)]
+        cleared.sort(key=lambda c: (
+            c.credit.decision != CreditDecision.PENDING,   # pending first
+            -c.report.confidence_score,                    # most certain first
+            c.report.risk_score,                           # lowest risk first
+        ))
+        return cleared
+
+    def record_credit_decision(
+        self, case_id: str, decision: CreditDecision, officer: str,
+        rationale: str, approved_amount: Optional[float] = None,
+        conditions: Optional[str] = None,
+    ) -> Optional[Case]:
+        """Persist the loan officer's final lending decision.
+
+        Guardrail: refuses to record a decision on a case whose fraud concern is
+        not cleared — the banker stage must never override the fraud outcome.
+        """
+        with _LOCK:
+            data = self._read()
+            raw = data.get(case_id)
+            if not raw:
+                return None
+            case = Case.model_validate(raw)
+            if not self.fraud_is_cleared(case):
+                raise ValueError(
+                    "Fraud concern is not cleared; this case cannot receive a "
+                    "lending decision until screening approves it."
+                )
+            now = datetime.utcnow()
+            case.credit = CreditRecord(
+                case_id=case_id,
+                decision=decision,
+                officer=officer,
+                rationale=rationale,
+                approved_amount=approved_amount,
+                conditions=conditions,
+                decided_at=now,
+            )
+            case.audit_log.append({
+                "ts": now.isoformat(),
+                "event": f"CREDIT_{decision.value}",
+                "detail": (f"officer={officer}; rationale={rationale}"
+                           + (f"; approved_amount={approved_amount}"
+                              if approved_amount is not None else "")),
             })
             data[case_id] = json.loads(case.model_dump_json())
             self._write(data)
