@@ -67,7 +67,7 @@ def main() -> None:
 
     # Load the trained ML models once (fail-safe: None if the .joblib is absent),
     # so the optional ML nodes (6a/6b) run alongside the rule-based agents.
-    txn_model = ml_transaction.load_model()
+    txn_model = ml_transaction.load_live_model()  # off by default, as in the web app
     statement_model = ml_statement.load_model()
 
     samples = [

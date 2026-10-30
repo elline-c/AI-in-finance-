@@ -19,8 +19,8 @@ flowchart TD
     N1 --> N2["<b>Node 2 — Visual Forensics</b><br/>font mismatch, mixed date/<br/>currency, editor metadata,<br/>impossible creation date"]
     N1 --> N3["<b>Node 3 — Financial Logic</b><br/>balance reconciliation, gaps,<br/>sudden deposits, structuring,<br/>UEN/ACRA cross-check"]
 
-    %% ML agents — now active: models are loaded at startup and run every screening
-    N1 --> N6A["<b>Node 6a — ML Transaction</b><br/>GBM fraud likelihood +<br/>GNN graph-risk lookup"]
+    %% ML agents: loaded at startup; 6a's transaction scoring is off by default
+    N1 --> N6A["<b>Node 6a — ML Transaction</b><br/>GNN graph-risk lookup<br/>(GBM scoring off by default)"]
     N1 --> N6B["<b>Node 6b — ML Statement</b><br/>document-forgery likelihood"]
 
     %% Node 5 memory depends on prior case store + this run's suspicious rows
@@ -53,9 +53,10 @@ flowchart TD
     class AUTO,HUMAN outcome;
 ```
 
-**Reading the diagram:** solid arrows are the always-on flow. Nodes 6a/6b are now
-wired in (models loaded at startup) and run on every screening — they stay
-fail-safe, producing no findings if a model file is missing. The one dotted,
+**Reading the diagram:** solid arrows are the always-on flow. Nodes 6a/6b are
+wired in (models loaded at startup) and run on every screening, except 6a's
+transaction scoring, which is off by default (`FRAUD_ENABLE_TXN_MODEL=1` turns it
+on). Both stay fail-safe, producing no findings if a model file is missing. The one dotted,
 conditional step left is Node 5, which runs only when a case store is supplied.
 
 ## What each node does (in plain terms)
@@ -101,11 +102,16 @@ conditional step left is Node 5, which runs only when a case store is supplied.
 - Learns only from human-verified decisions (never the AI's own past guesses) and
   always cites the prior case so a reviewer can trace it.
 
-### Node 6a — ML Transaction Fraud (machine-learning, now active)
-- **Active in the live pipeline:** the transaction model and the precomputed GNN
-  scores are loaded once at startup (in `webapp.py` / `demo.py`) and passed into
-  every screening, so this node runs on real cases rather than staying dormant.
-- Scores individual transactions for fraud likelihood with a gradient-boosted model (GBM).
+### Node 6a — ML Transaction Fraud (GNN lookup on; transaction scoring off)
+- **Transaction scoring is switched off by default.** The gradient-boosted model
+  that scores each transaction raised false alarms on clean business statements
+  without adding detection the rule-based checks lack: trained on the available
+  dataset it either relies on fields a PDF does not carry (channel, counterparty,
+  KYC) or mistakes ordinary business-sized amounts for fraud. Set
+  `FRAUD_ENABLE_TXN_MODEL=1` to switch it back on, e.g. after retraining on
+  representative statements.
+- **The GNN lookup stays on:** its precomputed scores are loaded at startup (in
+  `webapp.py` / `demo.py`) and checked on every screening.
 - Adds a graph-based signal (GNN) that catches relational money-laundering patterns a
   single row can't reveal — round-tripping, dormant reactivation, mule fan-in/out —
   via a fast lookup of scores precomputed offline.

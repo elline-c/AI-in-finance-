@@ -319,6 +319,14 @@ into Node 4 corroboration alongside the GBM's `ML_TXN_FRAUD_LIKELIHOOD` — so
 GBM+GNN agreement naturally strengthens the risk call. Like every other node it
 only adds evidence for a reviewer and never auto-rejects.
 
+**The GBM transaction model is off in the live app by default.** On clean business
+statements it raised false alarms without adding detection: the dataset is mostly
+small retail payments, and the fields that let it tell businesses apart (segment,
+KYC, channel, counterparty) are not on a PDF statement. The web app and `demo.py`
+load it only when `FRAUD_ENABLE_TXN_MODEL=1` is set. `train_transaction.py
+--feature-set pdf` trains a version restricted to statement-only fields, for when
+representative statements are available.
+
 **Tests:** `tests/test_gnn_graph_builder.py` (split-safety, leaky-column and
 INTERNAL-only edge guards), `tests/test_gnn_lookup.py` (missing file / unknown key
 / corrupt store all fail-safe to `None`), `tests/test_gnn_scores_store.py` (store
