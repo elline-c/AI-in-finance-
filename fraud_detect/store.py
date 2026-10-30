@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from .audit import AuditChain, build_signer_from_env
 from .models import Case, ReviewDecision, ReviewRecord, RiskReport, TxnFingerprint
 
 _LOCK = threading.Lock()
@@ -78,11 +79,21 @@ def fingerprint(counterparty: Optional[str], amount: Optional[float],
 
 
 class CaseStore:
-    def __init__(self, path: str = "data/cases.json") -> None:
+    def __init__(self, path: str = "data/cases.json",
+                 audit_path: str = "data/audit_chain.jsonl") -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if not self.path.exists():
             self._write({})
+
+        # Signed, hash-chained, append-only audit trail (separate from the
+        # mutable cases.json snapshot above). ``build_signer_from_env`` returns
+        # None when no key is configured (UNSIGNED mode, a supported state) and
+        # fails loud (propagating ValueError) if a key is configured but
+        # unreadable -- a misconfigured key must surface, never silently
+        # downgrade to UNSIGNED. The append calls are wired in task 8.2.
+        signer = build_signer_from_env()
+        self._audit = AuditChain(audit_path, signer=signer)
 
     # ---- low-level ----------------------------------------------------- #
     def _read(self) -> dict:
@@ -109,13 +120,23 @@ class CaseStore:
                     report=report,
                     review=ReviewRecord(case_id=report.case_id),
                 )
+            # Compute ts + detail ONCE so the authoritative hash-chained event
+            # and the cases.json audit_log mirror agree exactly (same ts, same
+            # detail). The chain is the source of truth (Req 3.1/3.3); the
+            # embedded audit_log is kept as a read-only mirror for UI
+            # convenience under the start-fresh migration stance.
+            ts = datetime.utcnow().isoformat()
+            detail = (f"risk={report.risk_score} ({report.risk_band.value}), "
+                      f"confidence={report.confidence_score} "
+                      f"({report.confidence_band.value}), routing={report.routing.value}")
             case.audit_log.append({
-                "ts": datetime.utcnow().isoformat(),
+                "ts": ts,
                 "event": "SCREENED",
-                "detail": (f"risk={report.risk_score} ({report.risk_band.value}), "
-                           f"confidence={report.confidence_score} "
-                           f"({report.confidence_band.value}), routing={report.routing.value}"),
+                "detail": detail,
             })
+            self._audit.append(
+                case_id=case.case_id, event="SCREENED", detail=detail, ts=ts,
+            )
             data[case.case_id] = json.loads(case.model_dump_json())
             self._write(data)
             return case
@@ -231,11 +252,19 @@ class CaseStore:
                 reviewed_at=datetime.utcnow(),
                 feedback_for_training=feedback_for_training,
             )
+            # Compute ts + detail ONCE so the authoritative hash-chained event
+            # and the cases.json audit_log mirror agree exactly (Req 3.2/3.3).
+            ts = datetime.utcnow().isoformat()
+            event = f"HUMAN_{decision.value}"
+            detail = f"reviewer={reviewer}; reason={reason}"
             case.audit_log.append({
-                "ts": datetime.utcnow().isoformat(),
-                "event": f"HUMAN_{decision.value}",
-                "detail": f"reviewer={reviewer}; reason={reason}",
+                "ts": ts,
+                "event": event,
+                "detail": detail,
             })
+            self._audit.append(
+                case_id=case_id, event=event, detail=detail, ts=ts,
+            )
             data[case_id] = json.loads(case.model_dump_json())
             self._write(data)
             return case

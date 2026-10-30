@@ -324,3 +324,66 @@ INTERNAL-only edge guards), `tests/test_gnn_lookup.py` (missing file / unknown k
 / corrupt store all fail-safe to `None`), `tests/test_gnn_scores_store.py` (store
 shape + keying), and `tests/test_node6a_gnn.py` (elevated account → one finding at
 the right severity; no store → behavior unchanged; never auto-rejects).
+---
+
+## Immutable audit trail (signed, hash-chained)
+
+Audit events — `SCREENED`, `HUMAN_APPROVED`, `HUMAN_REJECTED` — are written to a
+dedicated **append-only, hash-chained, Ed25519-signed** log at
+`data/audit_chain.jsonl`, kept separate from the mutable case snapshot in
+`data/cases.json`. The snapshot legitimately changes as a review moves from
+`PENDING` to a decision; the event history must not. Co-locating them in one
+rewritten file is exactly what made the old embedded `audit_log` forgeable, so the
+two are split: each event is one newline-delimited JSON object, links to its
+predecessor by a hash chain (`prev_hash` → the prior event's `entry_hash`), and is
+signed over a payload that commits to that `entry_hash`. Editing, deleting,
+reordering, inserting, or a full rewrite-with-rehash all become **detectable**,
+because an attacker cannot produce valid signatures without the private key.
+
+**How to verify**
+
+```bash
+# Verify the chain is intact and signed (exit code is the contract):
+python -m fraud_detect.audit.verify [--path data/audit_chain.jsonl]
+```
+
+The exit code is the machine-readable contract:
+
+| Exit | Result | Meaning |
+|------|--------|---------|
+| `0` | `INTACT_SIGNED` | hash chain walks cleanly **and** every event is validly signed (the only OK) |
+| `1` | `BROKEN_CHAIN` / `SIGNATURE_INVALID` | a broken/edited/reordered chain, or a signature that did not validate |
+| `2` | `INTACT_UNSIGNED` | chain intact but events carry no signature — surfaced **distinctly** so it is never mistaken for signed |
+| `3` | `ERROR` | verification could not run (e.g. a configured signing key could not be loaded) |
+
+**Signing key config.** Set `AUDIT_SIGNING_KEY_PATH` to an Ed25519 PEM private key
+located **outside** the `data/` directory (so the key is never co-located with the
+log it protects). If the variable is **unset**, the chain still records events but
+they are **UNSIGNED**, and `verify` reports `INTACT_UNSIGNED` (exit 2) — never
+"signed". If the variable is **set but the key is unreadable or invalid**, the
+system **fails loudly** rather than silently falling back to unsigned. The key path
+is pluggable behind a `Signer` interface so production can swap the local-file key
+for a KMS/HSM backend without touching the chain.
+
+**The honest security boundary.** Stated plainly so no one overstates the
+prototype:
+
+- The prototype is **tamper-evident and forgery-resistant *while the signing key is
+  secure*.** Editing, deleting, reordering, inserting, and a full rewrite-with-rehash
+  are all detectable, because the attacker cannot forge valid signatures without the
+  private key.
+- It is **not** proof against signing-key **theft.** An attacker who steals the
+  private key can forge. Production **MUST** move key custody to a **KMS/HSM so the
+  private key never leaves the security boundary** — the app process would then hold
+  no private-key material at all.
+- It is **not** proof against a full **wipe-and-restart** of the chain (delete
+  everything, begin a fresh genesis). Detecting that requires external
+  anchoring/checkpointing, which is a **production requirement and out of scope for
+  the prototype.**
+
+**Governance (never auto-repair, never auto-reject).** A broken, invalid,
+missing-signature, or unexpectedly-UNSIGNED chain is surfaced to a human as an
+incident. The system never auto-repairs or rewrites the chain (auto-editing an
+append-only log would itself be a tamper vector), and an integrity failure never
+triggers an automated reject on a customer — consistent with the whole system's
+never-auto-reject stance.
