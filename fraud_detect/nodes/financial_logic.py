@@ -19,6 +19,13 @@ from __future__ import annotations
 from collections import Counter
 
 from ..models import AgentReport, Finding, IngestionResult, Severity, Transaction
+from .coverage import (
+    duplicate_months,
+    missing_months,
+    month_name,
+    months_in_period,
+    out_of_order_segments,
+)
 from ..reference_data import (
     ACRA_REGISTRY,
     CASHFLOW_BASELINE,
@@ -132,6 +139,147 @@ def _period_length(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
+def _segment_periods(ing: IngestionResult):
+    """Return the per-segment periods used by the month-coverage checks.
+
+    Falls back to the single top-level statement period when the ingestion has
+    no explicit segments (older results) or only one, so single-period
+    statements behave exactly as before. Each item is
+    ``(period_start, period_end, segment_label)`` where the label is used only
+    for human-readable evidence, never for month identity.
+    """
+    periods = []
+    if ing.segments:
+        # A MULTI-FILE submission has segments originating from distinct files
+        # (distinct ``source`` basenames); a single-file / combined PDF has one
+        # source shared by every segment. When the sources genuinely differ we
+        # label each segment by its file name so duplicate-month evidence can
+        # say WHICH files collide; otherwise we keep the existing page-based
+        # wording for the single-file combined-PDF case.
+        distinct_sources = {
+            seg.source for seg in ing.segments if seg.source is not None
+        }
+        use_source_labels = len(distinct_sources) > 1
+        for i, seg in enumerate(ing.segments, start=1):
+            if use_source_labels and seg.source is not None:
+                label = seg.source
+            elif seg.page_start is not None and seg.page_end is not None:
+                if seg.page_start == seg.page_end:
+                    label = f"page {seg.page_start}"
+                else:
+                    label = f"pages {seg.page_start}\u2013{seg.page_end}"
+            else:
+                label = f"segment {i}"
+            periods.append((seg.period_start, seg.period_end, label))
+    else:
+        periods.append((
+            ing.statement_period_start,
+            ing.statement_period_end,
+            "statement period",
+        ))
+    return periods
+
+
+def _month_missing(ing: IngestionResult) -> list[Finding]:
+    """Flag calendar months absent from the interior of the covered range."""
+    periods = _segment_periods(ing)
+    bounds = [(s, e) for s, e, _ in periods]
+    gaps = missing_months(bounds)
+    if not gaps:
+        return []
+
+    covered = sorted(
+        ym for s, e in bounds if s is not None and e is not None
+        for ym in months_in_period(s, e)
+    )
+    covered_set = {ym for ym in covered}
+    findings: list[Finding] = []
+    for gap in gaps:
+        gap_idx = gap[0] * 12 + (gap[1] - 1)
+        before = max((ym for ym in covered_set
+                      if ym[0] * 12 + (ym[1] - 1) < gap_idx), default=None,
+                     key=lambda ym: ym[0] * 12 + (ym[1] - 1))
+        after = min((ym for ym in covered_set
+                     if ym[0] * 12 + (ym[1] - 1) > gap_idx), default=None,
+                    key=lambda ym: ym[0] * 12 + (ym[1] - 1))
+        between = ""
+        if before is not None and after is not None:
+            between = f" between {month_name(before)} and {month_name(after)}"
+        findings.append(Finding(
+            agent=AGENT, code="FL_MONTH_MISSING",
+            title="Missing month in statement coverage",
+            severity=Severity.MEDIUM, weight=12,
+            evidence=(f"{month_name(gap)} is missing{between}. The submitted "
+                      f"statements skip a calendar month; a removed month can hide "
+                      f"adverse activity and must be explained."),
+        ))
+    return findings
+
+
+def _month_duplicate(ing: IngestionResult) -> list[Finding]:
+    """Flag a calendar month covered by more than one segment/file (or
+    overlapping date ranges, which always share at least one month)."""
+    periods = _segment_periods(ing)
+    labelled = [(s, e, label) for s, e, label in periods]
+    dupes = duplicate_months(labelled)
+    findings: list[Finding] = []
+    for ym, sources in dupes:
+        # Sort the colliding source labels so the evidence (and therefore the
+        # finding) is identical regardless of the order the files/segments were
+        # submitted in — this keeps FL_MONTH_DUPLICATE order-independent.
+        where = ", ".join(sorted(str(s) for s in sources))
+        findings.append(Finding(
+            agent=AGENT, code="FL_MONTH_DUPLICATE",
+            title="Duplicate / overlapping month in statement coverage",
+            severity=Severity.MEDIUM, weight=12,
+            evidence=(f"{month_name(ym)} is covered more than once ({where}). "
+                      f"Duplicated or overlapping statement periods may indicate a "
+                      f"resubmitted or doctored month."),
+        ))
+    return findings
+
+
+def _month_out_of_order(ing: IngestionResult) -> list[Finding]:
+    """Flag segments within a single combined PDF that appear in a
+    non-chronological page order (a later page covers an earlier month).
+
+    Page-order inversion is only meaningful for a genuine in-file layout where
+    the segments occupy DISTINCT, physically-ordered pages (a combined PDF). In
+    a multi-file submission each standalone monthly file parses to a single
+    segment with the same ``page_start`` (all == 1), so list position is just
+    the arbitrary upload order and must NEVER drive a finding; that is the
+    whole point of the order-independence requirement. We therefore only run the
+    check when there are >= 2 segments whose ``page_start`` values are all
+    present and not all identical, and we iterate in true physical page order
+    (sorted by ``page_start``) rather than list-insertion order."""
+    if len(ing.segments) < 2:
+        return []
+    page_starts = [seg.page_start for seg in ing.segments]
+    if any(ps is None for ps in page_starts) or len(set(page_starts)) < 2:
+        # No distinct physical page positions: multi-file aggregate (all the
+        # same page) or missing page info. Coverage then depends only on the
+        # parsed dates, keeping multi-file screening order-independent.
+        return []
+    ordered_segments = sorted(ing.segments, key=lambda seg: seg.page_start)
+    ordered = [
+        (seg.period_start, seg.period_end, seg.page_start)
+        for seg in ordered_segments
+    ]
+    inversions = out_of_order_segments(ordered)
+    findings: list[Finding] = []
+    for prev_page, prev_ym, curr_page, curr_ym in inversions:
+        findings.append(Finding(
+            agent=AGENT, code="FL_MONTH_OUT_OF_ORDER",
+            title="Statement months out of chronological order",
+            severity=Severity.MEDIUM, weight=12, page=curr_page,
+            evidence=(f"Page {curr_page} covers {month_name(curr_ym)} but appears "
+                      f"after page {prev_page} which covers the later month "
+                      f"{month_name(prev_ym)}. Out-of-order monthly sections in a "
+                      f"combined PDF may indicate inserted or reordered pages."),
+        ))
+    return findings
+
+
 def _suspicious_transactions(ing: IngestionResult) -> list[Finding]:
     findings: list[Finding] = []
     baseline = CASHFLOW_BASELINE.get(ing.uen or "", {})
@@ -215,6 +363,9 @@ def analyze(ing: IngestionResult) -> AgentReport:
     findings += _closing_check(ing)
     findings += _period_continuity(ing)
     findings += _period_length(ing)
+    findings += _month_missing(ing)
+    findings += _month_duplicate(ing)
+    findings += _month_out_of_order(ing)
     findings += _suspicious_transactions(ing)
     findings += _structuring(ing)
     findings += _entity_crosscheck(ing)
