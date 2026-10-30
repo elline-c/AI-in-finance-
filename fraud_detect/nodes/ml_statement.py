@@ -5,6 +5,10 @@ single explainable Finding when the document scores as likely-tampered. Adds
 evidence only; never auto-rejects.
 
 Fail-safe: missing model, unreadable file, or scoring error -> no findings.
+
+Abstains (no finding) on documents whose size lies outside what the model was
+trained on. Its training documents are single-month statements, so a 12-month
+statement is outside its experience; see ``assess``.
 """
 from __future__ import annotations
 
@@ -13,6 +17,7 @@ from ..ml import statement_features as sf
 
 AGENT = "Node6b:MLStatement"
 
+# Fallback cutoffs for model files that carry no thresholds of their own.
 _HIGH_PROB = 0.80
 _MEDIUM_PROB = 0.50
 
@@ -43,6 +48,40 @@ def _top_signals(feats: dict) -> str:
     return "; ".join(bits) if bits else "aggregate document features"
 
 
+def assess(feats: dict, model) -> dict:
+    """Score one document's features with ``model`` (a bundle dict or a bare estimator).
+
+    Returns ``{"prob", "abstain", "outside", "medium", "high"}``. ``abstain`` is True
+    when a size feature (pages, text objects, money values) lies outside the range of
+    the documents the model was trained on: its training documents are single months,
+    so it cannot judge much longer or larger statements, and guessing there is what
+    made every generated statement look forged. ``outside`` names those features.
+
+    Bundles written by the current trainer carry their own ``feature_names``,
+    ``thresholds`` and ``size_ranges``; older bundles fall back to the module
+    defaults and have no guard, exactly as they behaved before.
+    """
+    import pandas as pd
+
+    bundle = model if isinstance(model, dict) else {}
+    clf = bundle["model"] if isinstance(model, dict) else model
+    names = list(bundle.get("feature_names") or sf.FEATURE_NAMES)
+    thresholds = bundle.get("thresholds") or {}
+    medium = float(thresholds.get("medium", _MEDIUM_PROB))
+    high = float(thresholds.get("high", _HIGH_PROB))
+
+    outside = [
+        name for name, (lo, hi) in (bundle.get("size_ranges") or {}).items()
+        if name in feats and not (lo <= feats[name] <= hi)
+    ]
+    if outside:
+        return {"prob": None, "abstain": True, "outside": outside, "medium": medium, "high": high}
+
+    X = pd.DataFrame([[feats[name] for name in names]], columns=names)
+    prob = float(clf.predict_proba(X)[0][1])
+    return {"prob": prob, "abstain": False, "outside": [], "medium": medium, "high": high}
+
+
 def analyze(ing: IngestionResult, model=None) -> AgentReport:
     findings: list[Finding] = []
     if model is None:
@@ -53,17 +92,18 @@ def analyze(ing: IngestionResult, model=None) -> AgentReport:
         return AgentReport(agent=AGENT, findings=findings)
 
     try:
-        import pandas as pd
-        clf = model["model"] if isinstance(model, dict) else model
-        X = pd.DataFrame([[feats[name] for name in sf.FEATURE_NAMES]],
-                         columns=sf.FEATURE_NAMES)
-        prob = float(clf.predict_proba(X)[0][1])
+        result = assess(feats, model)
     except Exception:
         return AgentReport(agent=AGENT, findings=findings)
 
-    if prob >= _HIGH_PROB:
+    # Outside the sizes the model was trained on -> stay silent rather than guess.
+    if result["abstain"]:
+        return AgentReport(agent=AGENT, findings=findings)
+
+    prob = result["prob"]
+    if prob >= result["high"]:
         sev, weight = Severity.HIGH, 24
-    elif prob >= _MEDIUM_PROB:
+    elif prob >= result["medium"]:
         sev, weight = Severity.MEDIUM, 12
     else:
         return AgentReport(agent=AGENT, findings=findings)

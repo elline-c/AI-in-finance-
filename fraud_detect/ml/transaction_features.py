@@ -78,6 +78,40 @@ _HISTORY = [
 FEATURE_COLUMNS = _NUMERIC + _HISTORY + _CATEGORICAL
 
 
+# --------------------------------------------------------------------------- #
+# PDF-only feature set (what Node 6a can actually see at screening time)
+# --------------------------------------------------------------------------- #
+# A parsed PDF statement gives each transaction a date (no time of day), a
+# direction, an amount and a running balance -- nothing else. The full feature
+# set above also uses channel, counterparty, merchant category, KYC attributes,
+# account age and hour of day, which the live path cannot know and fills with
+# "NA"/0 placeholders the model never saw in training. Training on this subset,
+# with timestamps cut to the date the same way a statement prints them, keeps
+# the model's training inputs identical to its screening inputs.
+PDF_CATEGORICAL = ["direction"]
+PDF_NUMERIC = [
+    "amount_sgd",
+    "balance_after_sgd",
+    "day_of_week",
+]
+PDF_FEATURE_COLUMNS = PDF_NUMERIC + _HISTORY + PDF_CATEGORICAL
+
+
+def build_pdf_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Like :func:`build_features`, restricted to fields a PDF statement carries.
+
+    Timestamps are truncated to the calendar date before any history window is
+    computed, because a statement prints only dates; otherwise ``n_txn_24h`` and
+    ``gap_hours`` would mean different things in training and at screening time.
+    Returns ``PDF_FEATURE_COLUMNS`` plus the target and split columns.
+    """
+    out = df.copy()
+    ts = pd.to_datetime(out["timestamp"], utc=True, errors="coerce").dt.normalize()
+    out["timestamp"] = ts.dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    full = build_features(out)
+    return full[PDF_FEATURE_COLUMNS + [TARGET, SPLIT_COL]]
+
+
 def load_joined(data_dir: str) -> pd.DataFrame:
     """Load transactions joined with static account attributes.
 

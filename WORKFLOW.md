@@ -19,8 +19,8 @@ flowchart TD
     N1 --> N2["<b>Node 2 — Visual Forensics</b><br/>font mismatch, mixed date/<br/>currency, editor metadata,<br/>impossible creation date"]
     N1 --> N3["<b>Node 3 — Financial Logic</b><br/>balance reconciliation, gaps,<br/>sudden deposits, structuring,<br/>UEN/ACRA cross-check"]
 
-    %% ML agents — now active: models are loaded at startup and run every screening
-    N1 --> N6A["<b>Node 6a — ML Transaction</b><br/>GBM fraud likelihood +<br/>GNN graph-risk lookup"]
+    %% ML agents: loaded at startup; 6a's transaction scoring is off by default
+    N1 --> N6A["<b>Node 6a — ML Transaction</b><br/>GNN graph-risk lookup<br/>(GBM scoring off by default)"]
     N1 --> N6B["<b>Node 6b — ML Statement</b><br/>document-forgery likelihood"]
 
     %% Node 5 memory depends on prior case store + this run's suspicious rows
@@ -53,9 +53,10 @@ flowchart TD
     class AUTO,HUMAN outcome;
 ```
 
-**Reading the diagram:** solid arrows are the always-on flow. Nodes 6a/6b are now
-wired in (models loaded at startup) and run on every screening — they stay
-fail-safe, producing no findings if a model file is missing. The one dotted,
+**Reading the diagram:** solid arrows are the always-on flow. Nodes 6a/6b are
+wired in (models loaded at startup) and run on every screening, except 6a's
+transaction scoring, which is off by default (`FRAUD_ENABLE_TXN_MODEL=1` turns it
+on). Both stay fail-safe, producing no findings if a model file is missing. The one dotted,
 conditional step left is Node 5, which runs only when a case store is supplied.
 
 ## What each node does (in plain terms)
@@ -101,11 +102,16 @@ conditional step left is Node 5, which runs only when a case store is supplied.
 - Learns only from human-verified decisions (never the AI's own past guesses) and
   always cites the prior case so a reviewer can trace it.
 
-### Node 6a — ML Transaction Fraud (machine-learning, now active)
-- **Active in the live pipeline:** the transaction model and the precomputed GNN
-  scores are loaded once at startup (in `webapp.py` / `demo.py`) and passed into
-  every screening, so this node runs on real cases rather than staying dormant.
-- Scores individual transactions for fraud likelihood with a gradient-boosted model (GBM).
+### Node 6a — ML Transaction Fraud (GNN lookup on; transaction scoring off)
+- **Transaction scoring is switched off by default.** The gradient-boosted model
+  that scores each transaction raised false alarms on clean business statements
+  without adding detection the rule-based checks lack: trained on the available
+  dataset it either relies on fields a PDF does not carry (channel, counterparty,
+  KYC) or mistakes ordinary business-sized amounts for fraud. Set
+  `FRAUD_ENABLE_TXN_MODEL=1` to switch it back on, e.g. after retraining on
+  representative statements.
+- **The GNN lookup stays on:** its precomputed scores are loaded at startup (in
+  `webapp.py` / `demo.py`) and checked on every screening.
 - Adds a graph-based signal (GNN) that catches relational money-laundering patterns a
   single row can't reveal — round-tripping, dormant reactivation, mule fan-in/out —
   via a fast lookup of scores precomputed offline.
@@ -113,13 +119,19 @@ conditional step left is Node 5, which runs only when a case store is supplied.
   findings (the node is skipped) rather than crashing the screening.
 - Adds evidence only; never auto-rejects.
 
-### Node 6b — ML Statement Forgery (machine-learning, now active)
-- **Active in the live pipeline:** the statement-forgery model is loaded once at
-  startup (in `webapp.py` / `demo.py`) and passed into every screening, so this node
-  runs on real cases rather than staying dormant.
-- Scores the whole document for how likely it is to be tampered, based on file-level features.
-- Still fail-safe: a missing or unreadable model yields no findings (the node is
-  skipped) rather than breaking the screening.
+### Node 6b — ML Statement Forgery (machine-learning, active)
+- Scores the whole document for how likely it is to be tampered, from file-level
+  features: fonts, editor traces in the metadata, and whether the running balances
+  add up row by row.
+- **It is a document-forensics check.** It flags altered balances, re-typed numbers
+  and editor metadata. It does not see content-only problems (structuring, a shell
+  company, a name mismatch); the rule-based nodes catch those.
+- **It stays silent on documents it was not trained for.** Its training documents
+  are single-month statements (at most 3 pages), so on a document much larger than
+  that (e.g. a long 12-month statement) it abstains rather than guess, and the
+  rule-based checks decide. Severity cutoffs (MEDIUM from 0.7, HIGH from 0.9) are
+  stored with the model and were set on validation data.
+- Still fail-safe: a missing or unreadable model yields no findings.
 - Adds evidence only; never auto-rejects.
 
 ### Node 4 — Risk Synthesis (the senior officer)
