@@ -11,3 +11,6 @@ samples/*.pdf
 # Trained ML models and private/large datasets
 models/
 data/private/
+
+# Hypothesis test cache
+.hypothesis/

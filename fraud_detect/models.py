@@ -96,6 +96,21 @@ class Transaction(BaseModel):
     amount: Optional[float] = None          # signed: credits +, debits -
     balance: Optional[float] = None
     page: Optional[int] = None
+    # Optional Node 1 (multi-layout) additions; old stored rows omit them.
+    value_date_raw: Optional[str] = None      # second date column text, when printed
+    direction_method: Optional[str] = None    # "column" | "printed_sign" | "balance_change"
+
+
+class SectionSummary(BaseModel):
+    """One monthly statement section as read by Node 1 (all fields optional)."""
+    period_start: Optional[date_type] = None
+    period_end: Optional[date_type] = None
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+    opening: Optional[float] = None
+    closing: Optional[float] = None
+    total_deposits: Optional[float] = None
+    total_withdrawals: Optional[float] = None
 
 
 class DocumentMetadata(BaseModel):
@@ -163,6 +178,11 @@ class IngestionResult(BaseModel):
     declared_currency: Optional[str] = None
 
     transactions: list[Transaction] = Field(default_factory=list)
+
+    # Multi-layout parser additions (optional; absent on older results).
+    layout_profile: Optional[str] = None
+    parse_coverage: Optional[float] = None
+    sections: list[SectionSummary] = Field(default_factory=list)
 
     # Data-quality flags collected during parsing
     data_quality_findings: list[Finding] = Field(default_factory=list)
