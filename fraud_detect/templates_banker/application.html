@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ case.case_id }}{% endblock %}
+{% block body %}
+
+<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+  <h1 style="margin:0">{{ r.account_holder or "Application" }}</h1>
+  <span class="badge b-{{ case.credit.decision.value }}">{{ case.credit.decision.value }}</span>
+  <span style="flex:1"></span>
+  <a class="btn ghost" href="/">← Back to queue</a>
+</div>
+<p class="lede" style="margin-top:6px"><code>{{ case.case_id }}</code>
+  &nbsp;·&nbsp; UEN {{ r.uen or "—" }} &nbsp;·&nbsp; Period {{ r.statement_period or "—" }}</p>
+
+<!-- Trust signal (from fraud screening — shown, not decided here) -->
+<div class="card" style="display:flex; align-items:center; gap:14px">
+  <span class="pill {{ summary.trust_tone }}">✓ {{ summary.trust_label }}</span>
+  <span class="hint">Fraud screening confidence: <b>{{ summary.confidence }}/100 ({{ summary.confidence_band }})</b>.
+  Document authenticity was assessed by the fraud team; your decision is a lending call.</span>
+</div>
+
+<!-- Headline financials the officer cares about -->
+<div class="card">
+  <h2 style="margin-top:0">Statement financials <span class="hint">{{ summary.currency }}</span></h2>
+  <div class="metrics">
+    <div class="metric"><div class="k">Opening balance</div>
+      <div class="v">{% if summary.opening is not none %}{{ "{:,.0f}".format(summary.opening) }}{% else %}—{% endif %}</div></div>
+    <div class="metric"><div class="k">Closing balance</div>
+      <div class="v">{% if summary.closing is not none %}{{ "{:,.0f}".format(summary.closing) }}{% else %}—{% endif %}</div></div>
+    <div class="metric"><div class="k">Total credits</div>
+      <div class="v pos">{{ "{:,.0f}".format(summary.total_credits) }}</div></div>
+    <div class="metric"><div class="k">Total debits</div>
+      <div class="v neg">{{ "{:,.0f}".format(summary.total_debits) }}</div></div>
+  </div>
+  <div class="kv" style="margin-top:14px"><span class="hint">Net change over period</span>
+    <span>{% if summary.net_change is not none %}{{ "{:+,.2f}".format(summary.net_change) }}{% else %}—{% endif %}</span></div>
+  <div class="kv"><span class="hint">Transactions on statement</span><span>{{ summary.txn_count }}</span></div>
+</div>
+
+{% if case.credit.decision.value == "PENDING" %}
+<!-- Lending decision form -->
+<div class="card">
+  <h2 style="margin-top:0">Lending decision</h2>
+  <p class="hint" style="margin-top:0">Approve, decline on credit grounds, or refer to a
+  senior officer / credit committee. A rationale is mandatory and is written to the audit log.</p>
+  <form action="/application/{{ case.case_id }}/decide" method="post">
+    <div class="row">
+      <div>
+        <label>Loan officer</label>
+        <input name="officer" required placeholder="e.g. Daniel Lim, Commercial Lending">
+      </div>
+      <div>
+        <label>Decision</label>
+        <select name="decision" id="decision">
+          <option value="approve">Approve loan</option>
+          <option value="decline">Decline (credit grounds)</option>
+          <option value="refer">Refer to senior officer / committee</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Approved amount <span class="hint">(if approving)</span></label>
+        <input name="approved_amount" placeholder="e.g. SGD 450,000">
+      </div>
+      <div>
+        <label>Conditions / covenants <span class="hint">(optional)</span></label>
+        <input name="conditions" placeholder="e.g. personal guarantee; quarterly statements">
+      </div>
+    </div>
+    <label>Rationale <span class="hint">(required, audited)</span></label>
+    <textarea name="rationale" rows="3" required
+      placeholder="Credit reasoning — cash-flow coverage, balances, exposure, policy fit."></textarea>
+    <div style="margin-top:14px; display:flex; gap:10px">
+      <button class="btn" type="submit">Record decision</button>
+      <a class="btn ghost" href="/">Cancel</a>
+    </div>
+  </form>
+</div>
+{% else %}
+<!-- Recorded decision -->
+<div class="card">
+  <h2 style="margin-top:0">Recorded decision</h2>
+  <div class="kv"><span class="hint">Decision</span>
+    <span><span class="badge b-{{ case.credit.decision.value }}">{{ case.credit.decision.value }}</span></span></div>
+  <div class="kv"><span class="hint">Officer</span><span>{{ case.credit.officer or "—" }}</span></div>
+  <div class="kv"><span class="hint">Decided at (UTC)</span><span>{{ case.credit.decided_at }}</span></div>
+  {% if case.credit.approved_amount is not none %}
+  <div class="kv"><span class="hint">Approved amount</span><span>{{ "{:,.2f}".format(case.credit.approved_amount) }}</span></div>{% endif %}
+  {% if case.credit.conditions %}
+  <div class="kv"><span class="hint">Conditions</span><span>{{ case.credit.conditions }}</span></div>{% endif %}
+  <div style="margin-top:10px"><span class="hint">Rationale</span><p style="margin:4px 0 0">{{ case.credit.rationale }}</p></div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2 style="margin-top:0">Audit log</h2>
+  <table>
+    <thead><tr><th>Timestamp (UTC)</th><th>Event</th><th>Detail</th></tr></thead>
+    <tbody>
+      {% for e in case.audit_log %}
+      <tr><td class="hint">{{ e.ts }}</td><td><code>{{ e.event }}</code></td><td class="hint">{{ e.detail }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Approval queue{% endblock %}
+{% block body %}
+
+<h1>Loan approval queue</h1>
+<p class="lede">Applications whose documents have cleared fraud screening and are
+ready for a lending decision. Suspected, under-review, or rejected documents do
+not appear here.</p>
+
+<div class="card">
+  <h2 style="margin-top:0">Awaiting your decision <span class="badge b-PENDING">{{ pending|length }}</span></h2>
+  <table>
+    <thead>
+      <tr><th>Reference</th><th>Applicant / UEN</th><th>Fraud screening</th>
+          <th class="num">Confidence</th><th class="num">Closing balance</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in pending %}
+      {% set r = c.report %}
+      <tr>
+        <td><code>{{ c.case_id }}</code></td>
+        <td>{{ r.account_holder or "—" }}<br><span class="hint">{{ r.uen or "" }}</span></td>
+        <td><span class="pill ok">Cleared</span></td>
+        <td class="num">{{ r.confidence_score }} · {{ r.confidence_band.value }}</td>
+        <td class="num">{% if r.closing_balance is not none %}{{ "{:,.2f}".format(r.closing_balance) }}{% else %}—{% endif %}</td>
+        <td><a href="/application/{{ c.case_id }}">Review →</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="hint">No fraud-cleared applications are waiting. When the
+      fraud team clears a case (or a statement auto-clears), it appears here.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if decided %}
+<div class="card">
+  <h2 style="margin-top:0">Recent decisions</h2>
+  <table>
+    <thead><tr><th>Reference</th><th>Applicant</th><th>Decision</th><th>Officer</th><th class="num">Approved amount</th></tr></thead>
+    <tbody>
+      {% for c in decided %}
+      <tr>
+        <td><code>{{ c.case_id }}</code> <a href="/application/{{ c.case_id }}" class="hint">open</a></td>
+        <td>{{ c.report.account_holder or "—" }}</td>
+        <td><span class="badge b-{{ c.credit.decision.value }}">{{ c.credit.decision.value }}</span></td>
+        <td>{{ c.credit.officer or "—" }}</td>
+        <td class="num">{% if c.credit.approved_amount is not none %}{{ "{:,.2f}".format(c.credit.approved_amount) }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
