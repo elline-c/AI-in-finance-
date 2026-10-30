@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from .audit import AuditChain, build_signer_from_env
 from .models import (
     Case,
     CreditDecision,

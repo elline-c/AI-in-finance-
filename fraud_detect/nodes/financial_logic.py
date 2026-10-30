@@ -17,6 +17,7 @@ Findings are explainable and carry the offending page/row where possible.
 from __future__ import annotations
 
 from collections import Counter
+from datetime import date, timedelta
 
 from ..models import AgentReport, Finding, IngestionResult, Severity, Transaction
 from .coverage import (
@@ -104,6 +105,25 @@ def _period_continuity(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
+def period_months(start: date, end: date) -> int:
+    """Whole calendar months covered by a statement period, END DATE INCLUSIVE.
+
+    Real statements end on the last day of the month (1 Apr to 30 Sep is six
+    months of data), so we measure from ``start`` up to the day AFTER ``end``.
+    Counting the end date as inclusive also keeps the older "start + N months"
+    style correct: 1 Jan to 1 Jul still counts as 6. A final month that is not
+    complete (end day before the start day) is not counted.
+    """
+    try:
+        stop = end + timedelta(days=1)
+    except OverflowError:  # end == date.max; no real statement gets here
+        stop = end
+    months = (stop.year - start.year) * 12 + (stop.month - start.month)
+    if stop.day < start.day:
+        months -= 1
+    return months
+
+
 def _period_length(ing: IngestionResult) -> list[Finding]:
     """Flag when the declared statement period falls outside the required
     6-12 month window. Missing dates are handled elsewhere (DQ_MISSING_PERIOD),
@@ -114,12 +134,7 @@ def _period_length(ing: IngestionResult) -> list[Finding]:
     if start is None or end is None:
         return findings
 
-    # Whole-month span between the two dates. Simple and explainable: count the
-    # calendar months, then subtract one if the end day has not yet reached the
-    # start day (an incomplete final month).
-    months = (end.year - start.year) * 12 + (end.month - start.month)
-    if end.day < start.day:
-        months -= 1
+    months = period_months(start, end)
 
     if months < _MIN_PERIOD_MONTHS or months > _MAX_PERIOD_MONTHS:
         too_short = months < _MIN_PERIOD_MONTHS
