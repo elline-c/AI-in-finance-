@@ -105,6 +105,26 @@ class PageText(BaseModel):
     text: str
 
 
+class StatementSegment(BaseModel):
+    """One contiguous statement section inside a (possibly combined) PDF.
+
+    A combined PDF can staple several monthly statements together; each printed
+    "Statement Period:" header starts a new segment. ``page_start`` / ``page_end``
+    delimit the pages that segment spans. All fields are Optional-with-default so
+    partially-parsed or hand-built segments still validate.
+    """
+    period_start: Optional[date_type] = None
+    period_end: Optional[date_type] = None
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+    # Basename of the file this segment was ingested from. Used only for
+    # human-readable evidence on a MULTI-FILE submission (so duplicate-month
+    # evidence can name the colliding files); never used for month identity.
+    # Optional-with-default so single-file/combined-PDF and hand-built segments
+    # are unchanged.
+    source: Optional[str] = None
+
+
 class IngestionResult(BaseModel):
     source_path: str
     page_count: int
@@ -112,6 +132,10 @@ class IngestionResult(BaseModel):
     page_texts: list[PageText] = Field(default_factory=list)
     metadata: DocumentMetadata
     fonts: list[FontUsage] = Field(default_factory=list)
+
+    # One entry per "Statement Period:" header found in the PDF. Empty for older
+    # stored reports / hand-built results; a single-period PDF yields exactly one.
+    segments: list[StatementSegment] = Field(default_factory=list)
 
     # Parsed statement header
     account_holder: Optional[str] = None
@@ -186,6 +210,13 @@ class RiskReport(BaseModel):
     opening_balance: Optional[float] = None
     closing_balance: Optional[float] = None
     declared_currency: Optional[str] = None
+
+    # Per-segment coverage summary (period + page range for each statement
+    # section found in the source PDF). A single-period statement yields exactly
+    # one segment; a combined multi-month PDF yields several. Optional (defaults
+    # to empty) so older stored reports still validate and single-segment cases
+    # render unchanged.
+    statement_segments: list[StatementSegment] = Field(default_factory=list)
 
     # Cross-case memory: fingerprints of this case's transactions, persisted so
     # that future screenings can detect recurrence of the same entity/amount.
