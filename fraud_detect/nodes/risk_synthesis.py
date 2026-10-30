@@ -190,4 +190,5 @@ def synthesize(ing: IngestionResult, reports: Iterable[AgentReport]) -> RiskRepo
         opening_balance=ing.opening_balance,
         closing_balance=ing.closing_balance,
         declared_currency=ing.declared_currency,
+        statement_segments=list(ing.segments),
     )

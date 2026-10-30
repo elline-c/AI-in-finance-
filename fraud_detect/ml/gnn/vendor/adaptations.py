@@ -22,6 +22,9 @@
 #   * ``create_hetero_obj`` no longer takes an upstream argparse ``args``
 #     object; the single flag it consulted (``args.ports``) is now an explicit
 #     ``ports`` boolean parameter so the function carries no CLI glue.
+#   * ``AddEgoIds`` gained a ``forward`` method (``__call__`` now delegates to it)
+#     because current PyTorch-Geometric declares ``BaseTransform.forward``
+#     abstract; the transform's logic is unchanged.
 #
 # ``torch`` / ``torch_geometric`` are OFFLINE-ONLY dependencies
 # (requirements-gnn.txt). Importing this module therefore requires those
@@ -44,6 +47,9 @@ class AddEgoIds(BaseTransform):
         pass
 
     def __call__(self, data: Union[Data, HeteroData]):
+        return self.forward(data)
+
+    def forward(self, data: Union[Data, HeteroData]):
         x = data.x if not isinstance(data, HeteroData) else data['node'].x
         device = x.device
         ids = torch.zeros((x.shape[0], 1), device=device)

@@ -59,7 +59,7 @@ commit above), and the nature of the change. Modifications made:
   `model_settings.json` parameter extraction, and the `wandb` / `tqdm` /
   `sklearn` imports those relied on. `create_hetero_obj` was changed to take an
   explicit `ports: bool` parameter instead of an upstream argparse `args` object,
-  so the vendored code carries no CLI glue.
+  so the vendored code carries no CLI glue. `AddEgoIds` also gained a `forward` method (with `__call__` delegating to it) because current PyG declares `BaseTransform.forward` abstract; the logic is unchanged.
 - **`__init__.py`** — new file; intentionally imports none of the torch-dependent
   submodules so the live path can import the package without torch installed.
 

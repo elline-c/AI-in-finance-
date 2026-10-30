@@ -16,6 +16,7 @@ Planted-issue types (Phase 3 test areas):
 """
 from __future__ import annotations
 
+import calendar
 import random
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -39,6 +40,73 @@ class GeneratedStatement:
     path: str
     manifest: list[PlantedIssue] = field(default_factory=list)
     is_clean: bool = True
+
+
+@dataclass
+class MonthGroundTruth:
+    """Ground truth for one monthly section inside a combined multi-month PDF.
+
+    ``year`` / ``month`` identify the calendar month. ``period_start`` /
+    ``period_end`` are the printed "Statement Period:" dates for that section
+    (first-of-month through last-of-month). ``page_start`` / ``page_end`` are
+    the 1-based page numbers the section occupies in the final document, so a
+    test can assert the ingestion segmentation matches exactly.
+    """
+    year: int
+    month: int
+    period_start: date
+    period_end: date
+    page_start: int
+    page_end: int
+
+
+@dataclass
+class CombinedStatement:
+    """A single combined PDF stapling several monthly sections together.
+
+    ``segments`` lists the ground-truth per-month page ranges in the order the
+    sections physically appear in the document (which, for a jumbled layout, is
+    NOT chronological). ``month_count`` is the expected number of ingestion
+    segments.
+    """
+    path: str
+    segments: list[MonthGroundTruth] = field(default_factory=list)
+    jumbled: bool = False
+
+    @property
+    def month_count(self) -> int:
+        return len(self.segments)
+
+
+@dataclass
+class MonthlyFile:
+    """One standalone single-month PDF plus the month its content declares.
+
+    ``year`` / ``month`` are the calendar month the printed Statement Period
+    dates identify. Note this identity lives in the file *content*, not the
+    filename, so the detection must not depend on filename or submission order.
+    """
+    path: str
+    year: int
+    month: int
+    period_start: date
+    period_end: date
+
+
+@dataclass
+class MonthlySet:
+    """A SET of standalone monthly PDFs submitted together as one application.
+
+    ``files`` is the (possibly shuffled) list of generated files; ``kind``
+    records what was deliberately engineered ("complete", "missing",
+    "duplicate", "jumbled").
+    """
+    files: list[MonthlyFile] = field(default_factory=list)
+    kind: str = "complete"
+
+    @property
+    def paths(self) -> list[str]:
+        return [f.path for f in self.files]
 
 
 # --------------------------------------------------------------------------- #
@@ -65,6 +133,10 @@ _DEBIT_DESCS = [
 ]
 
 
+def _last_day_of_month(year: int, month: int) -> date:
+    return date(year, month, calendar.monthrange(year, month)[1])
+
+
 def _build_transactions(rng: random.Random, start: date, opening: float,
                         n: int = 24) -> list[_Txn]:
     txns: list[_Txn] = []
@@ -72,6 +144,73 @@ def _build_transactions(rng: random.Random, start: date, opening: float,
     dt = start
     for _ in range(n):
         dt = dt + timedelta(days=rng.randint(1, 6))
+        if rng.random() < 0.5:
+            amt = round(rng.uniform(500, 9000), 2)
+            desc = rng.choice(_CREDIT_DESCS)
+        else:
+            amt = -round(rng.uniform(300, 7000), 2)
+            desc = rng.choice(_DEBIT_DESCS)
+        bal = round(bal + amt, 2)
+        txns.append(_Txn(dt=dt, desc=desc, amount=amt, balance=bal))
+    return txns
+
+
+def _add_months(d: date, months: int) -> date:
+    """``d`` shifted forward by ``months`` calendar months (day clamped to the
+    target month's length)."""
+    total = d.year * 12 + (d.month - 1) + months
+    year, month0 = divmod(total, 12)
+    month = month0 + 1
+    return date(year, month, min(d.day, calendar.monthrange(year, month)[1]))
+
+
+def _build_transactions_spanning(rng: random.Random, start: date, opening: float,
+                                 months: int) -> list[_Txn]:
+    """Transactions every 1-6 days from ``start`` until the statement spans exactly
+    ``months`` whole months, ending on ``start + months`` months.
+
+    Spacing never exceeds 6 days, so the result stays well inside Node 3's 25-day
+    unexplained-gap threshold. A closing transaction is added on the target end
+    date when the random spacing does not land on it, so the declared period is
+    exactly ``months`` long as Node 3's period-length rule counts it (this
+    assumes ``start`` is the 1st, so the end day is never earlier than the start
+    day).
+    """
+    target_end = _add_months(start, months)
+    txns: list[_Txn] = []
+    bal = opening
+    dt = start
+    while True:
+        dt = dt + timedelta(days=rng.randint(1, 6))
+        if dt > target_end:
+            break
+        if rng.random() < 0.5:
+            amt = round(rng.uniform(500, 9000), 2)
+            desc = rng.choice(_CREDIT_DESCS)
+        else:
+            amt = -round(rng.uniform(300, 7000), 2)
+            desc = rng.choice(_DEBIT_DESCS)
+        bal = round(bal + amt, 2)
+        txns.append(_Txn(dt=dt, desc=desc, amount=amt, balance=bal))
+    if not txns or txns[-1].dt < target_end:
+        amt = round(rng.uniform(500, 9000), 2)
+        bal = round(bal + amt, 2)
+        txns.append(_Txn(dt=target_end, desc=rng.choice(_CREDIT_DESCS),
+                         amount=amt, balance=bal))
+    return txns
+
+
+def _build_month_txns(rng: random.Random, year: int, month: int, opening: float,
+                      n: int = 6) -> list[_Txn]:
+    """A small set of transactions whose dates all fall inside one calendar
+    month. Kept short so each monthly section fits comfortably on one page."""
+    last_day = _last_day_of_month(year, month).day
+    txns: list[_Txn] = []
+    bal = opening
+    for i in range(n):
+        # spread days across the month deterministically
+        day = min(last_day, 2 + (i * max(1, last_day // (n + 1))))
+        dt = date(year, month, day)
         if rng.random() < 0.5:
             amt = round(rng.uniform(500, 9000), 2)
             desc = rng.choice(_CREDIT_DESCS)
@@ -103,15 +242,24 @@ def _render_pdf(path: Path, *, holder: str, uen: str, account_no: str,
         c.drawString(20 * mm, height - 25 * mm, "OCBC-STYLE BANK  |  Corporate Statement")
         c.setFont("Helvetica", 9)
         y = height - 33 * mm
-        for line in [
-            f"Account Holder: {holder}",
-            f"UEN: {uen}",
-            f"Account No: {account_no}",
-            f"Statement Period: {period_start:%d/%m/%Y} - {period_end:%d/%m/%Y}",
-            f"Currency: {currency}",
-            f"Opening Balance: {opening:,.2f}",
-            f"Page {page_no}",
-        ]:
+        # One statement prints its details block once, on page 1. Continuation
+        # pages carry only a page marker: ingestion treats every "Statement
+        # Period:" header as the start of a separate statement segment, so
+        # repeating it would make one multi-page statement look like several
+        # copies of the same months (FL_MONTH_DUPLICATE).
+        if page_no == 1:
+            lines = [
+                f"Account Holder: {holder}",
+                f"UEN: {uen}",
+                f"Account No: {account_no}",
+                f"Statement Period: {period_start:%d/%m/%Y} - {period_end:%d/%m/%Y}",
+                f"Currency: {currency}",
+                f"Opening Balance: {opening:,.2f}",
+                f"Page {page_no}",
+            ]
+        else:
+            lines = [f"Account No: {account_no}  (continued)", f"Page {page_no}"]
+        for line in lines:
             c.drawString(20 * mm, y, line)
             y -= 5 * mm
         # column headers
@@ -174,9 +322,180 @@ def _render_pdf(path: Path, *, holder: str, uen: str, account_no: str,
 
 
 # --------------------------------------------------------------------------- #
+# Multi-month / multi-file rendering (segmentation + coverage test fixtures)
+# --------------------------------------------------------------------------- #
+def _render_month_section(c: "canvas.Canvas", *, holder: str, uen: str,
+                          account_no: str, currency: str, opening: float,
+                          period_start: date, period_end: date,
+                          txns: list[_Txn], page_no: int) -> None:
+    """Render ONE monthly section onto the current canvas page.
+
+    Mirrors ``_render_pdf``'s header()/row layout so the ingestion regexes parse
+    it identically. The caller is responsible for ``c.showPage()`` so that each
+    section starts on a fresh page (giving the combined document one period
+    header per page). Kept short enough to fit on a single page.
+    """
+    width, height = A4
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(20 * mm, height - 25 * mm, "OCBC-STYLE BANK  |  Corporate Statement")
+    c.setFont("Helvetica", 9)
+    y = height - 33 * mm
+    for line in [
+        f"Account Holder: {holder}",
+        f"UEN: {uen}",
+        f"Account No: {account_no}",
+        f"Statement Period: {period_start:%d/%m/%Y} - {period_end:%d/%m/%Y}",
+        f"Currency: {currency}",
+        f"Opening Balance: {opening:,.2f}",
+        f"Page {page_no}",
+    ]:
+        c.drawString(20 * mm, y, line)
+        y -= 5 * mm
+    y -= 3 * mm
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(20 * mm, y, "Date")
+    c.drawString(55 * mm, y, "Description")
+    c.drawString(120 * mm, y, "Amount")
+    c.drawString(160 * mm, y, "Balance")
+    y -= 6 * mm
+
+    c.setFont("Helvetica", 9)
+    for t in txns:
+        c.setFont("Helvetica", 9)
+        c.drawString(20 * mm, y, t.dt.strftime(t.date_fmt))
+        c.drawString(55 * mm, y, t.desc)
+        sign = "" if t.amount < 0 else "+"
+        c.drawRightString(150 * mm, y, f"{sign}{currency}{t.amount:,.2f}")
+        c.drawRightString(195 * mm, y, f"{currency}{t.balance:,.2f}")
+        y -= 5.2 * mm
+
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(20 * mm, y - 4 * mm,
+                 f"Closing Balance: {currency}{txns[-1].balance:,.2f}")
+
+
+# --------------------------------------------------------------------------- #
 # Public generators
 # --------------------------------------------------------------------------- #
-def generate_clean(out_dir: str, seed: int = 1, uen: str = "201812345A") -> GeneratedStatement:
+def generate_combined_multi_month(
+    out_dir: str, *, year: int = 2024, months: list[int] | None = None,
+    jumbled: bool = False, seed: int = 101, uen: str = "201812345A",
+    account_no: str = "0123456789", currency: str = "SGD",
+    opening: float = 40000.0,
+) -> CombinedStatement:
+    """Generate ONE combined PDF with several monthly sections, each starting on
+    a fresh page with its own "Statement Period:" header.
+
+    With ``jumbled=False`` the sections are laid out in chronological order
+    (Jan..Jun). With ``jumbled=True`` the physical page order is non-chronological
+    (a later page covers an earlier month) to exercise FL_MONTH_OUT_OF_ORDER;
+    each section's printed period dates still identify its true month.
+
+    Returns ground truth: the expected segment count and the per-section
+    ``(page_start, page_end)`` and period dates, in physical document order.
+    """
+    rng = random.Random(seed)
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    holder = ACRA_REGISTRY[uen]
+    months = months or [1, 2, 3, 4, 5, 6]
+
+    # Physical layout order of the calendar months in the document.
+    layout = list(months)
+    if jumbled and len(layout) >= 2:
+        # Deterministic non-chronological order: swap so an earlier month lands
+        # on a later page (classic inserted/reordered-pages tampering shape).
+        layout = sorted(months)
+        layout[0], layout[-1] = layout[-1], layout[0]
+
+    suffix = "jumbled" if jumbled else "chrono"
+    path = out / f"combined_{year}_{suffix}.pdf"
+    c = canvas.Canvas(str(path), pagesize=A4)
+    c.setAuthor(holder)
+    c.setTitle(f"Combined Bank Statement {account_no}")
+
+    segments: list[MonthGroundTruth] = []
+    for page_no, m in enumerate(layout, start=1):
+        p_start = date(year, m, 1)
+        p_end = _last_day_of_month(year, m)
+        txns = _build_month_txns(rng, year, m, opening, n=6)
+        _render_month_section(
+            c, holder=holder, uen=uen, account_no=account_no, currency=currency,
+            opening=opening, period_start=p_start, period_end=p_end,
+            txns=txns, page_no=page_no,
+        )
+        c.showPage()  # each section occupies exactly one page -> fresh header
+        segments.append(MonthGroundTruth(
+            year=year, month=m, period_start=p_start, period_end=p_end,
+            page_start=page_no, page_end=page_no,
+        ))
+    c.save()
+
+    return CombinedStatement(path=str(path), segments=segments, jumbled=jumbled)
+
+
+def generate_monthly_set(
+    out_dir: str, *, year: int = 2024, months: list[int] | None = None,
+    kind: str = "complete", shuffle: bool = False, seed: int = 202,
+    uen: str = "201812345A", account_no: str = "0123456789",
+    currency: str = "SGD", opening: float = 40000.0,
+) -> MonthlySet:
+    """Generate a SET of standalone single-month PDFs, one file per month entry.
+
+    ``months`` is the list of calendar months to produce for ``year``. The list
+    is used verbatim, so callers craft the scenario by choosing it:
+        * complete  : [1, 2, 3]         -> contiguous months
+        * missing   : [1, 2, 4]         -> March omitted (interior gap)
+        * duplicate : [1, 2, 2, 3]      -> February produced twice
+    ``kind`` is recorded on the result for readability; it does not change what
+    is produced (the ``months`` list is authoritative).
+
+    Each file's month identity is carried ENTIRELY by its printed "Statement
+    Period:" dates, not by its filename. When ``shuffle=True`` the returned file
+    list is deterministically shuffled so callers can prove that submission
+    order does not change month identification.
+    """
+    rng = random.Random(seed)
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    holder = ACRA_REGISTRY[uen]
+    months = months if months is not None else [1, 2, 3]
+
+    files: list[MonthlyFile] = []
+    for occurrence, m in enumerate(months):
+        p_start = date(year, m, 1)
+        p_end = _last_day_of_month(year, m)
+        txns = _build_month_txns(rng, year, m, opening, n=6)
+        # Filename intentionally uses a neutral running index (NOT the month) so
+        # the detection cannot shortcut month identity from the filename.
+        path = out / f"stmt_{year}_{kind}_{occurrence:02d}.pdf"
+        _render_pdf(
+            path, holder=holder, uen=uen, account_no=account_no,
+            period_start=p_start, period_end=p_end, currency=currency,
+            opening=opening, txns=txns, producer="ReportLab PDF Library",
+            creation_override=None, mixed_currency=False,
+        )
+        files.append(MonthlyFile(
+            path=str(path), year=year, month=m,
+            period_start=p_start, period_end=p_end,
+        ))
+
+    if shuffle and len(files) > 1:
+        order = random.Random(seed + 1)
+        order.shuffle(files)
+
+    return MonthlySet(files=files, kind=kind)
+
+
+def generate_clean(out_dir: str, seed: int = 1, uen: str = "201812345A",
+                   months: int = 9) -> GeneratedStatement:
+    """A statement with no planted issues.
+
+    ``months`` is the span, in whole months, between the declared period start and
+    end (default 9). Node 3 requires 6-12 months under corporate-loan policy, so
+    the default is comfortably inside that window; pass a value outside it to
+    generate a statement the period-length rule should flag.
+    """
     rng = random.Random(seed)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -184,7 +503,7 @@ def generate_clean(out_dir: str, seed: int = 1, uen: str = "201812345A") -> Gene
     holder = ACRA_REGISTRY[uen]
     start = date(2025, 3, 1)
     opening = 42000.0
-    txns = _build_transactions(rng, start, opening, n=22)
+    txns = _build_transactions_spanning(rng, start, opening, months)
     end = txns[-1].dt
 
     path = out / f"clean_{uen}.pdf"
