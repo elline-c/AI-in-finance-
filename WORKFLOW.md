@@ -119,13 +119,19 @@ conditional step left is Node 5, which runs only when a case store is supplied.
   findings (the node is skipped) rather than crashing the screening.
 - Adds evidence only; never auto-rejects.
 
-### Node 6b — ML Statement Forgery (machine-learning, now active)
-- **Active in the live pipeline:** the statement-forgery model is loaded once at
-  startup (in `webapp.py` / `demo.py`) and passed into every screening, so this node
-  runs on real cases rather than staying dormant.
-- Scores the whole document for how likely it is to be tampered, based on file-level features.
-- Still fail-safe: a missing or unreadable model yields no findings (the node is
-  skipped) rather than breaking the screening.
+### Node 6b — ML Statement Forgery (machine-learning, active)
+- Scores the whole document for how likely it is to be tampered, from file-level
+  features: fonts, editor traces in the metadata, and whether the running balances
+  add up row by row.
+- **It is a document-forensics check.** It flags altered balances, re-typed numbers
+  and editor metadata. It does not see content-only problems (structuring, a shell
+  company, a name mismatch); the rule-based nodes catch those.
+- **It stays silent on documents it was not trained for.** Its training documents
+  are single-month statements (at most 3 pages), so on a document much larger than
+  that (e.g. a long 12-month statement) it abstains rather than guess, and the
+  rule-based checks decide. Severity cutoffs (MEDIUM from 0.7, HIGH from 0.9) are
+  stored with the model and were set on validation data.
+- Still fail-safe: a missing or unreadable model yields no findings.
 - Adds evidence only; never auto-rejects.
 
 ### Node 4 — Risk Synthesis (the senior officer)

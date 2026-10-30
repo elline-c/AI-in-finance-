@@ -319,6 +319,17 @@ into Node 4 corroboration alongside the GBM's `ML_TXN_FRAUD_LIKELIHOOD` — so
 GBM+GNN agreement naturally strengthens the risk call. Like every other node it
 only adds evidence for a reviewer and never auto-rejects.
 
+**Node 6b (statement forgery) is a document-forensics check with a size guard.**
+Its balance-reconciliation feature now reconciles each transaction row (the earlier
+version paired every money value on the page and reported breaks on genuine
+documents), and two features that only reflected how the training dataset's
+generator prints documents were removed from its inputs. It abstains on documents
+larger than anything it was trained on (training statements are single months), and
+its severity cutoffs live in the model file. Retrain with
+`python -m fraud_detect.ml.train_statement --data <statement_forgery_dataset>`; it
+caches features in `data/private/statement_features_v2.csv` (do not reuse the older
+`statement_features.csv`, which holds the earlier, incorrect feature).
+
 **The GBM transaction model is off in the live app by default.** On clean business
 statements it raised false alarms without adding detection: the dataset is mostly
 small retail payments, and the fields that let it tell businesses apart (segment,
