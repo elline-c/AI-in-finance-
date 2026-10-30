@@ -37,7 +37,7 @@ inconsistent manual review. This system:
 
 | Node | File | What it does |
 |------|------|--------------|
-| **1 Ingestion & Preprocessing** | `fraud_detect/nodes/ingestion.py` | PDF → text (OCR stand-in), extracts file **metadata**, captures per-page **font fingerprints**, parses the statement **header** + **transaction table**, emits explicit **data-quality** findings for missing/unreadable fields (never guesses). Output is a strict, validated `IngestionResult`. |
+| **1 Ingestion & Preprocessing** | `fraud_detect/nodes/ingestion.py` | PDF → text (OCR stand-in), extracts file **metadata**, captures per-page **font fingerprints**, parses the statement **header** + **transaction table** (several layouts, see below), emits explicit **data-quality** findings for missing/unreadable fields (never guesses). Output is a strict, validated `IngestionResult`. |
 | **2 Visual Forensics** | `fraud_detect/nodes/visual_forensics.py` | Localised **font inconsistency** (altered text), mixed **date/currency formats**, **editing-software** traces in metadata (Photoshop/Illustrator/GIMP…), and **creation-date-before-period**. |
 | **3 Financial Logic & Validation** | `fraud_detect/nodes/financial_logic.py` | Row-by-row **running-balance reconciliation**, closing-balance check, **period-continuity** gaps, **sudden deposits** vs a historical baseline, **unverified counterparties**, **structuring** below the reporting threshold, and **UEN↔ACRA** entity cross-check. |
 | **4 Risk Scoring & Synthesis** | `fraud_detect/nodes/risk_synthesis.py` | Aggregates all findings into a **risk score (1–100)** + band, a **confidence score (1–100)** + band, a **routing** decision with reason, and a plain-language summary. |
@@ -152,6 +152,103 @@ the machine never auto-rejects.
 
 ---
 
+## Reading statements in Node 1 (multiple layouts)
+
+Node 1 no longer assumes one statement layout. The parser lives in
+`fraud_detect/nodes/ingest_parse/`. How it reads a statement now:
+
+- It tries every **layout profile** on the file. The profile that reads the most
+  of each page (best coverage) wins; on a tie the earlier profile in the registry
+  wins, unless the tied profiles read different rows, in which case nothing is
+  decided and the file is flagged.
+- **Direction** (money in or out) comes from the column the amount sits in, or the
+  printed sign, or the change in running balance, in that order of preference.
+- The **printed amount is always kept** as printed. If a row's direction disagrees
+  with the balance change, the amount stays and the row is flagged.
+- A **self-check** compares printed section totals with the rows it read, so a
+  reading mistake of ours is not mistaken for document fraud.
+
+New data-quality reason codes (all from Node 1; they ask a human to look, they
+never reject anyone):
+
+| Code | Severity (weight) | Meaning |
+|------|-------------------|---------|
+| `DQ_LAYOUT_UNRECOGNISED` | MEDIUM (8) | No profile read a page well enough, tied profiles disagreed, or an unexpected error stopped a page. Rows that were read are kept. |
+| `DQ_DIRECTION_UNCERTAIN` | LOW (3) | The credit/debit direction of a row disagrees with the balance change. |
+| `DQ_PARSE_INCONSISTENT` | LOW (3) | Every row's running balance reconciles, but a printed section total differs from the parsed sum. |
+| `DQ_UNREADABLE_ROW` | LOW (3) | A row looked like a transaction but could not be fully read. |
+
+A layout we cannot read is **never auto-cleared**. It is flagged
+`DQ_LAYOUT_UNRECOGNISED` and goes to a human.
+
+### The six layout profiles
+
+Registered in `REGISTRY` in `fraud_detect/nodes/ingest_parse/layouts.py`:
+
+| Profile | Layout it covers |
+|---------|------------------|
+| `generator_v1` | Our own generator (`fraud_detect/synthetic.py`) |
+| `two_col_dmon` | `statement_E` / `statement_F` style, and dataset layout 5 |
+| `two_col_slash` | Dataset layout 1 |
+| `two_col_dual_date` | Dataset layout 2 |
+| `signed_amount_iso` | Dataset layout 3 |
+| `two_col_ddmmyy_cr` | Dataset layout 4 |
+
+### How to add a layout profile
+
+1. **Build a word-box fixture** for the new layout in
+   `tests/ingest_parse/fixtures.py` (fictional values only).
+2. **Write a failing test** that parses the fixture and expects its header, rows
+   and balances.
+3. **Add the `LayoutProfile`** in `fraud_detect/nodes/ingest_parse/layouts.py`.
+4. **Register it in `REGISTRY`.** Order matters: when two profiles tie, the earlier
+   one wins.
+5. **Run the evaluation script:**
+   ```bash
+   python -m fraud_detect.nodes.ingest_parse.eval_layouts            # 20 genuine docs per layout
+   python -m fraud_detect.nodes.ingest_parse.eval_layouts --sample 50
+   python -m fraud_detect.nodes.ingest_parse.eval_layouts --all-genuine
+   ```
+6. **Run the full test suite:** `python -m pytest -q`
+
+### What this does and does not prove
+
+- With only synthetic layouts, success **proves the parser design**. It does **not**
+  prove that real Singapore bank statements will parse.
+- Real-bank profiles are added later, when real data can be handled safely
+  (on-premises, anonymised, with consent).
+- The external evaluation files (`statement_forgery_dataset`, `statement_E` /
+  `statement_F`, the answer key) are **not stored in the repository**. Tests that
+  need them are skipped when the files are missing.
+
+### Results (synthetic-only)
+
+Measured on synthetic layouts, 20 genuine documents per layout by default. Reading
+all 1,000 genuine documents also gives 100%.
+
+| Layout | Profile | Rows read | Balance replays | Header match |
+|--------|---------|-----------|-----------------|--------------|
+| 1 | `two_col_slash` | 100.0% | 100.0% | 100.0% |
+| 2 | `two_col_dual_date` | 100.0% | 100.0% | 100.0% |
+| 3 | `signed_amount_iso` | 100.0% | 100.0% | 100.0% |
+| 4 | `two_col_ddmmyy_cr` | 100.0% | 100.0% | 100.0% |
+| 5 | `two_col_dmon` | 100.0% | 100.0% | 100.0% |
+
+- `statement_E` and `statement_F`: all six months match the answer key to the cent.
+- `statement_E`: 12 of 12 inserted rows are read as transactions.
+- Longest file took 0.36 s.
+- All 1,000 genuine dataset documents still route to `HUMAN_REVIEW`. They are
+  single-month personal accounts, so they raise `DQ_MISSING_UEN` and
+  `FL_PERIOD_LENGTH` (plus `VF_CURRENCY_MIX` on layout 5). This is expected and
+  not a parser problem.
+
+**Known limitation.** Overlay-style tampers (a new amount drawn over the old one)
+can garble the printed amount, so the reader may drop that row instead of reading
+it. 200 of 1,000 tampered dataset documents drop at least one row. This is not yet
+flagged per row.
+
+---
+
 ## Governance alignment
 
 - **MAS FEAT (Fairness, Ethics, Accountability, Transparency):** every flag carries
@@ -181,9 +278,10 @@ This is a **prototype** with deterministic, rule-based detectors — not product
 3. **Toy reference data.** ACRA registry, known-vendor list and cash-flow baselines
    are small in-memory fixtures, not live sources; no cross-application reuse
    detection across a real corpus.
-4. **Statement-format-specific parser.** The transaction/header parser targets the
-   generator's layout; real statements vary widely by bank and would need per-bank
-   templates or a learned layout model.
+4. **Synthetic-layout parser.** The transaction/header parser reads six layouts
+   (our generator plus five dataset layouts), all synthetic. Real statements vary
+   widely by bank and each real bank would need its own profile (see
+   [Reading statements in Node 1](#reading-statements-in-node-1-multiple-layouts)).
 5. **Not a fairness-audited model.** No bias testing, no adversarial-robustness
    testing, and the confidence score is a heuristic, not a calibrated probability.
 6. **Prototype persistence & security.** JSON file store, no auth, no encryption —
