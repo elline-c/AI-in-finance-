@@ -49,6 +49,9 @@ def test_default_config_values():
     assert c.dup_escalate_min_refs == 3
     assert c.dup_isolated_weight == 10.0
     assert c.dup_escalated_weight == 22.0
+    assert c.dup_min_payments_same_month == 2
+    assert c.dup_cross_month_weight == 3.0
+    assert c.dup_far_apart_weight == 10.0
     assert c.instalment_max_days == 45
     assert c.instalment_max_count == 3
     assert c.evidence_max_groups == 20
@@ -80,6 +83,10 @@ def test_default_config_equals_fresh_instance():
         {"fixed_cost_stability_pct": 1.0},
         {"fixed_cost_stability_pct": 1.5},
         {"dup_escalate_min_refs": 0},
+        {"dup_min_payments_same_month": 1},
+        {"dup_min_payments_same_month": 0},
+        {"dup_cross_month_weight": -1.0},
+        {"dup_far_apart_weight": -0.5},
         {"instalment_max_count": 0},
         {"seq_min_refs": 0},
         {"seq_min_breaks": 0},

@@ -104,8 +104,9 @@ def test_property_2_copy_is_detected_and_lookalikes_are_not(data, sc, amt, d, pa
     txns, credits, free, used = sc
     src = data.draw(st.sampled_from(credits))
     new_row = free[0]
+    d = src.date.replace(day=min(d.day, 28))          # same calendar month as the source
 
-    # a copy: same customer & ref, any other amount/date
+    # a copy: same customer & ref, any other amount/day in the same month
     out = _check(txns + [_copy_of(src, new_row, d, amt, page)])
     assert len(out) == 1
     f = out[0]
@@ -154,9 +155,14 @@ def grouped(draw, with_undated=False):
     date_st = st.one_of(days, st.none()) if with_undated else days
     added = []
     for src in sources:
+        anchor = src.date if src.date is not None else draw(days)    # one month per group
         for _ in range(draw(st.integers(1, 2))):
+            day = draw(st.integers(1, 28))
+            when = anchor.replace(day=day)
+            if with_undated and draw(st.booleans()):
+                when = None
             added.append(Transaction(
-                index=next_row, date=draw(date_st), description=src.description,
+                index=next_row, date=when, description=src.description,
                 amount=draw(amounts), page=draw(pages)))
             next_row += 1
     all_txns = sorted(txns + added, key=lambda t: t.index)
@@ -230,7 +236,8 @@ def test_property_7_likelier_copy_only_when_unambiguous(data, sc, extra):
     txns, credits, free, _ = sc
     src = data.draw(st.sampled_from(credits))
     copies = [
-        Transaction(index=free[i], date=data.draw(days), description=src.description,
+        Transaction(index=free[i], date=src.date.replace(day=data.draw(st.integers(1, 28))),
+                    description=src.description,
                     amount=data.draw(amounts), page=data.draw(pages))
         for i in range(extra)
     ]
@@ -255,3 +262,27 @@ def test_property_7_likelier_copy_only_when_unambiguous(data, sc, extra):
     in_group = [r for r in group if r in breaks]
     got = [r for r in group if f"row {r} breaks the invoice number order" in g.evidence]
     assert got == (in_group if len(in_group) == 1 else [])
+
+
+
+# Feature: node3-fabrication-rules, Property 4b: Cross-month repeats are judged on distance
+# **Validates: Requirements 3.1, 4.1, 4.2**
+@SETTINGS
+@given(data=st.data(), sc=scenario(), amt=amounts, page=pages, months_apart=st.integers(1, 6))
+def test_property_4b_cross_month_copy_is_judged_on_distance(data, sc, amt, page, months_apart):
+    txns, credits, free, _ = sc
+    src = data.draw(st.sampled_from(credits))
+    month = src.date.month + months_apart
+    year = src.date.year + (month - 1) // 12
+    when = date(year, (month - 1) % 12 + 1, data.draw(st.integers(1, 28)))
+    out = _check(txns + [_copy_of(src, free[0], when, amt, page)])
+    assert len(out) == 1
+    f = out[0]
+    assert {src.index, free[0]} <= set(_rows(f.field))
+    assert "likelier" not in f.evidence.lower()
+    assert f.severity != Severity.HIGH                       # never counts toward the escalation
+    days_apart = abs((when - src.date).days)
+    if days_apart <= CFG.instalment_max_days:                # could be an instalment
+        assert f.severity == Severity.LOW and f.weight == CFG.dup_cross_month_weight
+    else:                                                    # too far apart for an instalment
+        assert f.severity == Severity.MEDIUM and f.weight == CFG.dup_far_apart_weight

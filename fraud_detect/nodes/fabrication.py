@@ -31,6 +31,9 @@ class FabricationConfig:
     dup_escalate_min_refs: int = 3
     dup_isolated_weight: float = 10.0
     dup_escalated_weight: float = 22.0
+    dup_min_payments_same_month: int = 2      # payments of one invoice in ONE calendar month that count as a repeat
+    dup_cross_month_weight: float = 3.0       # LOW note for repeats that do not meet that test (e.g. across a month end)
+    dup_far_apart_weight: float = 10.0        # MEDIUM for cross-month repeats that cannot be an instalment (too far apart / too many)
     instalment_max_days: int = 45
     instalment_max_count: int = 3
     evidence_max_groups: int = 20
@@ -63,6 +66,10 @@ class FabricationConfig:
             v = getattr(self, name)
             if isinstance(v, bool) or not isinstance(v, int) or v < 1:
                 raise ValueError(f"{name} must be an integer >= 1, got {v!r}")
+        if isinstance(self.dup_min_payments_same_month, bool) or \
+                not isinstance(self.dup_min_payments_same_month, int) or \
+                self.dup_min_payments_same_month < 2:
+            raise ValueError("dup_min_payments_same_month must be an integer >= 2")
         if self.instalment_max_days < 0:
             raise ValueError("instalment_max_days must be >= 0")
         if not self.credit_jump_ratio > 1:
@@ -71,7 +78,8 @@ class FabricationConfig:
             raise ValueError("fixed_cost_stability_pct must be >= 0 and < 1")
         if not 0 < self.turnover_min_stable_share <= 1:
             raise ValueError("turnover_min_stable_share must be > 0 and <= 1")
-        for name in ("dup_isolated_weight", "dup_escalated_weight", "seq_weight", "turnover_weight"):
+        for name in ("dup_isolated_weight", "dup_escalated_weight", "dup_cross_month_weight", "dup_far_apart_weight",
+                     "seq_weight", "turnover_weight"):
             if not getattr(self, name) >= 0:
                 raise ValueError(f"{name} must be >= 0")
         for p in self.invoice_patterns:  # fail early on bad patterns
@@ -288,30 +296,88 @@ def _group_text(rows: Sequence[CreditRef], cfg: FabricationConfig, likely: froze
     return text
 
 
+def _month_key(r: CreditRef):
+    return (r.date.year, r.date.month) if r.date is not None else None
+
+
+def _split_by_month(rows: Sequence[CreditRef], minimum: int):
+    """Split the credits of one (customer, reference) into same-month groups and leftovers.
+
+    A same-month group is ``minimum`` or more payments in one calendar month. A credit
+    with no date cannot be placed in time, so it counts as inside every month.
+    """
+    undated = [r for r in rows if r.date is None]
+    months = sorted({_month_key(r) for r in rows if r.date is not None})
+    groups: list[list[CreditRef]] = []
+    used: set[int] = set()
+    for m in months:
+        members = [r for r in rows if r.date is not None and _month_key(r) == m] + undated
+        if len(members) >= minimum:
+            members = sorted(members, key=lambda r: r.row)
+            groups.append(members)
+            used.update(r.row for r in members)
+    if not months and len(undated) >= minimum:
+        groups.append(sorted(undated, key=lambda r: r.row))
+        used.update(r.row for r in undated)
+    leftover = [r for r in rows if r.row not in used]
+    return groups, leftover
+
+
+def _instalment_like(rows: Sequence[CreditRef], cfg: FabricationConfig) -> bool:
+    """Could these payments of one invoice be instalments? Few payments, close in time.
+
+    Same limits as the "may be an instalment" note. A group with fewer than two dated
+    rows cannot be judged on distance, so it gets the benefit of the doubt.
+    """
+    if len(rows) > cfg.instalment_max_count:
+        return False
+    dates = [r.date for r in rows if r.date is not None]
+    if len(dates) < 2:
+        return True
+    return (max(dates) - min(dates)).days <= cfg.instalment_max_days
+
+
 def check_duplicate_invoice_refs(
     txns: Sequence[Transaction],
     cfg: FabricationConfig,
     likely_copies: frozenset = frozenset(),
 ) -> list[Finding]:
-    """Credits that repeat the same invoice reference under the same customer."""
+    """Credits that repeat the same invoice reference under the same customer.
+
+    The main signal is a repeat inside ONE calendar month (``dup_min_payments_same_month``
+    payments or more): a monthly statement has no reason to show the same invoice paid
+    twice. Repeats that do not meet that test are judged on distance: close in time and
+    few payments (a payment that crosses a month end) is only a weak LOW note; far apart
+    or too many payments cannot be an instalment and is MEDIUM. Neither kind counts toward
+    the HIGH escalation.
+    """
     likely = frozenset(likely_copies or ())
     buckets: dict[tuple[str, str], list[CreditRef]] = {}
     for r in extract_credit_refs(txns, cfg):
         buckets.setdefault((r.counterparty, r.ref), []).append(r)
-    groups = [sorted(g, key=lambda r: r.row) for g in buckets.values() if len(g) >= 2]
+    groups: list[list[CreditRef]] = []
+    spread: list[list[CreditRef]] = []
+    for rows in buckets.values():
+        rows = sorted(rows, key=lambda r: r.row)
+        if len(rows) < 2:
+            continue
+        same, left = _split_by_month(rows, cfg.dup_min_payments_same_month)
+        groups.extend(same)
+        if len(left) >= 2:
+            spread.append(left)
     groups.sort(key=lambda g: g[0].row)
-    if not groups:
+    spread.sort(key=lambda g: g[0].row)
+    if not groups and not spread:
         return []
-
     cannot_tell = "This statement cannot tell which row of a group was copied from the other."
 
     def build(sel: Sequence[Sequence[CreditRef]], severity: Severity, weight: float,
-              evidence: str) -> Finding:
+              evidence: str, title: str = "Invoice reference used on more than one credit") -> Finding:
         named = sorted({r.row: r for g in sel for r in g}.values(), key=lambda r: r.row)
         return Finding(
             agent=AGENT,
             code="FL_DUP_INVOICE_REF",
-            title="Invoice reference used on more than one credit",
+            title=title,
             severity=severity,
             weight=weight,
             evidence=evidence,
@@ -319,19 +385,47 @@ def check_duplicate_invoice_refs(
             field="rows " + ", ".join(str(r.row) for r in named),
         )
 
-    if len(groups) < cfg.dup_escalate_min_refs:
-        return [
+    findings: list[Finding] = []
+    if groups and len(groups) < cfg.dup_escalate_min_refs:
+        findings += [
             build([g], Severity.MEDIUM, cfg.dup_isolated_weight,
-                  f"{_group_text(g, cfg, likely)} {cannot_tell}")
+                  f"Same invoice paid more than once in one month. {_group_text(g, cfg, likely)} "
+                  f"{cannot_tell}")
             for g in groups
         ]
-
-    shown = groups[: cfg.evidence_max_groups]
-    hidden = len(groups) - len(shown)
-    body = " ".join(_group_text(g, cfg, likely) for g in shown)
-    head = f"{len(groups)} invoice references are each used on several credits. {cannot_tell} "
-    evidence = head + (body.rstrip(".") + f", and {hidden} more." if hidden else body)
-    return [build(groups, Severity.HIGH, cfg.dup_escalated_weight, evidence)]
+    elif groups:
+        shown = groups[: cfg.evidence_max_groups]
+        hidden = len(groups) - len(shown)
+        body = " ".join(_group_text(g, cfg, likely) for g in shown)
+        head = (f"{len(groups)} invoice references are each used on several credits within "
+                f"one month. {cannot_tell} ")
+        evidence = head + (body.rstrip(".") + f", and {hidden} more." if hidden else body)
+        findings.append(build(groups, Severity.HIGH, cfg.dup_escalated_weight, evidence))
+    far = [g for g in spread if not _instalment_like(g, cfg)]
+    near = [g for g in spread if _instalment_like(g, cfg)]
+    if far:
+        shown = far[: cfg.evidence_max_groups]
+        hidden = len(far) - len(shown)
+        body = " ".join(_group_text(g, cfg, frozenset()) for g in shown)
+        head = (f"{len(far)} invoice reference(s) are repeated too far apart (more than "
+                f"{cfg.instalment_max_days} days) or too many times (more than "
+                f"{cfg.instalment_max_count} payments) to look like an instalment. "
+                f"A customer rarely pays one invoice again months later. ")
+        evidence = head + (body.rstrip(".") + f", and {hidden} more." if hidden else body)
+        findings.append(build(far, Severity.MEDIUM, cfg.dup_far_apart_weight, evidence,
+                              title="Invoice reference repeated months apart"))
+    if near:
+        shown = near[: cfg.evidence_max_groups]
+        hidden = len(near) - len(shown)
+        body = " ".join(_group_text(g, cfg, frozenset()) for g in shown)
+        head = (f"{len(near)} invoice reference(s) also appear on several credits, but not "
+                f"enough within one calendar month to count as a same-month repeat, and close "
+                f"enough in time to be an instalment (often a payment that crosses a month "
+                f"end). Weak signal only. ")
+        evidence = head + (body.rstrip(".") + f", and {hidden} more." if hidden else body)
+        findings.append(build(near, Severity.LOW, cfg.dup_cross_month_weight, evidence,
+                              title="Invoice reference reused across months"))
+    return findings
 
 
 # --------------------------------------------------------------------------- #

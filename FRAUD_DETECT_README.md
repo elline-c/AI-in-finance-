@@ -261,7 +261,7 @@ evidence, and route the file to a human.
 
 | Code | Severity (weight) | Meaning |
 |------|-------------------|---------|
-| `FL_DUP_INVOICE_REF` | MEDIUM (10) per repeated reference; one HIGH (22) summary when 3 or more references repeat | The same customer and invoice reference appears on more than one credit. |
+| `FL_DUP_INVOICE_REF` | MEDIUM (10) per repeated reference; one HIGH (22) summary when 3 or more references repeat **within a month**; across months: one MEDIUM (10) for repeats too far apart or too frequent to be an instalment, one weak LOW (3) note for close ones | The same customer and invoice reference appears on more than one credit in the same calendar month. |
 | `FL_INVOICE_SEQUENCE_BREAK` | LOW (5) | Invoice numbers run out of date order. |
 | `FL_TURNOVER_COST_MISMATCH` | MEDIUM (8) | Income jumps in several months while payroll, CPF and rent stay flat. |
 | `DQ_RULE_SKIPPED` | LOW (2) | One of the checks hit an internal error and was skipped; the others still ran. |
@@ -271,10 +271,18 @@ evidence, and route the file to a human.
 The example is `statement_E`, which has 12 fake receipts inserted.
 
 - **Duplicate invoice reference (`FL_DUP_INVOICE_REF`).** The 12 fakes reuse a
-  customer name and invoice number that already appear on a genuine receipt. The
-  rule groups credits by customer and invoice reference and names every row in a
-  group. One repeat gives a MEDIUM finding per reference. Three or more repeated
-  references give a single HIGH summary, so the score is not flooded. The evidence
+  customer name and invoice number that already appear on a genuine receipt, in the
+  same month. A monthly statement has no reason to show one invoice paid twice, so the
+  rule groups credits by customer, invoice reference **and calendar month** and names
+  every row in a group. One same-month repeat gives a MEDIUM finding per reference.
+  Three or more repeated references give a single HIGH summary, so the score is not
+  flooded. The same invoice appearing in **different** months (often an instalment that
+  crosses a month end) is judged on distance: **close in time and few payments** (45 days
+  or less and at most 3 payments, the instalment limits) is a single weak LOW note of
+  weight 3; **far apart or too many payments** (a customer rarely pays one invoice again
+  months later) is a MEDIUM of weight 10, reported as one finding for the whole file.
+  Neither counts toward the HIGH summary. A credit with no date counts as inside every
+  month, and a group that cannot be dated gets the benefit of the doubt (LOW). The evidence
   notes when a group looks like an instalment (few payments, close together) or an
   identical amount (possible duplicate posting).
 - **Invoice sequence break (`FL_INVOICE_SEQUENCE_BREAK`).** Invoice numbers
@@ -299,6 +307,9 @@ used when nothing is passed. Bad values raise `ValueError` at creation.
 | `invoice_patterns` | `INV` + 3 or more digits | n/a (a list of regexes: group 1 prefix, group 2 number; add patterns for other reference styles) | n/a |
 | `rail_prefixes` | `FAST FROM`, `PAYNOW FROM`, `GIRO`, `TT FROM` | n/a (payment-rail words stripped from the front of a description so the customer name matches across rails) | n/a |
 | `dup_escalate_min_refs` | 3 | More repeated references needed before the HIGH summary; fewer HIGH findings | HIGH summary appears sooner |
+| `dup_min_payments_same_month` | 2 | One invoice must be paid this many times in one calendar month to count as a same-month repeat (minimum 2). 3 would miss a plain original-plus-copy pair | Not allowed below 2 |
+| `dup_far_apart_weight` | 10 | Far-apart cross-month repeats move the score more | Moves it less |
+| `dup_cross_month_weight` | 3 | Weak cross-month note moves the score more | Moves it less (0 keeps the note but adds nothing) |
 | `dup_isolated_weight` | 10 | Each lone repeat moves the score more | Moves it less |
 | `dup_escalated_weight` | 22 | HIGH summary moves the score more | Moves it less |
 | `instalment_max_days` | 45 | More groups get the "may be an instalment" note | Fewer get it |

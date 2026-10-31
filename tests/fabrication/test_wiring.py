@@ -54,20 +54,20 @@ def _codes(findings):
 
 
 def _one_copy_file():
-    """Fixture file plus one copy of an early credit, dated late (breaks the order)."""
+    """Fixture file plus one copy of an early credit, dated late in the SAME month (breaks the order)."""
     txns, _ = business_file()
     first = credit_rows(txns)[0]
-    copied = insert_copy(txns, first.index, date(2026, 9, 20), 1234.56)
+    copied = insert_copy(txns, first.index, date(2026, 4, 28), 1234.56)
     return copied, make_ingestion(copied)
 
 
 def _two_copy_file():
     txns, _ = business_file()
     credits = credit_rows(txns)
-    out = insert_copy(txns, credits[0].index, date(2026, 9, 20), 1234.56)
+    out = insert_copy(txns, credits[0].index, date(2026, 4, 28), 1234.56)
     # indices shifted by the insert; look the second source up by description
     src2 = next(t for t in out if t.description == credits[1].description and t.date == credits[1].date)
-    out = insert_copy(out, src2.index, date(2026, 9, 22), 2345.67)
+    out = insert_copy(out, src2.index, date(2026, 4, 29), 2345.67)
     return out, make_ingestion(out)
 
 
@@ -125,7 +125,7 @@ def test_analyze_fabrication_reports_in_order_b_then_a_then_c():
 
 def test_rule_b_break_rows_reach_rule_a_as_likely_copies():
     txns, ing = _one_copy_file()
-    copy_row = next(t.index for t in txns if t.date == date(2026, 9, 20) and t.amount == 1234.56)
+    copy_row = next(t.index for t in txns if t.date == date(2026, 4, 28) and t.amount == 1234.56)
     findings = fabrication.analyze_fabrication(ing)
     (dup,) = [f for f in findings if f.code == DUP]
     assert f"row {copy_row} breaks the invoice number order, so it is the likelier copy" in dup.evidence

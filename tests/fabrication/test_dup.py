@@ -5,8 +5,11 @@ ImportError until then.
 
 Pinned behaviour
 ----------------
-* A group is two or more credits with the same counterparty and reference
-  (leading zeros ignored). Debits are ignored; a different counterparty or a
+* A group is ``dup_min_payments_same_month`` (default 2) or more credits with the same
+  counterparty and reference IN ONE CALENDAR MONTH (leading zeros ignored; an undated
+  credit counts as inside every month). Repeats spread over months are only a weak LOW
+  note (``dup_cross_month_weight``, default 3) and never count toward the HIGH escalation.
+  Fewer than the threshold below means MEDIUM per group. Debits are ignored; a different counterparty or a
   different reference makes a different key.
 * Fewer than ``dup_escalate_min_refs`` groups -> one MEDIUM finding per group
   (weight ``dup_isolated_weight``). At or above it -> exactly one HIGH
@@ -58,7 +61,7 @@ def _tx(row, day, customer, ref, amount, page=None, *, credit=True, desc=None):
     )
 
 
-def _pairs(n, *, start_row=1, gap=5, span=10):
+def _pairs(n, *, start_row=1, gap=3, span=10):
     """n groups of two credits each: distinct customers/refs, different amounts."""
     out = []
     row = start_row
@@ -345,3 +348,162 @@ def test_deterministic_and_input_not_mutated():
     assert [f.model_dump() for f in first] == [f.model_dump() for f in second]
     assert txns == before
     assert likely == {2, 4}
+
+
+# ---- same month vs across months (option 2) -----------------------------------------
+
+XM_NOTE_TOKEN = "Weak signal"
+
+
+def _pair(row, customer, ref, d1, d2, a1=900.0, a2=950.0):
+    return [_tx(row, d1, customer, ref, a1), _tx(row + 1, d2, customer, ref, a2)]
+
+
+def test_same_month_pair_is_medium_with_weight_10():
+    (f,) = _check(_pair(1, "ALPHA", "INV3000", 2, 20))          # 3 Apr and 21 Apr
+    assert f.severity == Severity.MEDIUM and f.weight == 10.0
+
+
+def test_cross_month_pair_is_one_weak_low_note():
+    (f,) = _check(_pair(1, "ALPHA", "INV3000", 27, 32))          # 28 Apr and 3 May
+    assert f.code == "FL_DUP_INVOICE_REF"
+    assert f.severity == Severity.LOW
+    assert f.weight == 3.0 == CFG.dup_cross_month_weight
+    assert f.field == "rows 1, 2"
+    assert XM_NOTE_TOKEN in f.evidence
+    assert INSTALMENT in f.evidence                              # close in time: likely instalment
+    assert "likelier" not in f.evidence.lower()
+
+
+def test_cross_month_repeats_are_one_finding_for_the_whole_file():
+    txns = _pair(1, "A", "INV3000", 27, 32) + _pair(3, "B", "INV3001", 28, 33) \
+        + _pair(5, "C", "INV3002", 29, 34) + _pair(7, "D", "INV3003", 25, 40)
+    out = _check(txns)
+    assert len(out) == 1 and out[0].severity == Severity.LOW and out[0].weight == 3.0
+    assert out[0].field == "rows 1, 2, 3, 4, 5, 6, 7, 8"
+
+
+def test_cross_month_repeats_never_count_toward_the_high_escalation():
+    same = _pairs(2)                                              # two same-month groups
+    spread = _pair(10, "X", "INV5000", 27, 32) + _pair(12, "Y", "INV5001", 28, 33) \
+        + _pair(14, "Z", "INV5002", 29, 34)
+    out = _check(same + spread)
+    assert sorted(f.severity.value for f in out) == ["LOW", "MEDIUM", "MEDIUM"]
+    assert not any(f.severity == Severity.HIGH for f in out)
+
+
+def test_three_same_month_groups_escalate_and_a_spread_group_is_added_separately():
+    out = _check(_pairs(3) + _pair(20, "X", "INV5000", 27, 32))
+    assert [f.severity for f in out] == [Severity.HIGH, Severity.LOW]
+
+
+def test_one_invoice_paid_in_two_months_is_not_a_same_month_group():
+    # Apr 5, Apr 20 (same-month group) and May 3 (left over alone): one MEDIUM only.
+    txns = [_tx(1, 4, "ALPHA", "INV3000", 900.0), _tx(2, 19, "ALPHA", "INV3000", 950.0),
+            _tx(3, 32, "ALPHA", "INV3000", 700.0)]
+    (f,) = _check(txns)
+    assert f.severity == Severity.MEDIUM and f.field == "rows 1, 2"
+
+
+def test_min_payments_threshold_of_three_demotes_a_pair_to_the_weak_note():
+    cfg = FabricationConfig(dup_min_payments_same_month=3)
+    (f,) = _check(_pair(1, "ALPHA", "INV3000", 2, 20), cfg)
+    assert f.severity == Severity.LOW
+    three = [_tx(i, i * 3, "ALPHA", "INV3000", 100.0 * i) for i in (1, 2, 3)]
+    (g,) = _check(three, cfg)
+    assert g.severity == Severity.MEDIUM
+
+
+def test_undated_credit_counts_as_inside_the_month():
+    txns = [_tx(1, 2, "ALPHA", "INV3000", 900.0), _tx(2, None, "ALPHA", "INV3000", 950.0)]
+    (f,) = _check(txns)
+    assert f.severity == Severity.MEDIUM
+
+
+def test_two_undated_credits_form_a_same_month_group():
+    txns = [_tx(1, None, "ALPHA", "INV3000", 900.0), _tx(2, None, "ALPHA", "INV3000", 950.0)]
+    (f,) = _check(txns)
+    assert f.severity == Severity.MEDIUM
+
+
+def test_cross_month_note_can_be_silenced_with_a_zero_weight_but_still_reports():
+    cfg = FabricationConfig(dup_cross_month_weight=0.0)
+    (f,) = _check(_pair(1, "ALPHA", "INV3000", 27, 32), cfg)
+    assert f.weight == 0.0 and f.severity == Severity.LOW
+
+
+# ---- cross-month repeats are judged on distance -------------------------------------
+
+def test_pair_months_apart_is_medium_with_the_far_apart_weight():
+    (f,) = _check(_pair(1, "ALPHA", "INV3000", 2, 150))          # 3 Apr and 1 Sep
+    assert f.code == "FL_DUP_INVOICE_REF"
+    assert f.severity == Severity.MEDIUM
+    assert f.weight == 10.0 == CFG.dup_far_apart_weight
+    assert f.field == "rows 1, 2"
+    assert "too far apart" in f.evidence
+    assert INSTALMENT not in f.evidence
+    assert "likelier" not in f.evidence.lower()
+
+
+def test_forty_five_days_is_still_weak_and_forty_six_is_medium():
+    near = _check(_pair(1, "ALPHA", "INV3000", 0, 45))
+    far = _check(_pair(1, "ALPHA", "INV3000", 0, 46))
+    assert [f.severity for f in near] == [Severity.LOW]
+    assert [f.severity for f in far] == [Severity.MEDIUM]
+
+
+def test_four_payments_across_months_cannot_be_an_instalment():
+    # Needs the same-month threshold of 3 so that 2 + 2 payments are not same-month groups.
+    cfg = FabricationConfig(dup_min_payments_same_month=3)
+    txns = [_tx(1, 19, "ALPHA", "INV3000", 100.0), _tx(2, 27, "ALPHA", "INV3000", 200.0),
+            _tx(3, 31, "ALPHA", "INV3000", 300.0), _tx(4, 38, "ALPHA", "INV3000", 400.0)]
+    assert len({t.date.month for t in txns}) == 2                   # Apr and May, 2 + 2
+    out = _check(txns, cfg)
+    assert [f.severity for f in out] == [Severity.MEDIUM]            # 19 days, but 4 payments
+    assert "too many times" in out[0].evidence
+
+
+def test_far_apart_groups_are_one_finding_and_do_not_escalate():
+    far = _pair(1, "A", "INV3000", 2, 150) + _pair(3, "B", "INV3001", 3, 160) \
+        + _pair(5, "C", "INV3002", 4, 170) + _pair(7, "D", "INV3003", 5, 180)
+    out = _check(far)
+    assert len(out) == 1
+    assert out[0].severity == Severity.MEDIUM and out[0].weight == 10.0
+    assert out[0].field == "rows 1, 2, 3, 4, 5, 6, 7, 8"
+
+
+def test_far_apart_groups_do_not_count_toward_the_high_summary():
+    same = _pairs(2)
+    far = _pair(10, "X", "INV5000", 2, 150) + _pair(12, "Y", "INV5001", 3, 160) \
+        + _pair(14, "Z", "INV5002", 4, 170)
+    out = _check(same + far)
+    assert not any(f.severity == Severity.HIGH for f in out)
+    assert sorted((f.severity.value, f.weight) for f in out) == [
+        ("MEDIUM", 10.0), ("MEDIUM", 10.0), ("MEDIUM", 10.0)]
+
+
+def test_close_and_far_cross_month_groups_are_reported_separately():
+    txns = _pair(1, "NEAR", "INV3000", 27, 32) + _pair(3, "FAR", "INV3001", 2, 150)
+    out = _check(txns)
+    by_sev = {f.severity: f for f in out}
+    assert set(by_sev) == {Severity.LOW, Severity.MEDIUM}
+    assert by_sev[Severity.LOW].field == "rows 1, 2" and by_sev[Severity.MEDIUM].field == "rows 3, 4"
+
+
+def test_far_apart_weight_override():
+    cfg = FabricationConfig(dup_far_apart_weight=14.0)
+    (f,) = _check(_pair(1, "ALPHA", "INV3000", 2, 150), cfg)
+    assert f.weight == 14.0 and f.severity == Severity.MEDIUM
+
+
+def test_distance_limit_follows_the_instalment_setting():
+    cfg = FabricationConfig(instalment_max_days=20)
+    (f,) = _check(_pair(1, "ALPHA", "INV3000", 27, 52), cfg)        # 25 days apart
+    assert f.severity == Severity.MEDIUM
+    (g,) = _check(_pair(1, "ALPHA", "INV3000", 27, 32), cfg)        # 5 days apart
+    assert g.severity == Severity.LOW
+
+
+def test_same_month_repeat_is_unaffected_by_distance_rule():
+    (f,) = _check(_pair(1, "ALPHA", "INV3000", 2, 28))               # same month, 26 days
+    assert f.severity == Severity.MEDIUM and f.weight == 10.0
