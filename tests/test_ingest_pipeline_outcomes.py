@@ -63,14 +63,8 @@ def test_tampered_amount_keeps_printed_value_and_balance_break(tmp_path):
 
 
 @pytest.mark.skipif(not STATEMENT_F.is_file(), reason="statement_F.pdf not available")
-@pytest.mark.xfail(
-    strict=True,
-    reason="Req 11.7 not met today: statement_F routes HUMAN_REVIEW (risk 40) with a HIGH "
-           "FL_STRUCTURING finding (3 deposits 9,500-10,000). Remove this marker once the "
-           "fabrication rules / thresholds are revisited.",
-)
 def test_statement_f_outcome():
-    """Req 11.7"""
+    """Req 11.7: AUTO_CLEAR or no HIGH-severity finding (FL_STRUCTURING is no longer HIGH here)."""
     ing, report = _screen(STATEMENT_F)
     _print_outcome("F", report)
     high = [f.code for f in report.findings if f.severity == Severity.HIGH]

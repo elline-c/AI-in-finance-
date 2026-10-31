@@ -1,0 +1,653 @@
+{
+  "pbtResults": {
+    "3.3 Write property test for Rule B": {
+      "status": "passed",
+      "lastRunTimestamp": 1793380200670
+    }
+  },
+  "executionHistory": {
+    "1.1 Create test scaffolding and in-code fixtures": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230723
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379261449
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379528830
+      }
+    ],
+    "1.2 Record the baseline": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230745
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379261484
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379529621
+      }
+    ],
+    "2.1 Write failing tests for the config and the reference reader": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230766
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379530280
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379737895
+      }
+    ],
+    "2.2 Implement `FabricationConfig`, `DEFAULT_CONFIG` and the reader": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230803
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379737998
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379843735
+      }
+    ],
+    "3.1 Write failing tests for `find_order_breaks` and `check_invoice_sequence`": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230829
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379844548
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380009410
+      }
+    ],
+    "3.2 Implement Rule B": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230849
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380009360
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380112569
+      }
+    ],
+    "4.1 Write failing tests for `check_duplicate_invoice_refs`": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230899
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380113541
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380258045
+      }
+    ],
+    "4.2 Implement Rule A": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230918
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380258745
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380394573
+      }
+    ],
+    "5. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230940
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380589030
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380993184
+      }
+    ],
+    "6.1 Write failing tests for `check_turnover_vs_costs`": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230960
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380396075
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380587819
+      }
+    ],
+    "6.2 Implement Rule C": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379230982
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380588313
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380992899
+      }
+    ],
+    "7.1 Write failing tests for `analyze_fabrication` and the Node 3 wiring": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231001
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380994981
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381313389
+      }
+    ],
+    "7.2 Implement `analyze_fabrication` and wire it in": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231017
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381314068
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381442735
+      }
+    ],
+    "8. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231036
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381454399
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381660333
+      }
+    ],
+    "9.1 Write the labelled-file acceptance tests": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231058
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381452100
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381659335
+      }
+    ],
+    "9.2 Run the acceptance tests and record the figures": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231078
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381909155
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382422345
+      }
+    ],
+    "10.1 Write failing tests for the calibrated rule": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231106
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381452857
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381659359
+      }
+    ],
+    "10.2 Implement the cluster condition": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231136
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381673458
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381898857
+      }
+    ],
+    "10.3 Remove the strict xfail marker": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231156
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381907559
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382421484
+      }
+    ],
+    "11.1 Add the regression tests": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231174
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382422896
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382645562
+      }
+    ],
+    "12.1 Write tests for the evaluation script": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231192
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381453883
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381659517
+      }
+    ],
+    "12.2 Implement `fraud_detect/nodes/fabrication_eval.py`": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231209
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381673526
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381898935
+      }
+    ],
+    "12.3 Run the script and record the false-alarm and risk-score tables": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231227
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382423704
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382645594
+      }
+    ],
+    "12.4 Write the investigation notes": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231243
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381909969
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382421697
+      }
+    ],
+    "13. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231261
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382645730
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382655604
+      }
+    ],
+    "14.1 Update `FRAUD_DETECT_README.md`": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231278
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382655701
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382816603
+      }
+    ],
+    "15. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379231298
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382816663
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793383056498
+      }
+    ],
+    "2.3 Write property tests for the reader and the config": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379243355
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379843993
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380009344
+      }
+    ],
+    "3.3 Write property test for Rule B": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379243411
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380112784
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380257972
+      }
+    ],
+    "4.3 Write property tests for Rule A": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379243934
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380395372
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380587806
+      }
+    ],
+    "6.3 Write property test for Rule C": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379244743
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380994237
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381312595
+      }
+    ],
+    "7.3 Write property tests for isolation and determinism": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379245537
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381451936
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381659072
+      }
+    ],
+    "10.4 Write property test for the cluster condition": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379246093
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381908338
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382421596
+      }
+    ],
+    "1. Foundations and safety net": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379529643
+      }
+    ],
+    "2. Settings and reference reading": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793379843770
+      }
+    ],
+    "3. Rule B: invoice sequence break": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380112602
+      }
+    ],
+    "4. Rule A: duplicate invoice reference": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380394605
+      }
+    ],
+    "6. Rule C: turnover against fixed costs": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793380992933
+      }
+    ],
+    "7. Wire into Node 3 and isolate failures": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793381442782
+      }
+    ],
+    "10. Calibrate the structuring rule (separable group; can be dropped without affecting tasks 1 to 9)": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382421561
+      },
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382421613
+      }
+    ],
+    "9. Acceptance on the labelled files": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382422371
+      }
+    ],
+    "11. Regression sweep": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382645644
+      }
+    ],
+    "12. Evaluation script and report-only investigations": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382645696
+      }
+    ],
+    "14. Documentation": [
+      {
+        "executionId": "26bd03f7-16df-4b20-94ac-4a7563aa6a23",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1793382816713
+      }
+    ]
+  }
+}
