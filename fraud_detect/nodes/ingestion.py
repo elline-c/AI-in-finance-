@@ -32,6 +32,10 @@ from ..models import (
     Transaction,
 )
 
+from .ingest_parse.parser import parse_pages
+from .ingest_parse.table import _group_lines
+from .ingest_parse.types import Line, PageContent, Word
+
 AGENT = "Node1:Ingestion"
 
 # Matches every "Statement Period:" header; used with finditer so a combined
@@ -98,9 +102,14 @@ def _extract_fonts(pdf: "pdfplumber.PDF") -> list[FontUsage]:
     return usage
 
 
-def _grab(pattern: str, text: str) -> Optional[str]:
-    m = re.search(pattern, text)
-    return m.group(1).strip() if m else None
+def _page_content(page_no: int, page: "pdfplumber.page.Page") -> PageContent:
+    """Word boxes and grouped text lines for one page (for the layout-tolerant parser)."""
+    words = [
+        Word(text=w["text"], x0=float(w["x0"]), x1=float(w["x1"]), top=float(w["top"]))
+        for w in page.extract_words(keep_blank_chars=False, use_text_flow=False)
+    ]
+    lines = [Line(text=" ".join(w.text for w in grp), top=grp[0].top) for grp in _group_lines(words)]
+    return PageContent(page=page_no, lines=lines, words=words)
 
 
 def ingest(path: str) -> IngestionResult:
@@ -109,6 +118,7 @@ def ingest(path: str) -> IngestionResult:
     with pdfplumber.open(path) as pdf:
         page_count = len(pdf.pages)
         page_texts = [(i + 1, (p.extract_text() or "")) for i, p in enumerate(pdf.pages)]
+        page_contents = [_page_content(i + 1, p) for i, p in enumerate(pdf.pages)]
         fonts = _extract_fonts(pdf)
 
     raw_text = "\n".join(t for _, t in page_texts)
@@ -122,102 +132,18 @@ def ingest(path: str) -> IngestionResult:
                      "scan requiring OCR fallback / manual review.",
         ))
 
-    # ---- header fields -----------------------------------------------------
-    holder = _grab(r"Account Holder:\s*(.+)", raw_text)
-    uen = _grab(r"UEN:\s*([A-Z0-9]+)", raw_text)
-    account_number = _grab(r"Account No:\s*([0-9]+)", raw_text)
-    currency = _grab(r"Currency:\s*([A-Za-z$]+)", raw_text)
-
-    # ---- statement period segmentation ------------------------------------
-    # Find EVERY "Statement Period:" header along with the page it sits on, so a
-    # combined PDF (several monthly statements stapled together) is split into
-    # one StatementSegment per header. We iterate page_texts (which preserves
-    # page attribution) rather than raw_text (which joins pages and loses it).
-    #
-    # A segment spans from the page its header is on up to the page just before
-    # the next header's page; the final segment runs to the last page. Month
-    # identity for each segment comes solely from its own printed dates.
-    raw_headers: list[tuple[int, Optional[date], Optional[date]]] = []
-    for page_no, text in page_texts:
-        for hm in _PERIOD_RE.finditer(text):
-            h_start, _ = _parse_date(hm.group(1))
-            h_end, _ = _parse_date(hm.group(2))
-            raw_headers.append((page_no, h_start, h_end))
-
+    # ---- layout-tolerant parse (header, sections, rows, self-check) --------
+    parsed = parse_pages(page_contents)
     source_name = os.path.basename(path)
-    segments: list[StatementSegment] = []
-    for i, (page_no, h_start, h_end) in enumerate(raw_headers):
-        if i + 1 < len(raw_headers):
-            next_page = raw_headers[i + 1][0]
-            page_end = max(page_no, next_page - 1)
-        else:
-            page_end = page_count
-        segments.append(StatementSegment(
-            period_start=h_start,
-            period_end=h_end,
-            page_start=page_no,
-            page_end=page_end,
-            source=source_name,
-        ))
+    segments = [seg.model_copy(update={"source": source_name}) for seg in parsed.segments]
+    # DQ_NO_TEXT is decided above from the extracted text; skip the parser's copy.
+    dq.extend(f for f in parsed.findings if f.code != "DQ_NO_TEXT")
 
-    # Top-level period stays backward compatible: earliest start / latest end
-    # across all segments (for a single-header PDF this is just that header).
-    period_start = period_end = None
-    starts = [s.period_start for s in segments if s.period_start is not None]
-    ends = [s.period_end for s in segments if s.period_end is not None]
-    if starts:
-        period_start = min(starts)
-    if ends:
-        period_end = max(ends)
-
-    opening_balance = _parse_money(_grab(r"Opening Balance:\s*([^\n]+)", raw_text) or "")
-    closing_balance = _parse_money(_grab(r"Closing Balance:\s*([^\n]+)", raw_text) or "")
-
-    # mandatory-field data-quality checks (explicit nulls, no guessing)
-    for label, value, code in [
-        ("account holder", holder, "DQ_MISSING_HOLDER"),
-        ("UEN", uen, "DQ_MISSING_UEN"),
-        ("statement period", period_start, "DQ_MISSING_PERIOD"),
-        ("opening balance", opening_balance, "DQ_MISSING_OPENING"),
-    ]:
-        if value in (None, ""):
-            dq.append(Finding(
-                agent=AGENT, code=code, title=f"Missing mandatory field: {label}",
-                severity=Severity.MEDIUM, weight=8, field=label,
-                evidence=f"Could not read the {label} from the statement; flagged rather than inferred.",
-            ))
-
-    # ---- transactions ------------------------------------------------------
-    transactions: list[Transaction] = []
-    idx = 0
-    for page_no, text in page_texts:
-        for line in text.splitlines():
-            m = _ROW_RE.match(line.strip())
-            if not m:
-                continue
-            d, d_raw = _parse_date(m.group("date"))
-            amt = _parse_money(m.group("amount"))
-            bal = _parse_money(m.group("balance"))
-            if amt is None or bal is None:
-                dq.append(Finding(
-                    agent=AGENT, code="DQ_UNREADABLE_ROW",
-                    title="Unreadable transaction row", severity=Severity.LOW,
-                    weight=3, page=page_no,
-                    evidence=f"Row could not be fully parsed: {line!r}",
-                ))
-                continue
-            transactions.append(Transaction(
-                index=idx, date=d, date_raw=d_raw, description=m.group("desc").strip(),
-                amount=amt, balance=bal, page=page_no,
-            ))
-            idx += 1
-
-    if not transactions:
-        dq.append(Finding(
-            agent=AGENT, code="DQ_NO_TXNS", title="No transactions parsed",
-            severity=Severity.HIGH, weight=15,
-            evidence="No transaction rows could be parsed from the statement.",
-        ))
+    holder, uen = parsed.holder, parsed.uen
+    account_number, currency = parsed.account_number, parsed.currency
+    period_start, period_end = parsed.period_start, parsed.period_end
+    opening_balance, closing_balance = parsed.opening_balance, parsed.closing_balance
+    transactions = parsed.transactions
 
     return IngestionResult(
         source_path=path,
@@ -236,6 +162,9 @@ def ingest(path: str) -> IngestionResult:
         closing_balance=closing_balance,
         declared_currency=currency,
         transactions=transactions,
+        layout_profile=parsed.layout_profile,
+        parse_coverage=parsed.parse_coverage,
+        sections=parsed.sections,
         data_quality_findings=dq,
     )
 

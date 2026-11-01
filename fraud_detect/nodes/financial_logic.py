@@ -17,8 +17,11 @@ Findings are explainable and carry the offending page/row where possible.
 from __future__ import annotations
 
 from collections import Counter
+from datetime import date, timedelta
 
 from ..models import AgentReport, Finding, IngestionResult, Severity, Transaction
+from . import fabrication
+from .fabrication import DEFAULT_CONFIG
 from .coverage import (
     duplicate_months,
     missing_months,
@@ -26,8 +29,10 @@ from .coverage import (
     months_in_period,
     out_of_order_segments,
 )
+from ..registry import NOT_FOUND as REGISTRY_NOT_FOUND
+from ..registry import UNAVAILABLE as REGISTRY_UNAVAILABLE
+from ..registry import lookup_entity, names_match
 from ..reference_data import (
-    ACRA_REGISTRY,
     CASHFLOW_BASELINE,
     KNOWN_VENDORS,
     STRUCTURING_THRESHOLD,
@@ -104,6 +109,25 @@ def _period_continuity(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
+def period_months(start: date, end: date) -> int:
+    """Whole calendar months covered by a statement period, END DATE INCLUSIVE.
+
+    Real statements end on the last day of the month (1 Apr to 30 Sep is six
+    months of data), so we measure from ``start`` up to the day AFTER ``end``.
+    Counting the end date as inclusive also keeps the older "start + N months"
+    style correct: 1 Jan to 1 Jul still counts as 6. A final month that is not
+    complete (end day before the start day) is not counted.
+    """
+    try:
+        stop = end + timedelta(days=1)
+    except OverflowError:  # end == date.max; no real statement gets here
+        stop = end
+    months = (stop.year - start.year) * 12 + (stop.month - start.month)
+    if stop.day < start.day:
+        months -= 1
+    return months
+
+
 def _period_length(ing: IngestionResult) -> list[Finding]:
     """Flag when the declared statement period falls outside the required
     6-12 month window. Missing dates are handled elsewhere (DQ_MISSING_PERIOD),
@@ -114,12 +138,7 @@ def _period_length(ing: IngestionResult) -> list[Finding]:
     if start is None or end is None:
         return findings
 
-    # Whole-month span between the two dates. Simple and explainable: count the
-    # calendar months, then subtract one if the end day has not yet reached the
-    # start day (an incomplete final month).
-    months = (end.year - start.year) * 12 + (end.month - start.month)
-    if end.day < start.day:
-        months -= 1
+    months = period_months(start, end)
 
     if months < _MIN_PERIOD_MONTHS or months > _MAX_PERIOD_MONTHS:
         too_short = months < _MIN_PERIOD_MONTHS
@@ -315,18 +334,50 @@ def _suspicious_transactions(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
+# FL_STRUCTURING fires only on a CLUSTER: three or more near-threshold credits
+# (lo <= amount < threshold) inside a span of _STRUCTURING_CLUSTER_DAYS days
+# (last - first <= 14, inclusive). An undated near-threshold credit cannot be placed
+# in time, so it counts as inside every span; 3+ undated credits fire on their own.
+# Spans start at each dated near-threshold credit in date order and the earliest
+# qualifying span is reported (independent of file row order).
+# Accepted trade-off: slow structuring spread over weeks (e.g. one deposit every
+# 3-4 weeks) is missed; this avoids flagging ordinary near-threshold credits that are
+# scattered across a statement period.
+_STRUCTURING_CLUSTER_DAYS = 14
+
+
+def _structuring_span(near: list[Transaction]):
+    """Return (rows, start, end) for the earliest qualifying span, or None."""
+    undated = [t for t in near if t.date is None]
+    dated = sorted((t for t in near if t.date is not None),
+                   key=lambda t: (t.date, t.index))
+    limit = timedelta(days=_STRUCTURING_CLUSTER_DAYS)
+    for first in dated:
+        inside = [t for t in dated if first.date <= t.date <= first.date + limit]
+        if len(inside) + len(undated) >= 3:
+            rows = sorted(inside + undated, key=lambda t: t.index)
+            return rows, first.date, inside[-1].date
+    if len(undated) >= 3:
+        return sorted(undated, key=lambda t: t.index), None, None
+    return None
+
+
 def _structuring(ing: IngestionResult) -> list[Finding]:
     findings: list[Finding] = []
     lo = STRUCTURING_THRESHOLD * (1 - _STRUCTURING_WINDOW)
-    near = [t for t in ing.transactions
-            if t.amount is not None and lo <= t.amount < STRUCTURING_THRESHOLD]
-    if len(near) >= 3:
+    near_all = [t for t in ing.transactions
+                if t.amount is not None and lo <= t.amount < STRUCTURING_THRESHOLD]
+    span = _structuring_span(near_all)
+    if span is not None:
+        near, start, end = span
+        when = (f" within {start.isoformat()} to {end.isoformat()}"
+                if start is not None else " (undated rows)")
         rows = ", ".join(f"#{t.index}({t.amount:,.0f})" for t in near)
         findings.append(Finding(
             agent=AGENT, code="FL_STRUCTURING",
             title="Possible structuring below reporting threshold",
             severity=Severity.HIGH, weight=20, page=near[0].page,
-            evidence=(f"{len(near)} deposits fall in {lo:,.0f}-{STRUCTURING_THRESHOLD:,.0f} "
+            evidence=(f"{len(near)} deposits fall in {lo:,.0f}-{STRUCTURING_THRESHOLD:,.0f}{when} "
                       f"(just under the {STRUCTURING_THRESHOLD:,.0f} reporting threshold): "
                       f"{rows}. Repeated near-threshold amounts suggest deliberate splitting."),
         ))
@@ -334,30 +385,47 @@ def _structuring(ing: IngestionResult) -> list[Finding]:
 
 
 def _entity_crosscheck(ing: IngestionResult) -> list[Finding]:
+    """Check the statement's UEN and holder name against the company registry.
+
+    The lookup goes through ``registry.lookup_entity``: local fixtures first, then the
+    live data.gov.sg registry when ``ACRA_LIVE_LOOKUP`` is on. A live lookup that could
+    not answer is reported as a LOW data-quality note, never as "UEN not found".
+    """
     findings: list[Finding] = []
     if not ing.uen:
         return findings
-    registered = ACRA_REGISTRY.get(ing.uen)
-    if registered is None:
+    result = lookup_entity(ing.uen)
+    if result.state == REGISTRY_NOT_FOUND:
+        where = "the local registry and the live ACRA registry (data.gov.sg)" \
+            if result.live_checked else "the registry"
         findings.append(Finding(
             agent=AGENT, code="FL_UEN_NOT_FOUND",
             title="UEN not found in registry",
             severity=Severity.MEDIUM, weight=10,
-            evidence=f"UEN {ing.uen} has no matching ACRA record.",
+            evidence=f"UEN {ing.uen} has no matching ACRA record in {where}.",
         ))
-    elif ing.account_holder and registered.lower() != ing.account_holder.strip().lower():
+    elif result.state == REGISTRY_UNAVAILABLE:
+        findings.append(Finding(
+            agent=AGENT, code="DQ_REGISTRY_UNAVAILABLE",
+            title="Company registry could not be checked",
+            severity=Severity.LOW, weight=2,
+            evidence=(f"The live ACRA registry could not be reached ({result.detail}), so UEN "
+                      f"{ing.uen} was not verified. This says nothing about the company."),
+        ))
+    elif result.record is not None and ing.account_holder \
+            and not names_match(result.record.name, ing.account_holder):
         findings.append(Finding(
             agent=AGENT, code="FL_UEN_NAME_MISMATCH",
             title="Account holder does not match ACRA record",
             severity=Severity.HIGH, weight=22,
             evidence=(f"Statement holder '{ing.account_holder}' does not match the ACRA "
-                      f"record '{registered}' for UEN {ing.uen}. May indicate a statement "
-                      f"reused under a different company."),
+                      f"record '{result.record.name}' for UEN {ing.uen}. May indicate a "
+                      f"statement reused under a different company."),
         ))
     return findings
 
 
-def analyze(ing: IngestionResult) -> AgentReport:
+def analyze(ing: IngestionResult, fabrication_config=None) -> AgentReport:
     findings: list[Finding] = []
     findings += _reconcile(ing)
     findings += _closing_check(ing)
@@ -369,4 +437,7 @@ def analyze(ing: IngestionResult) -> AgentReport:
     findings += _suspicious_transactions(ing)
     findings += _structuring(ing)
     findings += _entity_crosscheck(ing)
+    findings += fabrication.analyze_fabrication(
+        ing, DEFAULT_CONFIG if fabrication_config is None else fabrication_config
+    )
     return AgentReport(agent=AGENT, findings=findings)

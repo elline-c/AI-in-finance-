@@ -37,9 +37,9 @@ inconsistent manual review. This system:
 
 | Node | File | What it does |
 |------|------|--------------|
-| **1 Ingestion & Preprocessing** | `fraud_detect/nodes/ingestion.py` | PDF → text (OCR stand-in), extracts file **metadata**, captures per-page **font fingerprints**, parses the statement **header** + **transaction table**, emits explicit **data-quality** findings for missing/unreadable fields (never guesses). Output is a strict, validated `IngestionResult`. |
+| **1 Ingestion & Preprocessing** | `fraud_detect/nodes/ingestion.py` | PDF → text (OCR stand-in), extracts file **metadata**, captures per-page **font fingerprints**, parses the statement **header** + **transaction table** (several layouts, see below), emits explicit **data-quality** findings for missing/unreadable fields (never guesses). Output is a strict, validated `IngestionResult`. |
 | **2 Visual Forensics** | `fraud_detect/nodes/visual_forensics.py` | Localised **font inconsistency** (altered text), mixed **date/currency formats**, **editing-software** traces in metadata (Photoshop/Illustrator/GIMP…), and **creation-date-before-period**. |
-| **3 Financial Logic & Validation** | `fraud_detect/nodes/financial_logic.py` | Row-by-row **running-balance reconciliation**, closing-balance check, **period-continuity** gaps, **sudden deposits** vs a historical baseline, **unverified counterparties**, **structuring** below the reporting threshold, and **UEN↔ACRA** entity cross-check. |
+| **3 Financial Logic & Validation** | `fraud_detect/nodes/financial_logic.py` | Row-by-row **running-balance reconciliation**, closing-balance check, **period-continuity** gaps, **sudden deposits** vs a historical baseline, **unverified counterparties**, **structuring** (3+ near-threshold credits within 14 days), **UEN↔ACRA** entity cross-check, and the **fabrication rules** (repeated invoice references, invoice numbers out of date order, turnover jumps against flat fixed costs; see [Node 3 fabrication rules](#node-3-fabrication-rules)). |
 | **4 Risk Scoring & Synthesis** | `fraud_detect/nodes/risk_synthesis.py` | Aggregates all findings into a **risk score (1–100)** + band, a **confidence score (1–100)** + band, a **routing** decision with reason, and a plain-language summary. |
 
 Orchestration lives in `fraud_detect/pipeline.py` (`run_pipeline(pdf_path) -> RiskReport`).
@@ -152,6 +152,321 @@ the machine never auto-rejects.
 
 ---
 
+## Reading statements in Node 1 (multiple layouts)
+
+Node 1 no longer assumes one statement layout. The parser lives in
+`fraud_detect/nodes/ingest_parse/`. How it reads a statement now:
+
+- It tries every **layout profile** on the file. The profile that reads the most
+  of each page (best coverage) wins; on a tie the earlier profile in the registry
+  wins, unless the tied profiles read different rows, in which case nothing is
+  decided and the file is flagged.
+- **Direction** (money in or out) comes from the column the amount sits in, or the
+  printed sign, or the change in running balance, in that order of preference.
+- The **printed amount is always kept** as printed. If a row's direction disagrees
+  with the balance change, the amount stays and the row is flagged.
+- A **self-check** compares printed section totals with the rows it read, so a
+  reading mistake of ours is not mistaken for document fraud.
+
+New data-quality reason codes (all from Node 1; they ask a human to look, they
+never reject anyone):
+
+| Code | Severity (weight) | Meaning |
+|------|-------------------|---------|
+| `DQ_LAYOUT_UNRECOGNISED` | MEDIUM (8) | No profile read a page well enough, tied profiles disagreed, or an unexpected error stopped a page. Rows that were read are kept. |
+| `DQ_DIRECTION_UNCERTAIN` | LOW (3) | The credit/debit direction of a row disagrees with the balance change. |
+| `DQ_PARSE_INCONSISTENT` | LOW (3) | Every row's running balance reconciles, but a printed section total differs from the parsed sum. |
+| `DQ_UNREADABLE_ROW` | LOW (3) | A row looked like a transaction but could not be fully read. |
+
+A layout we cannot read is **never auto-cleared**. It is flagged
+`DQ_LAYOUT_UNRECOGNISED` and goes to a human.
+
+### The six layout profiles
+
+Registered in `REGISTRY` in `fraud_detect/nodes/ingest_parse/layouts.py`:
+
+| Profile | Layout it covers |
+|---------|------------------|
+| `generator_v1` | Our own generator (`fraud_detect/synthetic.py`) |
+| `two_col_dmon` | `statement_E` / `statement_F` style, and dataset layout 5 |
+| `two_col_slash` | Dataset layout 1 |
+| `two_col_dual_date` | Dataset layout 2 |
+| `signed_amount_iso` | Dataset layout 3 |
+| `two_col_ddmmyy_cr` | Dataset layout 4 |
+
+### How to add a layout profile
+
+1. **Build a word-box fixture** for the new layout in
+   `tests/ingest_parse/fixtures.py` (fictional values only).
+2. **Write a failing test** that parses the fixture and expects its header, rows
+   and balances.
+3. **Add the `LayoutProfile`** in `fraud_detect/nodes/ingest_parse/layouts.py`.
+4. **Register it in `REGISTRY`.** Order matters: when two profiles tie, the earlier
+   one wins.
+5. **Run the evaluation script:**
+   ```bash
+   python -m fraud_detect.nodes.ingest_parse.eval_layouts            # 20 genuine docs per layout
+   python -m fraud_detect.nodes.ingest_parse.eval_layouts --sample 50
+   python -m fraud_detect.nodes.ingest_parse.eval_layouts --all-genuine
+   ```
+6. **Run the full test suite:** `python -m pytest -q`
+
+### What this does and does not prove
+
+- With only synthetic layouts, success **proves the parser design**. It does **not**
+  prove that real Singapore bank statements will parse.
+- Real-bank profiles are added later, when real data can be handled safely
+  (on-premises, anonymised, with consent).
+- The external evaluation files (`statement_forgery_dataset`, `statement_E` /
+  `statement_F`, the answer key) are **not stored in the repository**. Tests that
+  need them are skipped when the files are missing.
+
+### Results (synthetic-only)
+
+Measured on synthetic layouts, 20 genuine documents per layout by default. Reading
+all 1,000 genuine documents also gives 100%.
+
+| Layout | Profile | Rows read | Balance replays | Header match |
+|--------|---------|-----------|-----------------|--------------|
+| 1 | `two_col_slash` | 100.0% | 100.0% | 100.0% |
+| 2 | `two_col_dual_date` | 100.0% | 100.0% | 100.0% |
+| 3 | `signed_amount_iso` | 100.0% | 100.0% | 100.0% |
+| 4 | `two_col_ddmmyy_cr` | 100.0% | 100.0% | 100.0% |
+| 5 | `two_col_dmon` | 100.0% | 100.0% | 100.0% |
+
+- `statement_E` and `statement_F`: all six months match the answer key to the cent.
+- `statement_E`: 12 of 12 inserted rows are read as transactions.
+- Longest file took 0.36 s.
+- All 1,000 genuine dataset documents still route to `HUMAN_REVIEW`. They are
+  single-month personal accounts, so they raise `DQ_MISSING_UEN` and
+  `FL_PERIOD_LENGTH` (plus `VF_CURRENCY_MIX` on layout 5). This is expected and
+  not a parser problem.
+
+**Known limitation.** Overlay-style tampers (a new amount drawn over the old one)
+can garble the printed amount, so the reader may drop that row instead of reading
+it. 200 of 1,000 tampered dataset documents drop at least one row. This is not yet
+flagged per row.
+
+---
+
+## Node 3 fabrication rules
+
+Node 3 now has three extra checks aimed at **fabricated business income**: fake
+customer receipts pasted into a statement. They live in
+`fraud_detect/nodes/fabrication.py` and run inside `financial_logic.analyze`.
+Like every other finding, they **never reject anyone**. They add a reason and
+evidence, and route the file to a human.
+
+### Reason codes
+
+| Code | Severity (weight) | Meaning |
+|------|-------------------|---------|
+| `FL_DUP_INVOICE_REF` | MEDIUM (10) per repeated reference; one HIGH (22) summary when 3 or more references repeat **within a month**; across months: one MEDIUM (10) for repeats too far apart or too frequent to be an instalment, one weak LOW (3) note for close ones | The same customer and invoice reference appears on more than one credit in the same calendar month. |
+| `FL_INVOICE_SEQUENCE_BREAK` | LOW (5) | Invoice numbers run out of date order. |
+| `FL_TURNOVER_COST_MISMATCH` | MEDIUM (8) | Income jumps in several months while payroll, CPF and rent stay flat. |
+| `DQ_RULE_SKIPPED` | LOW (2) | One of the checks hit an internal error and was skipped; the others still ran. |
+
+### What each rule looks for
+
+The example is `statement_E`, which has 12 fake receipts inserted.
+
+- **Duplicate invoice reference (`FL_DUP_INVOICE_REF`).** The 12 fakes reuse a
+  customer name and invoice number that already appear on a genuine receipt, in the
+  same month. A monthly statement has no reason to show one invoice paid twice, so the
+  rule groups credits by customer, invoice reference **and calendar month** and names
+  every row in a group. One same-month repeat gives a MEDIUM finding per reference.
+  Three or more repeated references give a single HIGH summary, so the score is not
+  flooded. The same invoice appearing in **different** months (often an instalment that
+  crosses a month end) is judged on distance: **close in time and few payments** (45 days
+  or less and at most 3 payments, the instalment limits) is a single weak LOW note of
+  weight 3; **far apart or too many payments** (a customer rarely pays one invoice again
+  months later) is a MEDIUM of weight 10, reported as one finding for the whole file.
+  Neither counts toward the HIGH summary. A credit with no date counts as inside every
+  month, and a group that cannot be dated gets the benefit of the doubt (LOW). The evidence
+  notes when a group looks like an instalment (few payments, close together) or an
+  identical amount (possible duplicate posting).
+- **Invoice sequence break (`FL_INVOICE_SEQUENCE_BREAK`).** Invoice numbers
+  normally rise with the date. Fakes are often pasted in with numbers that do not
+  fit. The rule finds the longest in-order run and lists the credits outside it.
+  It only needs 6 references and 2 breaks to speak. It also gives the duplicate
+  rule a hint about which row of a pair is the likelier copy.
+- **Turnover against fixed costs (`FL_TURNOVER_COST_MISMATCH`).** On `statement_E`
+  income is up 25–30% in three months, yet payroll, CPF and rent stay within 10%
+  of their median. Real growth usually brings costs with it. It needs at least 4
+  full months.
+
+Every finding says what it saw and asks a person to check. None is proof.
+
+### Tuning: `FabricationConfig`
+
+All settings are in one frozen dataclass, `FabricationConfig`. `DEFAULT_CONFIG` is
+used when nothing is passed. Bad values raise `ValueError` at creation.
+
+| Field | Default | Raising it | Lowering it |
+|-------|---------|------------|-------------|
+| `invoice_patterns` | `INV` + 3 or more digits | n/a (a list of regexes: group 1 prefix, group 2 number; add patterns for other reference styles) | n/a |
+| `rail_prefixes` | `FAST FROM`, `PAYNOW FROM`, `GIRO`, `TT FROM` | n/a (payment-rail words stripped from the front of a description so the customer name matches across rails) | n/a |
+| `dup_escalate_min_refs` | 3 | More repeated references needed before the HIGH summary; fewer HIGH findings | HIGH summary appears sooner |
+| `dup_min_payments_same_month` | 2 | One invoice must be paid this many times in one calendar month to count as a same-month repeat (minimum 2). 3 would miss a plain original-plus-copy pair | Not allowed below 2 |
+| `dup_far_apart_weight` | 10 | Far-apart cross-month repeats move the score more | Moves it less |
+| `dup_cross_month_weight` | 3 | Weak cross-month note moves the score more | Moves it less (0 keeps the note but adds nothing) |
+| `dup_isolated_weight` | 10 | Each lone repeat moves the score more | Moves it less |
+| `dup_escalated_weight` | 22 | HIGH summary moves the score more | Moves it less |
+| `instalment_max_days` | 45 | More groups get the "may be an instalment" note | Fewer get it |
+| `instalment_max_count` | 3 | Larger groups still get the instalment note | Only very small groups do |
+| `evidence_max_groups` | 20 | Longer evidence text in the summary | Shorter text; the rest is counted as "and N more" |
+| `seq_min_refs` | 6 | Rule B needs more references; quieter on short files | Speaks on shorter files |
+| `seq_min_breaks` | 2 | Needs more out-of-order credits; quieter | A single break is enough; noisier |
+| `seq_weight` | 5 | Moves the score more | Moves it less |
+| `fixed_cost_keywords` | `CPF`, `PAYROLL`, `SALARY`, `RENT` | n/a (debit words that count as fixed costs) | n/a |
+| `turnover_exclude_keywords` | `LOAN`, `CAPITAL`, `TRANSFER`, `INTEREST` | n/a (credit words left out of turnover) | n/a |
+| `credit_jump_ratio` | 1.2 | A month must beat the median of the other months by more; fewer jump months, quieter | Smaller rises count as jumps; noisier |
+| `fixed_cost_stability_pct` | 0.10 | Wider "flat" band; more months count as stable; noisier | Stricter flat band; quieter |
+| `turnover_min_months` | 4 | Needs a longer statement before Rule C runs | Runs on shorter statements |
+| `turnover_min_stable_share` | 2/3 | Needs most months to have stable costs; quieter | Tolerates more uneven costs; noisier |
+| `turnover_min_jump_months` | 2 | Needs more jump months; quieter | One jump month is enough; noisier |
+| `turnover_weight` | 8 | Moves the score more | Moves it less |
+
+**Worked example: a business with seasonal sales.** A shop whose sales spike
+every few months while rent and payroll stay put will look like Rule C's pattern.
+Ask for a bigger jump and more jump months before it speaks:
+
+```python
+from fraud_detect.nodes import financial_logic
+from fraud_detect.nodes.fabrication import FabricationConfig
+from fraud_detect.nodes.ingestion import ingest
+
+ing = ingest("statement.pdf")
+seasonal = FabricationConfig(credit_jump_ratio=1.4, turnover_min_jump_months=3)
+report = financial_logic.analyze(ing, fabrication_config=seasonal)
+```
+
+I ran this on `statement_E` (read-only). With defaults it reports
+`FL_DUP_INVOICE_REF`, `FL_INVOICE_SEQUENCE_BREAK` and `FL_TURNOVER_COST_MISMATCH`.
+With the settings above `FL_TURNOVER_COST_MISMATCH` goes quiet (E's jumps are
+1.25x to 1.30x) and the other two remain. That is the trade-off: the same setting
+that spares a seasonal shop would also mute a modest fabricated rise.
+
+### Running the evaluation report
+
+```bash
+python -m fraud_detect.nodes.fabrication_eval                       # defaults
+python -m fraud_detect.nodes.fabrication_eval --sample 200          # first 200 genuine dataset documents
+python -m fraud_detect.nodes.fabrication_eval --dataset ~/Downloads/statement_forgery_dataset
+python -m fraud_detect.nodes.fabrication_eval --statements ~/Downloads   # folder with statement_E/F.pdf
+python -m fraud_detect.nodes.fabrication_eval --generator-count 0        # skip generator statements
+```
+
+It counts how many genuine documents fire each rule, shows the share of documents
+carrying an invoice reference, and prints risk score, band, routing and codes for
+`statement_E` and `statement_F`. It is read-only: it writes nothing to
+`data/cases.json` or the audit chain (the full pipeline run on E/F may still append
+audit events). A missing folder is skipped, not an error. Results are recorded in
+`.kiro/specs/node3-fabrication-rules/evaluation-results.md`.
+
+### Structuring calibration
+
+`FL_STRUCTURING` (HIGH, weight 20) used to fire on any 3 near-threshold credits
+anywhere in a statement. It now needs **3 near-threshold credits within 14 days**
+of each other. `statement_F`, a genuine file, had 3 such credits on 28 Jul, 1 Aug
+and 28 Aug; it raised a false alarm before and no longer does. The trade-off:
+**slow structuring spread over weeks is missed**, for example one deposit every
+3–4 weeks. Undated near-threshold credits count as inside any window.
+
+### Honest limits
+
+- Only **two labelled files** exist (`statement_E` tampered, `statement_F`
+  genuine). Everything here is indicative.
+- The Rule C jump ratio default (1.2) was **informed by both files**, so E and F
+  separating under it is a sanity check, not proof. F's highest ratio is 1.14x and
+  E's lowest jump is 1.25x, a thin gap.
+- A fake with a **brand-new invoice number** evades the duplicate rule.
+- **Genuine instalments can look like duplicates.** The evidence says so when it
+  can.
+- About **half of the rows the duplicate rule names are genuine** (the twins the
+  fakes copied). On E: 24 rows named, 12 fake and 12 genuine. The rule cannot tell
+  which of a pair was copied.
+- The order hint names only **9 of the 12 fakes** on `statement_E`; it stays silent
+  when it cannot single out one row.
+- **No finding means no signal, not verified.** The 1,000-document dataset has no
+  invoice references and is single-month, so zero firings there prove nothing.
+- Weights were set from first principles, not fitted. **Node 4 (risk synthesis)
+  weights and thresholds were NOT changed.**
+- Findings that cover several rows appear in the findings list, but are **not
+  highlighted on a table row** in the reviewer UI.
+
+### Results (indicative)
+
+| Measure | Before | After |
+|---------|--------|-------|
+| `statement_E` (tampered) risk | 26 | 55, HIGH, `HUMAN_REVIEW` |
+| `statement_F` (genuine) risk | 40 | 26, MEDIUM, `HUMAN_REVIEW` |
+| Clean synthetic sample risk | n/a | 1, `AUTO_CLEAR` |
+| Genuine dataset documents firing a new rule | n/a | 0 of 1,000 (no signal, see limits) |
+| Generator statements firing a new rule | n/a | 0 of 30 (no signal, see limits) |
+
+`statement_F` still goes to `HUMAN_REVIEW` because of `FL_UEN_NOT_FOUND` and
+`VF_CURRENCY_MIX`, both MEDIUM. Nothing was tuned after seeing these figures.
+
+### Known follow-ups
+
+- **Node 2 gaps on `statement_E`.** Node 2 does not recognise the producer
+  "OpenPage Writer" and has no ModDate check. A rule on "ModDate later than
+  CreationDate" alone would flag all 64 re-saved genuine documents in the dataset,
+  so it must be combined with the Producer.
+- **`VF_CURRENCY_MIX` has no discriminating power.** It fires on 100% of the
+  Vellichor layout, genuine and tampered alike. Narrow or drop it in a later Node 2
+  spec.
+
+---
+
+## Company registry lookup (UEN cross-check)
+
+Node 3 checks the UEN that Node 1 read against a company registry
+(`fraud_detect/registry.py`, function `lookup_entity`). There are two sources, asked
+in this order:
+
+1. **Local registry** (`ACRA_REGISTRY` in `fraud_detect/reference_data.py`). Always on.
+   It holds the fictional demo and test companies, so those never need the network.
+   Local entries win.
+2. **Live registry** (data.gov.sg, "Registered Entities with Unique Entity Number",
+   published by ACRA). **On while the web apps run** (`webapp.py` and
+   `customer_app.py`), so real companies can be shown end to end. It is **off** in
+   the test suite, in `demo.py` and when you call the code as a library. Override it
+   either way with an environment variable, which always wins:
+
+   ```bash
+   export ACRA_LIVE_LOOKUP=1   # force on (also for demo.py and scripts)
+   export ACRA_LIVE_LOOKUP=0   # force off, even for the web apps (fully offline demo)
+   ```
+
+   Only the UEN (a public identifier) is sent. No statement text, name or amount
+   leaves the machine. The request is verified HTTPS using the `certifi` CA bundle.
+
+What you get back:
+
+| Outcome | Finding |
+|---------|---------|
+| UEN found, holder name matches | none. Names are compared ignoring case, punctuation and spacing (`PTE. LTD.` = `Pte Ltd`). |
+| UEN found, holder name differs | `FL_UEN_NAME_MISMATCH` (HIGH, 22) |
+| Every enabled source answered and none knows the UEN | `FL_UEN_NOT_FOUND` (MEDIUM, 10) |
+| Live source enabled but could not answer (network error, timeout, bad reply) | `DQ_REGISTRY_UNAVAILABLE` (LOW, 2). This says nothing about the company and is never reported as "not found". |
+
+Answers are cached in memory (found 24 h, not found 1 h, unavailable 1 min).
+
+**Things to know**
+- The test statements use **fictional companies**, so the real registry does not know
+  them. That is why they are also listed locally.
+- The dataset is published monthly, so a company registered this month may not be in
+  it yet.
+- The live record also carries a status (for example `Deregistered`). It is not used
+  for a finding yet; a deregistered company submitting a statement is a sensible
+  follow-up rule.
+- Tests never call the network (a fake service stands in). To try the real service:
+  `RUN_LIVE_TESTS=1 python -m pytest tests/test_registry.py`.
+
+---
+
 ## Governance alignment
 
 - **MAS FEAT (Fairness, Ethics, Accountability, Transparency):** every flag carries
@@ -181,9 +496,10 @@ This is a **prototype** with deterministic, rule-based detectors — not product
 3. **Toy reference data.** ACRA registry, known-vendor list and cash-flow baselines
    are small in-memory fixtures, not live sources; no cross-application reuse
    detection across a real corpus.
-4. **Statement-format-specific parser.** The transaction/header parser targets the
-   generator's layout; real statements vary widely by bank and would need per-bank
-   templates or a learned layout model.
+4. **Synthetic-layout parser.** The transaction/header parser reads six layouts
+   (our generator plus five dataset layouts), all synthetic. Real statements vary
+   widely by bank and each real bank would need its own profile (see
+   [Reading statements in Node 1](#reading-statements-in-node-1-multiple-layouts)).
 5. **Not a fairness-audited model.** No bias testing, no adversarial-robustness
    testing, and the confidence score is a heuristic, not a calibrated probability.
 6. **Prototype persistence & security.** JSON file store, no auth, no encryption —

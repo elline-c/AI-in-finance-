@@ -322,3 +322,37 @@ def test_month_identification_is_order_independent(workdir):
     # a multi-file set has no physical page order, so upload order must never
     # raise an out-of-order finding (that would break order-independence)
     assert "FL_MONTH_OUT_OF_ORDER" not in codes_fwd
+
+
+# --------------------------------------------------------------------------- #
+# Period length counts the end date as inclusive (real statements end on the
+# last day of the month, e.g. 1 Apr to 30 Sep is six months).
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("start,end,expected", [
+    (date(2026, 4, 1), date(2026, 9, 30), 6),     # month-end style: was wrongly 5
+    (date(2026, 1, 1), date(2026, 12, 31), 12),   # full year: was wrongly 11
+    (date(2026, 4, 1), date(2026, 4, 30), 1),
+    (date(2023, 1, 1), date(2023, 7, 1), 6),      # generator style still 6
+    (date(2023, 1, 1), date(2024, 1, 1), 12),
+    (date(2023, 1, 15), date(2023, 7, 14), 6),    # mid-month start, complete
+    (date(2023, 1, 15), date(2023, 7, 10), 5),    # incomplete final month
+    (date(2024, 1, 31), date(2024, 7, 30), 6),    # month-end start, 30-day month
+])
+def test_period_months_counts_end_date_inclusive(start, end, expected):
+    from fraud_detect.nodes.financial_logic import period_months
+    assert period_months(start, end) == expected
+
+
+def test_genuine_month_end_six_month_statement_is_not_too_short():
+    ing = _ingestion_with_period(date(2026, 4, 1), date(2026, 9, 30))
+    assert "FL_PERIOD_LENGTH" not in _fl_codes(ing)
+
+
+def test_month_end_five_month_statement_is_still_too_short():
+    ing = _ingestion_with_period(date(2026, 4, 1), date(2026, 8, 31))
+    assert "FL_PERIOD_LENGTH" in _fl_codes(ing)
+
+
+def test_month_end_thirteen_month_statement_is_still_too_long():
+    ing = _ingestion_with_period(date(2026, 1, 1), date(2027, 1, 31))
+    assert "FL_PERIOD_LENGTH" in _fl_codes(ing)

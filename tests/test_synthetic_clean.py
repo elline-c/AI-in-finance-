@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 
 from fraud_detect.nodes import financial_logic, ingestion
+from fraud_detect.nodes.financial_logic import period_months
 from fraud_detect.synthetic import generate_clean
 
 
@@ -24,8 +25,7 @@ def _codes(ing) -> set[str]:
 
 def _rule_months(ing) -> int:
     """Whole months between the declared period dates, counted as the rule does."""
-    s, e = ing.statement_period_start, ing.statement_period_end
-    return (e.year - s.year) * 12 + (e.month - s.month) - (1 if e.day < s.day else 0)
+    return period_months(ing.statement_period_start, ing.statement_period_end)
 
 
 def test_default_clean_statement_is_inside_the_policy_window(tmp_path):
