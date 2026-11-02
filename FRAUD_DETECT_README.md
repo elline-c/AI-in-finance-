@@ -510,6 +510,117 @@ leave the metadata untouched, and this check cannot see those.
 
 ---
 
+## Synthetic corpus generator
+
+A small tool that makes **fictional** company bank statements as PDFs, in the six
+layouts Node 1 already reads, and writes the "answer key" for each one: which rows
+are fake, what was changed, how, and in which layout. It can make clean ("genuine")
+statements and 16 kinds of tampered ones. A second command then feeds the PDFs
+through Nodes 1 to 4 and reports what was read and what was flagged. Use it to
+test and demo the pipeline on more data than the hand-made samples.
+
+**All data is synthetic.** Companies, accounts, counterparties and amounts are made
+up. The generated corpus is **never committed**: the default output folder
+`data/corpus` is under `data/`, which is git-ignored.
+
+### Build a corpus
+
+```bash
+python -m fraud_detect.corpus.build --out data/corpus --seed 20260601
+```
+
+| Option | Meaning (default) |
+|--------|-------------------|
+| `--out` | Output folder (`data/corpus`) |
+| `--seed` | Master seed (`20260601`) |
+| `--per-layout-genuine` | Genuine documents per layout (`2`) |
+| `--per-layout-tampered` | Tampered documents per layout (`2`) |
+| `--months-min` / `--months-max` | Fewest / most months per statement, 1 to 24 |
+| `--hold-out-layout LAYOUT` | Keep one layout for the `test_unseen_layout` split |
+| `--tamper-mix TYPE=WEIGHT,...` | Tamper types by weight, e.g. `metadata_inconsistency=1,font_mismatch=2` (even mix) |
+| `--split-fractions TRAIN,VAL,TEST` | Split sizes, must sum to 1 (`0.70,0.15,0.15`) |
+| `--force` | Build into a non-empty folder (existing files are never deleted) |
+
+Run `python -m fraud_detect.corpus.build --help` for the full list of tamper type names.
+
+**Output folder**
+
+- `pdfs/<doc_id>.pdf`: the statements
+- `manifests/<doc_id>.json`: per-document answer key (tamper type, method, changed rows)
+- `labels.csv`: one row per document (layout, tampered or not, tamper type, split)
+- `rows.csv`: one row per statement line, with the fake ones marked
+- `companies.json`: the fictional companies
+- `corpus_manifest.json`: settings, counts and generator version
+- `README.txt`: a plain summary of the build, with any warnings
+
+**Reproducible by seed.** The same options and `--seed` give the same corpus. A
+different seed gives a different one.
+
+### Verify a corpus
+
+```bash
+python -m fraud_detect.corpus.verify --corpus data/corpus --sample 5 \
+    --json data/corpus/report.json --markdown data/corpus/report.md
+```
+
+`--sample N` measures at most N documents per layout (faster). `--json` and
+`--markdown` write the report to those files; nothing else is written, and the
+corpus is only read. The report covers:
+
+- **Node 1:** share of rows read (genuine and tampered separately), share where
+  the replayed balance equals the printed closing balance, share with matching
+  header, the layout profile chosen, finding codes, and overlay rows dropped.
+- **Nodes 2 to 4:** false alarms on genuine documents, detection per tamper type,
+  blind spots, figures per layout and per split, decision breakdown, and
+  follow-up suggestions (text only).
+
+Screening runs in memory with no case store, no audit chain and the live registry
+lookup off.
+
+### The six layouts
+
+`generator_v1`, `two_col_dmon`, `two_col_slash`, `two_col_dual_date`,
+`signed_amount_iso`, `two_col_ddmmyy_cr` (see
+[The six layout profiles](#the-six-layout-profiles)).
+
+### The 16 tamper types
+
+| Type | Group | What it does |
+|------|-------|--------------|
+| `edited_amount` | Document | One amount changed; balances recomputed or left as printed |
+| `altered_date` | Document | One date changed |
+| `broken_balance` | Document | One printed balance changed, amounts untouched |
+| `font_mismatch` | Document | The edited amount is drawn in Courier |
+| `metadata_inconsistency` | Document | Editor-style Producer and later ModDate |
+| `genuine_resaved` | Hard negative | Print/export Producer and later ModDate; **not** tampered |
+| `fabricated_receipts` | Content | 6 to 12 extra credits copying an existing receipt |
+| `cross_month_copy` | Content | Receipt copy landing in a different month |
+| `turnover_inflation` | Content | Extra credits with new invoice numbers in 2+ months |
+| `structuring` | Behaviour | 3 to 5 credits of 9,500 to 9,999.99 within 14 days |
+| `sudden_large_deposit` | Behaviour | One credit far above the average monthly credit |
+| `shell_counterparty` | Behaviour | One credit of 50,000+ from a name like UNKNOWN TRADING LLC |
+| `rapid_pass_through` | Behaviour | Money in, almost the same out within 1 to 3 days (expected blind spot) |
+| `dormant_reactivation` | Behaviour | Months of only bank charges, then large activity (expected blind spot) |
+| `period_gap` | Behaviour | One middle month removed |
+| `uen_mismatch` | Behaviour | Printed holder name differs from the registered name |
+
+### Known limits and blind spots
+
+Results are indicative only: small samples, our own tamper designs, and a
+generator and detectors written by the same team (possible circularity). Some
+tampers are not caught by any rule (for example `rapid_pass_through`). Document
+level only; row-level accuracy is not measured. See
+[`evaluation-results.md`](.kiro/specs/synthetic-corpus-generator/evaluation-results.md)
+for the measured numbers and the full list.
+
+### What is unchanged
+
+Nodes 1 to 4 and the reference data are **unchanged**. The fictional companies are
+registered only temporarily, in memory, while `verify` measures, and are not
+written anywhere in the repo.
+
+---
+
 ## Governance alignment
 
 - **MAS FEAT (Fairness, Ethics, Accountability, Transparency):** every flag carries
