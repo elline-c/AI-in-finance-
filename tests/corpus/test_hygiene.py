@@ -99,6 +99,11 @@ def test_tests_do_not_need_downloads_folder():
         assert "Downloads" not in text and "~/" not in text, path.name
 
 
+def test_readme_documents_the_uen_check_options():
+    text = (REPO / "FRAUD_DETECT_README.md").read_text(encoding="utf-8")
+    assert "--uen-snapshot" in text and "--check-live-uen" in text
+
+
 def test_schema_constants():
     assert schema.GENERATOR_VERSION == "1.0.0"
     assert len(schema.LAYOUTS) == 6 and len(set(schema.LAYOUTS)) == 6

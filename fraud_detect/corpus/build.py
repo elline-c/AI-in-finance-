@@ -4,7 +4,8 @@
         --per-layout-tampered 2 --months-min 6 --months-max 12 --seed 20260601
 
 Exit codes: 0 all documents built, 1 some documents failed, 2 refused (bad settings,
-non-empty folder without --force, folder inside a protected tree). A refusal writes nothing.
+non-empty folder without --force, folder inside a protected tree, or a UEN check that
+could not be completed: bad --uen-snapshot file, or --check-live-uen with no answer). A refusal writes nothing.
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ from typing import Optional, Sequence
 
 from fraud_detect.corpus.builder import BuildConfig, CorpusBuilder
 from fraud_detect.corpus.schema import LAYOUTS, TAMPER_TYPES
+from fraud_detect.corpus.uen_check import UenCheckError
 
 DEFAULT_OUT = "data/corpus"
 DEFAULT_SEED = 20260601
@@ -72,6 +74,12 @@ def _parser() -> argparse.ArgumentParser:
                    metavar="TRAIN,VAL,TEST", help="split fractions, summing to 1 (default: 0.70,0.15,0.15)")
     p.add_argument("--force", action="store_true",
                    help="build into a non-empty folder (existing files are never deleted)")
+    p.add_argument("--uen-snapshot", default=None, metavar="PATH",
+                   help="file of real UENs (text, CSV with a 'uen' column, or JSON list) that "
+                        "invented UENs must not equal")
+    p.add_argument("--check-live-uen", action="store_true",
+                   help="also ask the live data.gov.sg lookup about each invented UEN "
+                        "(off by default; needs the network)")
     return p
 
 
@@ -84,7 +92,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         months_min=args.months_min, months_max=args.months_max,
         hold_out_layout=args.hold_out_layout, tamper_mix=args.tamper_mix,
         split_fractions=args.split_fractions, force=args.force,
-        command_line="python -m fraud_detect.corpus.build " + shlex.join(args_list))
+        command_line="python -m fraud_detect.corpus.build " + shlex.join(args_list),
+        uen_snapshot=Path(args.uen_snapshot) if args.uen_snapshot else None,
+        check_live_uen=args.check_live_uen)
     try:
         builder = CorpusBuilder(cfg)
         builder._check_out_dir()  # refuse before anything is written
@@ -98,6 +108,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         summary = builder.build(progress)
+    except UenCheckError as exc:
+        print(f"Refused: {exc}", file=sys.stderr)
+        return 2
     except ValueError as exc:
         print(f"Refused: {exc}", file=sys.stderr)
         return 2

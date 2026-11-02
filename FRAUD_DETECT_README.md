@@ -540,6 +540,7 @@ python -m fraud_detect.corpus.build --out data/corpus --seed 20260601
 | `--tamper-mix TYPE=WEIGHT,...` | Tamper types by weight, e.g. `metadata_inconsistency=1,font_mismatch=2` (even mix) |
 | `--split-fractions TRAIN,VAL,TEST` | Split sizes, must sum to 1 (`0.70,0.15,0.15`) |
 | `--force` | Build into a non-empty folder (existing files are never deleted) |
+| `--uen-snapshot` / `--check-live-uen` | Check invented UENs against real ones, see [UEN check](#uen-check-no-invented-company-number-should-be-a-real-one) |
 
 Run `python -m fraud_detect.corpus.build --help` for the full list of tamper type names.
 
@@ -555,6 +556,35 @@ Run `python -m fraud_detect.corpus.build --help` for the full list of tamper typ
 
 **Reproducible by seed.** The same options and `--seed` give the same corpus. A
 different seed gives a different one.
+
+### UEN check (no invented company number should be a real one)
+
+Each fictional company gets an invented UEN. By chance it could equal the UEN of a
+real Singapore company, and a statement must never look like that company's. So while
+the corpus is built, every UEN is checked and, if it is taken, drawn again from the
+company's own seeded stream. Only the UEN changes; the rest of the company stays the
+same, and the same seed with the same snapshot gives the same corpus.
+
+| Option | Meaning (default) |
+|--------|-------------------|
+| `--uen-snapshot PATH` | A file of real UENs to avoid: one UEN per line (blank lines and `#` lines are skipped), a CSV with a column named `uen`, or a JSON list of UENs (default: none) |
+| `--check-live-uen` | Also ask the live data.gov.sg lookup about each UEN (default: off) |
+
+- **Default.** Without either option the UENs are compared only with the in-repo test
+  registry and with each other. No network request is made, and the build prints a
+  warning that the real registry was **not** checked. The warning is also stored in
+  `corpus_manifest.json` and `README.txt`.
+- **Live lookup is never on by default.** It needs the network and its answer can change
+  from day to day, so a corpus built with it is repeatable only with the same snapshot or
+  while the live data are unchanged. Use `--check-live-uen` on purpose.
+- **A failed check stops the build.** A snapshot that is missing, unreadable, empty or in
+  an unknown format, or a live lookup that cannot answer, prints the reason, exits with
+  code 2 and writes no file. "Could not ask" is never treated as "free".
+- **Getting a snapshot.** Download the ACRA UEN list from data.gov.sg yourself and keep
+  it **outside the repository**. The tool only reads it.
+- **What is stored.** `corpus_manifest.json` and `README.txt` record the source of the
+  check, the snapshot file name and its SHA-256, and the counts (UENs checked,
+  redraws). No real company name or figure is stored.
 
 ### Verify a corpus
 

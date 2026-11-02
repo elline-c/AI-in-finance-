@@ -47,6 +47,7 @@ from fraud_detect.corpus.schema import (
     TAMPER_TYPES,
     BuildConfig,
     DocumentPlan,
+    CompanyProfile,
     Ledger,
     SimulatorKnobs,
     TamperLabel,
@@ -55,6 +56,7 @@ from fraud_detect.corpus.schema import (
 from fraud_detect.corpus.seeding import rng as make_rng
 from fraud_detect.corpus.seeding import stable_seed
 from fraud_detect.corpus.splits import assign_split, find_gaps, validate_fractions
+from fraud_detect.corpus.uen_check import UenChecker
 from fraud_detect.corpus.tamper.catalog import CATALOG
 from fraud_detect.corpus.tamper.pdf_ops import apply_file_ops
 
@@ -78,9 +80,25 @@ class CorpusSummary:
     warnings: list
 
 
+NOT_CHECKED_WARNING = ("UENs were not checked against the real registry: they were compared only "
+                       "with the in-repo registry and with each other (use --uen-snapshot or "
+                       "--check-live-uen to check them against real company numbers).")
+
+
+def _uen_line(info: dict) -> str:
+    checked = "yes" if info["real_registry_checked"] else "no"
+    text = (f"UEN check: source={info['source']}; UENs checked={info['uens_checked']}; "
+            f"redraws={info['redraws']}; real registry checked={checked}")
+    if info["snapshot_file"]:
+        text += f"; snapshot={info['snapshot_file']} ({info['snapshot_uens']} UENs)"
+    return text
+
+
 class CorpusBuilder:
-    def __init__(self, cfg: BuildConfig) -> None:
+    def __init__(self, cfg: BuildConfig, uen_fetch: Optional[Callable[[str], dict]] = None) -> None:
+        # ``uen_fetch`` is a fake JSON fetcher for tests; None means the registry's own.
         self.cfg = cfg
+        self._uen_fetch = uen_fetch
         self._validate()
 
     # ------------------------------------------------------------------ validation
@@ -170,10 +188,36 @@ class CorpusBuilder:
         return plans
 
     # ----------------------------------------------------------------------- build
-    def _build_document(self, plan: DocumentPlan, out: Path) -> tuple[dict, dict]:
+    def _company_seed(self, plan: DocumentPlan) -> int:
+        return stable_seed(self.cfg.master_seed, "company", plan.company_key)
+
+    def _choose_companies(self, plans: list[DocumentPlan], checker: UenChecker
+                          ) -> dict[str, CompanyProfile]:
+        """Make every company in plan order so each UEN is free (Requirement 20).
+
+        Plan order is fixed by the seed, so which of two clashing companies keeps its
+        first UEN does not depend on build speed or on failures.
+        """
+        claimed: set[str] = set()
+
+        def taken(uen: str) -> bool:
+            clash = checker.is_taken(uen) or uen in claimed
+            if clash:
+                checker.redraws += 1
+            return clash
+
+        profiles: dict[str, CompanyProfile] = {}
+        for plan in plans:
+            profile = make_company(self._company_seed(plan), plan.company_id, is_taken=taken)
+            claimed.add(profile.uen)
+            profiles[plan.doc_id] = profile
+        return profiles
+
+    def _build_document(self, plan: DocumentPlan, out: Path,
+                        company: Optional[CompanyProfile] = None) -> tuple[dict, dict]:
         cfg = self.cfg
-        company = make_company(stable_seed(cfg.master_seed, "company", plan.company_key),
-                               plan.company_id)
+        if company is None:
+            company = make_company(self._company_seed(plan), plan.company_id)
         renderer = get_renderer(plan.layout)
         ledger: Ledger = simulate_ledger(company, plan.start, plan.n_months, plan.doc_seed,
                                          SimulatorKnobs(), renderer.max_rows_per_month)
@@ -208,6 +252,12 @@ class CorpusBuilder:
         cfg = self.cfg
         plans = self.plan()
         out = self._check_out_dir()
+        # UEN check first: a bad snapshot or a live lookup that cannot answer raises
+        # UenCheckError here, before the output folder is created.
+        checker = UenChecker.from_options(cfg.uen_snapshot, live=cfg.check_live_uen,
+                                          fetch=self._uen_fetch)
+        profiles = self._choose_companies(plans, checker)
+        uen_info = checker.describe()
         out.mkdir(parents=True, exist_ok=True)
         (out / "pdfs").mkdir(exist_ok=True)
         (out / "manifests").mkdir(exist_ok=True)
@@ -217,7 +267,7 @@ class CorpusBuilder:
         failed: list[dict] = []
         for i, plan in enumerate(plans, start=1):
             try:
-                manifest, record = self._build_document(plan, out)
+                manifest, record = self._build_document(plan, out, profiles[plan.doc_id])
             except Exception as exc:  # recorded, the rest of the corpus is still built
                 failed.append({"doc_id": plan.doc_id, "layout": plan.layout,
                                "tamper_type": plan.tamper_type,
@@ -230,6 +280,8 @@ class CorpusBuilder:
 
         counts = self._counts(manifests)
         warnings = self._warnings(counts, failed)
+        if not uen_info["real_registry_checked"]:
+            warnings.append(NOT_CHECKED_WARNING)
         write_labels_csv(out / "labels.csv", manifests)
         write_rows_csv(out / "rows.csv", manifests)
         self._write_json(out / "companies.json", companies)
@@ -241,12 +293,13 @@ class CorpusBuilder:
             "hold_out_layout": cfg.hold_out_layout,
             "split_fractions": list(cfg.split_fractions),
             "tamper_mix": [list(p) for p in cfg.tamper_mix] if cfg.tamper_mix else None,
+            "uen_check": uen_info,
             "counts": counts,
             "failed": failed,
             "warnings": warnings,
         }
         self._write_json(out / "corpus_manifest.json", corpus_manifest)
-        (out / "README.txt").write_text(self._readme(counts, failed, warnings), encoding="utf-8")
+        (out / "README.txt").write_text(self._readme(counts, failed, warnings, uen_info), encoding="utf-8")
         return CorpusSummary(out_dir=out, planned=len(plans), built=len(manifests),
                              failed=failed, counts=counts, warnings=warnings)
 
@@ -286,7 +339,7 @@ class CorpusBuilder:
                                     + ", ".join(missing))
         return warnings
 
-    def _readme(self, counts: dict, failed: list, warnings: list) -> str:
+    def _readme(self, counts: dict, failed: list, warnings: list, uen_info: dict) -> str:
         cfg = self.cfg
         lines = [
             "SYNTHETIC DATA",
@@ -309,6 +362,8 @@ class CorpusBuilder:
             f"Documents: {counts['documents']}",
             "Per layout: " + ", ".join(f"{k}={v}" for k, v in counts["per_layout"].items()),
             "Per split : " + ", ".join(f"{k}={v}" for k, v in counts["per_split"].items()),
+            "",
+            _uen_line(uen_info),
             "",
             "The same seed and settings rebuild the same labels and text layers.",
             "Do not commit this folder; do not train on real statements mixed with it unlabelled.",

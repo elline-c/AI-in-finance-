@@ -186,3 +186,7 @@ python -m fraud_detect.corpus.verify --corpus data/corpus_large
 ```
 
 Same seed and settings rebuild the same labels and text layers. The reports used above are `report.md`, `report.json` and `verify.log` in each corpus folder; the folders themselves are git-ignored. To get the same tables again, add `--markdown <file>` and `--json <file>` to the `verify` command if you want files written (the command writes nothing otherwise).
+
+## 11. Note on the UEN check
+
+The runs reported above were made before the build-time UEN check existed, so they used the default behaviour: each invented UEN was compared only with the in-repo registry and with the other UENs of the corpus, and the real ACRA registry was **not** checked. A rebuild with the same seed gives the same corpus unless a UEN clashes with a snapshot or with live data, in which case only that company's UEN changes. The check stores no real company data: only the check source, the snapshot file name and hash, and counts (see `FRAUD_DETECT_README.md`, "UEN check"). The numbers in this file are not affected by the check.

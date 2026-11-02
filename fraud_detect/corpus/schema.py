@@ -278,6 +278,8 @@ class BuildConfig:
     split_fractions: tuple[float, float, float] = (0.70, 0.15, 0.15)
     force: bool = False
     command_line: str = ""
+    uen_snapshot: Path | None = None
+    check_live_uen: bool = False
 
 
 @dataclass(frozen=True)

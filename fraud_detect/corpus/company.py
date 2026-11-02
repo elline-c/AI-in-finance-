@@ -18,9 +18,11 @@ from __future__ import annotations
 
 import re
 from random import Random
+from typing import Callable, Optional
 
 from .schema import CompanyProfile, Party
 from .seeding import rng
+from .uen_check import UenCheckError
 
 _BANNED_SUBSTRINGS = ("UNKNOWN", "LLC", "HOLDINGS", "TT", "INV")
 _BANNED_WORDS = ("RENT", "CPF", "PAYROLL", "SALARY", "LOAN", "CAPITAL", "TRANSFER", "INTEREST")
@@ -86,8 +88,34 @@ def _uen(r: Random) -> str:
     return digits + r.choice("ABCDEFGHJKLMNPQRSTUVWXYZ")
 
 
-def make_company(seed: int, company_id: str) -> CompanyProfile:
-    """Build one fictional company; equal arguments give an equal profile."""
+MAX_UEN_REDRAWS = 1000
+
+
+def _free_uen(seed: int, company_id: str, first: str,
+              is_taken: Optional[Callable[[str], bool]]) -> str:
+    """Return ``first`` unless ``is_taken`` rejects it, then redraw (Requirement 20.2).
+
+    Redraws come from their own child stream, so the rest of the profile (drawn from the
+    main stream after the UEN) is not shifted by a clash.
+    """
+    if is_taken is None or not is_taken(first):
+        return first
+    stream = rng(seed, "company", company_id, "uen-redraw")
+    for _ in range(MAX_UEN_REDRAWS):
+        candidate = _uen(stream)
+        if not is_taken(candidate):
+            return candidate
+    raise UenCheckError(f"no free UEN found for company {company_id} after "
+                        f"{MAX_UEN_REDRAWS} tries")
+
+
+def make_company(seed: int, company_id: str,
+                 is_taken: Optional[Callable[[str], bool]] = None) -> CompanyProfile:
+    """Build one fictional company; equal arguments give an equal profile.
+
+    ``is_taken(uen)`` is optional. With ``None`` the result is exactly what it was before
+    the UEN check existed. If it says the first UEN is taken, only the UEN changes.
+    """
     r = rng(seed, "company", company_id)
     archetype = r.choice(sorted(_ARCHETYPES))
     (t_lo, t_hi), (p_lo, p_hi) = _ARCHETYPES[archetype]
@@ -112,10 +140,12 @@ def make_company(seed: int, company_id: str) -> CompanyProfile:
     address = (f"{block} {r.choice(_STREETS)}", f"SINGAPORE {postal}")
     account = f"{r.randint(100, 999)}-{r.randint(100000, 999999)}-{r.randint(0, 99):02d}"
 
+    uen = _free_uen(seed, company_id, _uen(r), is_taken)
+
     return CompanyProfile(
         company_id=company_id,
         name=name,
-        uen=_uen(r),
+        uen=uen,
         address_lines=address,
         account_number=account,
         archetype=archetype,

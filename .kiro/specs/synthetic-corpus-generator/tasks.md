@@ -289,7 +289,7 @@ Honest limits to keep in mind: results are demonstrations on synthetic data; do 
   - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.6, 17.7, 18.3, 18.4_
 
 - [ ] 28. Build-time UEN collision check
-  - [ ] 28.1 Write failing tests for the UEN check
+  - [x] 28.1 Write failing tests for the UEN check
     - In `tests/corpus/test_uen_check.py` (see the design section "Build-time UEN collision check"): snapshot loader (text, CSV with a `uen` column in any case, JSON list of strings and of objects, blank and `#` lines, lower-case input, missing file, empty file, CSV without a `uen` column); `UenChecker.is_taken` with a tiny fake snapshot, with a UEN from `ACRA_REGISTRY`, and with a fake `fetch` that returns a found record, an empty result and a failure (failure must raise `UenCheckError`, never "free"); `describe()` content, with no real company name anywhere
     - `make_company`: `is_taken=None` gives exactly the old profile (pin it); a forced clash gives a different UEN and an otherwise equal profile; the redraw is the same on every call; an always-taken callback ends in `UenCheckError`
     - Builder: in-corpus uniqueness (force two companies onto the same first UEN); same seed and same snapshot give equal `companies.json`; a snapshot holding one company's first UEN changes only that company; default run prints and stores the "not checked against the real registry" warning; manifest and README show source, counts and redraws; a bad snapshot and a failing fake live fetch both give exit code 2 and an empty output folder
@@ -297,7 +297,7 @@ Honest limits to keep in mind: results are demonstrations on synthetic data; do 
     - No network: a fixture makes `urllib.request.urlopen` raise; a test fails if `uen_check.py` imports `urllib`, `socket` or `requests` directly; use `registry.clear_cache()` between tests
     - These tests must fail now for the right reason (missing module and options)
     - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7, 20.8, 20.9, 20.10, 20.11, 20.13_
-  - [ ] 28.2 Implement `fraud_detect/corpus/uen_check.py` and wire it in
+  - [x] 28.2 Implement `fraud_detect/corpus/uen_check.py` and wire it in
     - Create `uen_check.py` with `UenCheckError`, `load_snapshot` and `UenChecker` as in the design; use only the public `registry.lookup_entity` (`live=False` for the in-repo part, `live=True` plus the optional `fetch` for the live part; `UNAVAILABLE` raises)
     - `company.py`: add the optional `is_taken` argument to `make_company`; first draw unchanged; redraws from the child stream `rng(seed, "company", company_id, "uen-redraw")`; limit of 1000 tries
     - `schema.py`: add `uen_snapshot: Path | None = None` and `check_live_uen: bool = False` to `BuildConfig`
@@ -306,7 +306,7 @@ Honest limits to keep in mind: results are demonstrations on synthetic data; do 
     - Do not change `registry.py`, `reference_data.py`, Nodes 1 to 4 or any earlier test; add no dependency
     - Make the 28.1 tests pass, and check that the earlier determinism and end-to-end tests still pass unchanged
     - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7, 20.8, 20.9, 20.10, 20.11, 20.12_
-  - [ ]* 28.3 Write property test for UEN determinism and no clash
+  - [x]* 28.3 Write property test for UEN determinism and no clash
     - **Property 22: Generated UENs never clash and are repeatable**
     - With `hypothesis` (at least 100 examples; pure functions, no PDFs): for any seed, any set of reserved UENs and any number of company ids, no company UEN is in the reserved set or repeats, and calling twice gives the same UENs; a company whose first draw is not reserved keeps its profile
     - **Validates: Requirements 20.1, 20.2, 20.3**
@@ -315,7 +315,7 @@ Honest limits to keep in mind: results are demonstrations on synthetic data; do 
     - Run the whole suite: all earlier tests still pass, the one skipped test is still skipped, and the new tests pass; `tests/corpus` still runs in about 90 seconds or less.
     - Hygiene: `git diff` shows no change to `fraud_detect/registry.py`, `fraud_detect/reference_data.py`, `fraud_detect/nodes/` or any earlier test; no network was used; no snapshot file or corpus file is tracked by git; delete any temporary folders.
     - _Requirements: 20.12, 20.13, 17.1, 17.3, 17.6, 17.7_
-  - [ ] 28.5 Update `FRAUD_DETECT_README.md` and `evaluation-results.md`
+  - [x] 28.5 Update `FRAUD_DETECT_README.md` and `evaluation-results.md`
     - In the README section "Synthetic corpus generator": explain in plain language the UEN check, the two options, that the default checks only the in-repo registry and the corpus itself and prints a warning, that live lookup is never on by default, that a failed snapshot or live check stops the build with exit code 2, and how to get a snapshot (download the ACRA UEN list from data.gov.sg yourself and keep it outside the repository)
     - In `evaluation-results.md`: add a short note that the existing run was made before the check existed and with the default option (real registry not checked), and that no real company data are stored
     - Add a check in `tests/corpus/test_hygiene.py` that the README mentions `--uen-snapshot` and `--check-live-uen`
