@@ -38,7 +38,7 @@ inconsistent manual review. This system:
 | Node | File | What it does |
 |------|------|--------------|
 | **1 Ingestion & Preprocessing** | `fraud_detect/nodes/ingestion.py` | PDF → text (OCR stand-in), extracts file **metadata**, captures per-page **font fingerprints**, parses the statement **header** + **transaction table** (several layouts, see below), emits explicit **data-quality** findings for missing/unreadable fields (never guesses). Output is a strict, validated `IngestionResult`. |
-| **2 Visual Forensics** | `fraud_detect/nodes/visual_forensics.py` | Localised **font inconsistency** (altered text), mixed **date/currency formats**, **editing-software** traces in metadata (Photoshop/Illustrator/GIMP…), and **creation-date-before-period**. |
+| **2 Visual Forensics** | `fraud_detect/nodes/visual_forensics.py` | Localised **font inconsistency** (altered text), mixed **date formats**, mixed **currency notation in the transaction amounts** (the account-header label is ignored), **editing-software** traces in metadata (Photoshop, GIMP, PDF editors…), a file **modified after it was created** by something other than a print/export tool, and **creation-date-before-period**. See [Node 2 checks](#node-2-checks-metadata-and-currency). |
 | **3 Financial Logic & Validation** | `fraud_detect/nodes/financial_logic.py` | Row-by-row **running-balance reconciliation**, closing-balance check, **period-continuity** gaps, **sudden deposits** vs a historical baseline, **unverified counterparties**, **structuring** (3+ near-threshold credits within 14 days), **UEN↔ACRA** entity cross-check, and the **fabrication rules** (repeated invoice references, invoice numbers out of date order, turnover jumps against flat fixed costs; see [Node 3 fabrication rules](#node-3-fabrication-rules)). |
 | **4 Risk Scoring & Synthesis** | `fraud_detect/nodes/risk_synthesis.py` | Aggregates all findings into a **risk score (1–100)** + band, a **confidence score (1–100)** + band, a **routing** decision with reason, and a plain-language summary. |
 
@@ -410,13 +410,9 @@ and 28 Aug; it raised a false alarm before and no longer does. The trade-off:
 
 ### Known follow-ups
 
-- **Node 2 gaps on `statement_E`.** Node 2 does not recognise the producer
-  "OpenPage Writer" and has no ModDate check. A rule on "ModDate later than
-  CreationDate" alone would flag all 64 re-saved genuine documents in the dataset,
-  so it must be combined with the Producer.
-- **`VF_CURRENCY_MIX` has no discriminating power.** It fires on 100% of the
-  Vellichor layout, genuine and tampered alike. Narrow or drop it in a later Node 2
-  spec.
+- The two Node 2 gaps found on `statement_E` (a metadata check that missed it, and a
+  currency warning that fired on a whole layout) are fixed. See
+  [Node 2 checks](#node-2-checks-metadata-and-currency).
 
 ---
 
@@ -464,6 +460,53 @@ Answers are cached in memory (found 24 h, not found 1 h, unavailable 1 min).
   follow-up rule.
 - Tests never call the network (a fake service stands in). To try the real service:
   `RUN_LIVE_TESTS=1 python -m pytest tests/test_registry.py`.
+
+---
+
+## Node 2 checks: metadata and currency
+
+Two Node 2 checks were reworked after `.kiro/specs/node3-fabrication-rules/investigation.md`
+showed they carried no signal on the test data.
+
+**Currency notation (`VF_CURRENCY_MIX`, MEDIUM, 10).** A forger who retypes an amount
+may write it differently from the bank (`SGD 1,234.00` among `S$` rows). The check now
+looks only at the amounts in the **transaction rows**. The account-header label
+(`Currency SGD`) and the summary box are labels, not amounts, so they are no longer
+counted. Before the change it fired on every document of one bank layout, genuine or
+tampered (200 of 200 each); now it fires on 0 of the 2,000 dataset documents. It still
+catches the generator's planted mixed-notation case.
+
+**File changed after it was created (`VF_MODIFIED_AFTER_CREATION`, MEDIUM, 14).** A bank's
+statement system writes the PDF once, so its "last modified" time equals its "created"
+time. The new check fires when the file was modified **more than 60 seconds** after it
+was created **and** the program that made it is not a print or export tool. A plain
+re-save through print-to-PDF or "save as PDF" is not flagged (64 genuine re-saved
+dataset documents are the test for that). The time of day is read, so a same-day edit
+is caught. It does not depend on knowing the editor's name, which is how
+`statement_E` ("OpenPage Writer 3.8") is caught.
+
+**Editing software (`VF_EDIT_SOFTWARE`, HIGH, 24).** The list of named tools grew from
+image editors to common PDF editors (Foxit, PDF-XChange, Sejda, PDFescape, Smallpdf,
+iLovePDF, PDFelement, Nitro) and any producer with the whole word "editor". Adobe's PDF
+libraries are deliberately not listed because real banks use them. When this fires, the
+modified-after-created finding is not added on top.
+
+Measured on the synthetic dataset (indicative only):
+
+| Group | Documents | `VF_CURRENCY_MIX` | modified-after-created | editing software |
+|-------|-----------|-------------------|------------------------|------------------|
+| Genuine | 936 | 0 | 0 | 0 |
+| Genuine, re-saved by a print/export tool | 64 | 0 | 0 | 0 |
+| Tampered: metadata changed | 200 | 0 | 152 | 48 |
+| Tampered: other types (800) | 800 | 0 | 286 | 55 |
+
+`statement_F` now has no Node 2 findings; `statement_E` gets the
+modified-after-created finding.
+
+**Limits.** The dataset's producer names are invented, so real print drivers and real
+editors may behave differently; the lists of re-save tools and editors would need
+checking against real files. More than half of the other tampered documents (459 of 800)
+leave the metadata untouched, and this check cannot see those.
 
 ---
 
