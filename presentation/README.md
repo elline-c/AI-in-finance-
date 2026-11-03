@@ -6,8 +6,14 @@ A slide deck to present and demonstrate the StatementGuard project.
 
 | File | What it is | How to use |
 |------|------------|------------|
-| `statementguard-deck.html` | Self-contained [reveal.js](https://revealjs.com/) slide deck (20 slides). | Open in any browser — no build, no install. Arrow keys to navigate, `F` for fullscreen, `S` for speaker notes, `Esc` for the slide overview. |
+| **`statementguard-deck-offline.html`** | **Fully self-contained** slide deck (20 slides) — all CSS + JS inlined, **zero network**. | Open in any browser, even offline. `←`/`→` or click to navigate, `F` fullscreen, `Esc` for the slide overview, `Home`/`End` to jump. Works from a USB stick or air-gapped laptop. **Recommended for presenting.** |
+| `statementguard-deck.html` | [reveal.js](https://revealjs.com/) slide deck that loads reveal.js from a CDN at open time. | Open in any browser **with internet**. Arrow keys to navigate, `F` fullscreen, `Esc` overview. |
 | `statementguard-deck.md` | The same deck as [Marp](https://marp.app/) Markdown. | Read inline on GitHub, or export to PDF/PPTX with `marp statementguard-deck.md --pdf` (or `--pptx`). |
+
+> **Which one should I open?** Use **`statementguard-deck-offline.html`** — it needs no internet and renders identically everywhere. The reveal.js and Marp versions are kept for teams that prefer those tools.
+
+### Export the offline deck to PDF
+Open `statementguard-deck-offline.html`, press `Esc` to leave overview if open, then **Print → Save as PDF** (landscape). The print stylesheet lays out one slide per page.
 
 ## What the deck covers
 
