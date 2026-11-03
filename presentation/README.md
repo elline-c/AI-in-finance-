@@ -12,8 +12,23 @@ A slide deck to present and demonstrate the StatementGuard project.
 
 > **Which one should I open?** Use **`statementguard-deck-offline.html`** — it needs no internet and renders identically everywhere. The reveal.js and Marp versions are kept for teams that prefer those tools.
 
-### Export the offline deck to PDF
-Open `statementguard-deck-offline.html`, press `Esc` to leave overview if open, then **Print → Save as PDF** (landscape). The print stylesheet lays out one slide per page.
+### PDF
+
+A ready-made **`statementguard-deck.pdf`** (20 pages, 16:9 landscape, one slide per page) is committed here — hand it out, email it, or present from it directly, no tooling required.
+
+To regenerate it (e.g. after editing the content):
+
+```bash
+pip install --target=./.pylibs fpdf2         # one-time, into any writable dir
+PYTHONPATH=./.pylibs python3 build_pdf.py    # writes statementguard-deck.pdf
+```
+
+`build_pdf.py` renders the deck with [fpdf2](https://py-pdf.github.io/fpdf2/) — pure Python, no browser or network. You can also export from the HTML instead: open `statementguard-deck-offline.html`, then **Print → Save as PDF** (landscape); its print stylesheet lays out one slide per page.
+
+| File | What it is |
+|------|------------|
+| `statementguard-deck.pdf` | The committed PDF (share / present / print). |
+| `build_pdf.py` | Script that generates the PDF from the deck content. |
 
 ## What the deck covers
 
