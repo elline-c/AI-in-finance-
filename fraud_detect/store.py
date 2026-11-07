@@ -16,7 +16,7 @@ from typing import Optional
 
 from .audit import AuditChain, build_signer_from_env
 from .audit.verify import VerificationStatus
-from .history import TrailingHistory, credit_sizes, monthly_credit_totals
+from .history import TrailingHistory, counterparty_key, credit_sizes, monthly_credit_totals
 from .registry import names_match
 from .models import (
     Case,
@@ -282,10 +282,12 @@ class CaseStore:
         gaps: list[int] = []
         credits: list[float] = []
         monthly: list[float] = []
+        names: set[str] = set()
         for case in picked:
             txns = case.report.transactions
             gaps += gaps_between_active_days([t.date for t in txns if t.date is not None])
             credits += credit_sizes(txns)
+            names |= {k for k in (counterparty_key(t.description) for t in txns) if k}
             segs = case.report.statement_segments
             starts = [s.period_start for s in segs if s.period_start is not None]
             ends = [s.period_end for s in segs if s.period_end is not None]
@@ -296,6 +298,7 @@ class CaseStore:
             credits=tuple(credits),
             monthly_credits=tuple(monthly),
             case_ids=tuple(c.case_id for c in picked),
+            counterparties=tuple(sorted(names)),
         )
 
     def list_cases(self) -> list[Case]:

@@ -2,6 +2,7 @@
 rapid pass-through (velocity) check."""
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -10,6 +11,7 @@ from fraud_detect.history import TrailingHistory, monthly_credit_totals
 from fraud_detect.models import DocumentMetadata, IngestionResult, Transaction
 from fraud_detect.nodes import financial_logic as fl
 from fraud_detect.nodes.financial_logic import analyze
+from fraud_detect.nodes.logic_config import DEFAULT_LOGIC_CONFIG
 
 UEN = "209999999Z"
 # One month of ordinary credits: median 1,275, a normal month totals 16,750.
@@ -210,12 +212,12 @@ def test_repeated_pass_through_is_escalated_to_high():
     assert f.evidence.startswith("3 large credit")
 
 
-def test_money_split_over_two_payments_needs_the_setting(monkeypatch):
+def test_money_split_over_two_payments_needs_the_setting():
     ing = _pt(CREDIT, (date(2025, 3, 11), "TRANSFER TO DELTA SUPPLY", -10_000.0),
               (date(2025, 3, 11), "TRANSFER TO ECHO SUPPLY", -9_500.0))
     assert _find(ing, "FL_RAPID_PASS_THROUGH") == []
-    monkeypatch.setattr(fl, "_PASS_MAX_PAYMENTS", 2)
-    assert len(_find(ing, "FL_RAPID_PASS_THROUGH")) == 1
+    two = replace(DEFAULT_LOGIC_CONFIG, pass_max_payments=2)
+    assert len(_find(ing, "FL_RAPID_PASS_THROUGH", config=two)) == 1
 
 
 def test_too_few_credits_to_know_what_is_normal_gives_no_finding():

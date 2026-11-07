@@ -39,7 +39,7 @@ inconsistent manual review. This system:
 |------|------|--------------|
 | **1 Ingestion & Preprocessing** | `fraud_detect/nodes/ingestion.py` | PDF → text (OCR stand-in), extracts file **metadata**, captures per-page **font fingerprints**, parses the statement **header** + **transaction table** (several layouts, see below), emits explicit **data-quality** findings for missing/unreadable fields (never guesses). Output is a strict, validated `IngestionResult`. |
 | **2 Visual Forensics** | `fraud_detect/nodes/visual_forensics.py` | Localised **font inconsistency** (altered text), mixed **date formats**, mixed **currency notation in the transaction amounts** (the account-header label is ignored), **editing-software** traces in metadata (Photoshop, GIMP, PDF editors…), a file **modified after it was created** by something other than a print/export tool, and **creation-date-before-period**. See [Node 2 checks](#node-2-checks-metadata-and-currency). |
-| **3 Financial Logic & Validation** | `fraud_detect/nodes/financial_logic.py` | Row-by-row **running-balance reconciliation**, closing-balance check, **period-continuity** gaps (limit learned from the company's own transaction rhythm), **unusual deposits** and **rapid pass-through** judged against the company's own history (see [Node 3 learned baselines](#node-3-learned-baselines-gaps-deposits-pass-through)), **unverified counterparties**, **structuring** (3+ near-threshold credits within 14 days), **UEN↔ACRA** entity cross-check, and the **fabrication rules** (repeated invoice references, invoice numbers out of date order, turnover jumps against flat fixed costs; see [Node 3 fabrication rules](#node-3-fabrication-rules)). |
+| **3 Financial Logic & Validation** | `fraud_detect/nodes/financial_logic.py` | Row-by-row **running-balance reconciliation**, closing-balance check, **period-continuity** gaps (limit learned from the company's own transaction rhythm), **unusual deposits** and **rapid pass-through** judged against the company's own history (see [Node 3 learned baselines](#node-3-learned-baselines-gaps-deposits-pass-through)), **large credits from payers never seen before**, **structuring** (clusters of credits just under a reporting level, judged against the company's size when a baseline exists), **UEN↔ACRA** entity cross-check, and the **fabrication rules** (repeated invoice references, invoice numbers out of date order, turnover jumps against flat fixed costs; see [Node 3 fabrication rules](#node-3-fabrication-rules)). |
 | **4 Risk Scoring & Synthesis** | `fraud_detect/nodes/risk_synthesis.py` | Aggregates all findings into a **risk score (1–100)** + band, a **confidence score (1–100)** + band, a **routing** decision with reason, and a plain-language summary. |
 
 Orchestration lives in `fraud_detect/pipeline.py` (`run_pipeline(pdf_path) -> RiskReport`).
@@ -371,7 +371,9 @@ anywhere in a statement. It now needs **3 near-threshold credits within 14 days*
 of each other. `statement_F`, a genuine file, had 3 such credits on 28 Jul, 1 Aug
 and 28 Aug; it raised a false alarm before and no longer does. The trade-off:
 **slow structuring spread over weeks is missed**, for example one deposit every
-3–4 weeks. Undated near-threshold credits count as inside any window.
+3–4 weeks. Undated near-threshold credits count as inside any window. When a baseline
+for the company exists, two further tests apply; see
+[Node 3 learned baselines](#node-3-learned-baselines-gaps-deposits-pass-through).
 
 ### Honest limits
 
@@ -420,7 +422,7 @@ and 28 Aug; it raised a false alarm before and no longer does. The trade-off:
 
 A bank does not judge a deposit against one fixed number. It asks whether the deposit
 is unusual **for that customer**, and a spike usually leads to a request for invoices
-or contracts rather than a rejection. Three Node 3 checks now work this way.
+or contracts rather than a rejection. Five Node 3 checks now work this way.
 They still never reject anyone; they add a reason and route the file to a human.
 
 ### What "normal for this company" is built from
@@ -441,9 +443,11 @@ With none of these, the deposit check says nothing instead of guessing.
 
 | Code | What it looks for | Severity (weight) |
 |---|---|---|
-| `FL_PERIOD_GAP` | A silence longer than the company's learned limit: median gap + 6 robust spreads, kept between 7 and 35 days. A busy account gets a short limit, a slow one a longer limit. Under 10 observed gaps it falls back to 25 days. | MEDIUM (12) |
+| `FL_PERIOD_GAP` | A silence longer than the company's learned limit: median gap + 6 robust spreads, kept between 10 and 35 days. A busy account gets a short limit, a slow one a longer limit. Under 10 observed gaps it falls back to 25 days. | MEDIUM (12) |
 | `FL_SUDDEN_DEPOSIT` | A credit above the company's normal credit size (median + 6 robust spreads) **and** at least half of a normal month of credits. The evidence says what to request: the invoice or contract, and who the payer is. | MEDIUM (12); HIGH (20) if the money also left within days |
 | `FL_RAPID_PASS_THROUGH` | A large credit (at least 3x the company's normal credit) followed within 3 days by one payment out of 90% to 105% of it. The payment must come after the credit. Payroll, rent, CPF, GST and tax payments are ignored. | MEDIUM (12) for 1 or 2 pairs; HIGH (20) for 3 or more |
+| `FL_UNVERIFIED_COUNTERPARTY` | A large credit from a payer that appears on no other row of the statement and not in the company's approved earlier statements. "Large" uses the same test as `FL_SUDDEN_DEPOSIT`; a shell-like word in the name (`UNKNOWN`, `LLC`, `HOLDINGS`, `TT`) lowers the bar to "above the company's normal credit sizes". Words are matched whole, so "BATTERY" and "REMITTANCE" no longer match `TT`. With no baseline at all it needs a shell-like word and a credit of 50,000 or more. Known vendors are skipped. | MEDIUM (12) |
+| `FL_STRUCTURING` | Three or more credits just under a reporting level (default 10,000, within 5%) inside 14 days. With no baseline this is unchanged. With a baseline it is also dropped when the cluster totals under 10% of a normal month of credits, or when credits near the level already make up 25% or more of the company's other credits (fixed-fee businesses). | HIGH (20) |
 
 The evidence text names where the baseline came from, for example "learned from
 2 approved earlier statements: CASE-..." or "this statement's 9 complete months".
@@ -470,21 +474,81 @@ the lookup fails, screening carries on using the statement itself.
 
 ### Where the settings are
 
-They are module constants at the top of `fraud_detect/nodes/financial_logic.py`
-(`_GAP_*`, `_CREDIT_*`, `_SPIKE_*`, `_PASS_*`). They have not been moved into a config
-object yet.
+Every threshold is a field of `FinancialLogicConfig` in `fraud_detect/nodes/logic_config.py`
+(the fabrication rules keep their own `FabricationConfig`). It is a frozen dataclass that
+rejects impossible values at construction. `DEFAULT_LOGIC_CONFIG` holds the shipped
+values; none has been fitted to real data.
+
+```python
+from dataclasses import replace
+from fraud_detect.nodes.financial_logic import analyze
+from fraud_detect.nodes.logic_config import DEFAULT_LOGIC_CONFIG
+
+cfg = replace(DEFAULT_LOGIC_CONFIG,
+              gap_min_days=14,                           # tolerate two-week quiet spells
+              structuring_levels=(10_000.0, 20_000.0))   # watch more than one reporting level
+report = analyze(ing, config=cfg)
+```
+
+Reporting levels: splitting to stay under a reporting level is the offence at any amount,
+and the level that applies depends on the jurisdiction and the channel. The default
+watches only 10,000. Confirm the right levels with compliance before relying on this.
+
+### Running the evaluation
+
+```bash
+python -m fraud_detect.nodes.node3_eval --companies 200
+python -m fraud_detect.nodes.node3_eval --companies 200 --set gap_min_days=14 --silence-days 12
+```
+
+It builds fictional companies, plants one tamper per statement, runs Node 3 and prints how
+often each rule fires with 95% Wilson intervals, on genuine statements (false alarms) and on
+planted tampers (detection). `--presets learned,fixed` compares the shipped settings with a
+set that switches off what can be switched off (25-day gap limit, declared baseline only,
+no pass-through, no relative structuring). `--set NAME=VALUE` overrides any numeric setting
+and `--json PATH` keeps the raw counts. It draws no PDFs and does not involve Node 1.
 
 ### Results (synthetic only)
 
-On 200 synthetic companies of 9 months each (generator seeds 2000 to 2199), the old
-rules against the new ones:
+200 fictional companies of 9 months each (seeds 2000 to 2199), shipped settings against the
+`fixed` preset. Detection is the share of planted statements where the expected rule fired.
 
-| Planted tamper | Old rule | New rule |
-|---|---|---|
-| `sudden_large_deposit` caught by `FL_SUDDEN_DEPOSIT` | 55/200 (it cannot fire at all without a declared baseline) | 200/200 |
-| `shell_counterparty` also caught by `FL_SUDDEN_DEPOSIT` | 2/200 | 173/200 |
-| `rapid_pass_through` caught by `FL_RAPID_PASS_THROUGH` | 0/200 | 198/200 |
-| Genuine statements flagged by these two rules | 0/200 | 0/200 |
+| Scenario | Rule that should see it | `fixed` | shipped |
+|---|---|---|---|
+| `sudden_large_deposit` | `FL_SUDDEN_DEPOSIT` | 53/200 (26.5%) | 200/200 (100%) |
+| `shell_counterparty` | `FL_UNVERIFIED_COUNTERPARTY` | 2/200 (1.0%) | 197/200 (98.5%) |
+| `rapid_pass_through` | `FL_RAPID_PASS_THROUGH` | 0/200 | 200/200 (100%) |
+| `structuring` | `FL_STRUCTURING` | 128/200 (64.0%) | 126/200 (63.0%) |
+| `period_gap` (a month removed) | `FL_PERIOD_GAP` or `FL_MONTH_MISSING` | 200/200 | 200/200 |
+| `short_silence` (12 days removed) | `FL_PERIOD_GAP` | 0/200 | 200/200 (100%) |
+
+False alarms on the 200 genuine statements: none for sudden deposit, pass-through,
+counterparty, structuring or missing month, **except `FL_PERIOD_GAP`: 1/200 (0.5%, interval
+0.1% to 2.8%) with the shipped settings against 0/200 with the fixed 25-day limit.** (With the
+first floor of 7 days it was 8/200; see below.)
+
+Against the previous commit, the counterparty rule no longer fires on the 200
+`sudden_large_deposit` statements (it did, because "REMITTANCE" contains the letters "TT"),
+and still sees 197 of 200 planted shell credits (the previous rule saw 200).
+
+### The gap floor decides everything for busy accounts
+
+All the synthetic companies transact almost every day (median gap 1 day, no spread), so
+the learned limit collapses to its floor, `gap_min_days`. The floor was first 7 days; it
+is now **10**. With 7, 8 of the 200 genuine statements were flagged for quiet spells of 8 to
+12 days. Raising the floor trades false alarms against the shortest silence that is still
+caught (200 companies each):
+
+| `gap_min_days` | genuine false alarms | 12-day silence caught | 20-day silence caught |
+|---|---|---|---|
+| 7 (first version) | 8/200 (4.0%) | 200/200 | 200/200 |
+| **10 (shipped)** | 1/200 (0.5%) | 200/200 | 200/200 |
+| 14 | 0/200 | 60/200 (30%) | 200/200 |
+
+The silences were chosen by us, so this shows the shape of the trade-off, not the right
+value. **A floor of 10 misses a silence of 10 days or shorter**, such as a 9-day removal. A
+bank would pick the floor from what its customers' real quiet spells (holidays, closures)
+look like.
 
 ### Honest limits
 
@@ -505,6 +569,13 @@ rules against the new ones:
   transactions, so edited transaction rows in `cases.json` would not be noticed.
 - **No peer benchmarking.** Comparing against similar businesses needs data no one
   publishes. A bank would supply it.
+- **Whole-name matching.** "Payer never seen before" depends on the name surviving the
+  bank's description. Truncated or reworded descriptions make a known payer look new.
+- **Shell credits below the company's normal range are missed.** 3 of 200 planted shell
+  credits were not large for that company, so the counterparty rule left them to other checks.
+- **Relative structuring can only reduce alerts.** It applies only when a baseline exists and
+  was not measured on real near-level credits; the synthetic genuine statements never trigger
+  `FL_STRUCTURING`, so no false-alarm reduction can be shown here.
 - **Not tested on real statements or through the web apps end to end.**
 
 ## Company registry lookup (UEN cross-check)

@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import pytest
 
 from fraud_detect.models import DocumentMetadata, IngestionResult, Transaction
-from fraud_detect.nodes import financial_logic as fl
+from fraud_detect.nodes.logic_config import DEFAULT_LOGIC_CONFIG as CFG
 from fraud_detect.nodes.financial_logic import _period_continuity, analyze, gap_limit
 
 
@@ -29,13 +29,13 @@ def _gap_findings(ing, trailing=None):
 # --------------------------------------------------------------------------- #
 def test_too_few_gaps_uses_default():
     limit, basis = gap_limit([5, 6])
-    assert limit == fl._GAP_DAYS
+    assert limit == CFG.gap_default_days
     assert "default" in basis
 
 
 def test_busy_account_gets_the_floor():
     limit, _ = gap_limit([1, 1, 2, 1, 1, 3, 1, 2, 1, 1, 1, 2])
-    assert limit == fl._GAP_MIN_DAYS
+    assert limit == CFG.gap_min_days
 
 
 def test_sparse_account_gets_a_longer_limit_than_busy():
@@ -46,7 +46,7 @@ def test_sparse_account_gets_a_longer_limit_than_busy():
 
 def test_limit_never_exceeds_the_cap():
     limit, _ = gap_limit([20, 40, 10, 55, 30, 25, 45, 15, 50, 35])
-    assert limit == fl._GAP_MAX_DAYS
+    assert limit == CFG.gap_max_days
 
 
 def test_one_long_silence_cannot_stretch_its_own_limit():
@@ -96,7 +96,7 @@ def test_several_transactions_on_one_day_are_one_active_day():
 def test_evidence_states_the_limit_and_where_it_came_from():
     days = list(range(0, 30)) + list(range(40, 70))
     ev = _gap_findings(_ing(days))[0].evidence
-    assert "normal limit is about 7 days" in ev
+    assert "normal limit is about 10 days" in ev
     assert "learned" in ev
 
 

@@ -194,6 +194,16 @@ def test_evidence_names_the_cases_the_limit_came_from(store):
     assert "approved earlier statement" in gap.evidence
 
 
+def test_history_carries_the_names_the_company_has_dealt_with(store):
+    rep = _report("CASE-A")
+    rep.transactions[0] = rep.transactions[0].model_copy(
+        update={"description": "FAST FROM ACME PTE. LTD. INV12"})
+    rep.transactions[1] = rep.transactions[1].model_copy(update={"description": "CASH DEPOSIT"})
+    _approve(store, rep)
+    names = _hist(store).counterparties
+    assert "ACME" in names and "CASH DEPOSIT" not in names and "" not in names
+
+
 def test_history_also_carries_credit_sizes_and_complete_month_totals(store):
     days = list(range(0, 130, 4))                       # Jan to early May 2025, several per month
     _approve(store, _report("CASE-A", days=days))

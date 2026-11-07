@@ -96,8 +96,11 @@ conditional step left is Node 5, which runs only when a case store is supplied.
     to ask for the invoice or contract, not an accusation,
   - money that comes in and leaves again within days (**rapid pass-through**), judged
     against the company's normal credit size,
-  - big inflows from shady, unverified counterparties,
-  - **structuring** — several deposits sitting just under a reporting threshold,
+  - big inflows from a payer never seen before (matched on whole words, so "BATTERY" is
+    not mistaken for a shell company),
+  - **structuring** — several deposits sitting just under a reporting threshold. When the
+    company's normal size is known, a cluster that is small next to it, or that matches
+    how the company normally gets paid, is not flagged,
   - account-holder name vs the official company registry (UEN/ACRA) record.
 - **What "normal for this company" means.** Node 3 learns it from the company's earlier
   statements that a **human approved** (same UEN and holder name, confirmed in the audit

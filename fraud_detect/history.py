@@ -6,6 +6,7 @@ Kept in its own module so the case store (which collects the history) and Node 3
 from __future__ import annotations
 
 import calendar
+import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Iterable, Optional, Sequence
@@ -20,17 +21,60 @@ class TrailingHistory:
     ``gap_days``: days of silence between active days, measured inside each statement.
     ``credits``: size of every credit.
     ``monthly_credits``: total credits of each COMPLETE calendar month.
+    ``counterparties``: names (see ``counterparty_key``) the company has dealt with.
     ``case_ids``: the earlier cases this came from (quoted in evidence for audit).
     """
     gap_days: tuple[int, ...] = ()
     credits: tuple[float, ...] = ()
     monthly_credits: tuple[float, ...] = ()
     case_ids: tuple[str, ...] = ()
+    counterparties: tuple[str, ...] = ()
 
     def describe(self) -> str:
         n = len(self.case_ids)
         ids = ", ".join(self.case_ids)
         return f"{n} approved earlier statement{'s' if n != 1 else ''}: {ids}"
+
+
+# Payment-rail words that start a description and say nothing about WHO the other party is.
+# Longest first, so "INWARD REMITTANCE FROM" is removed before "INWARD".
+_RAIL_PREFIXES = (
+    "INWARD REMITTANCE FROM", "INWARD REMITTANCE", "TRANSFER FROM", "TRANSFER TO", "PAYNOW FROM",
+    "PAYNOW TO", "FAST FROM", "FAST TO", "TT FROM", "INWARD TT", "INWARD", "OUTWARD", "GIRO",
+)
+_REFERENCE = re.compile(r"\b(?:INV|INVOICE|REF|PO)[\s\-#:]*\d+\b", re.IGNORECASE)
+_ENTITY_SUFFIXES = frozenset({"PTE", "LTD", "LLC", "LLP", "INC", "CO", "CORP", "LIMITED",
+                              "PRIVATE", "PLC", "BHD", "SDN"})
+# Descriptions that name a kind of entry, not a party.
+_NOT_A_NAME = frozenset({"CASH DEPOSIT", "CASH", "DEPOSIT", "CHEQUE DEPOSIT", "CHEQUE",
+                         "INTEREST CREDIT", "INTEREST", "SERVICE CHARGE", "BANK CHARGES"})
+
+
+def counterparty_key(description: Optional[str]) -> str:
+    """The other party's name in a comparable form, or ``""`` when there is none.
+
+    Removes the payment rail ("FAST FROM", "INWARD TT"), invoice references, punctuation
+    and entity suffixes, so "FAST FROM ACME PTE. LTD. INV12" and "GIRO ACME PTE LTD"
+    give the same key, ``"ACME"``. Whole words only: nothing is matched inside a word.
+    """
+    if not isinstance(description, str):
+        return ""
+    text = _REFERENCE.sub(" ", description.upper())
+    text = " ".join(re.sub(r"[^A-Z0-9]+", " ", text).split())
+    for _ in range(2):
+        for rail in _RAIL_PREFIXES:
+            if text == rail:
+                text = ""
+            elif text.startswith(rail + " "):
+                text = text[len(rail):].strip()
+            else:
+                continue
+            break
+    words = text.split()
+    while words and words[-1] in _ENTITY_SUFFIXES:
+        words.pop()
+    text = " ".join(words)
+    return "" if text in _NOT_A_NAME else text
 
 
 def credit_sizes(transactions: Iterable[Transaction]) -> list[float]:
