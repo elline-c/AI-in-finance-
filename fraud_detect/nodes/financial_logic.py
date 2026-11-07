@@ -16,8 +16,10 @@ Findings are explainable and carry the offending page/row where possible.
 """
 from __future__ import annotations
 
+import statistics
 from collections import Counter
 from datetime import date, timedelta
+from typing import Optional, Sequence
 
 from ..models import AgentReport, Finding, IngestionResult, Severity, Transaction
 from . import fabrication
@@ -41,7 +43,11 @@ from ..reference_data import (
 AGENT = "Node3:FinancialLogic"
 
 _BALANCE_TOL = 0.01           # rounding tolerance
-_GAP_DAYS = 25                # unexplained-gap threshold
+_GAP_DAYS = 25                # fallback gap threshold when too little data to learn from
+_GAP_MIN_DAYS = 7             # never flag a silence shorter than a week
+_GAP_MAX_DAYS = 35            # never excuse a silence longer than this (a missing month)
+_GAP_MIN_OBSERVATIONS = 10    # gaps needed before trusting a learned pattern
+_GAP_MAD_MULT = 6.0           # how many robust spreads above the median is "unusual"
 _STRUCTURING_WINDOW = 0.05    # within 5% below threshold
 _SUSPICIOUS_MULTIPLE = 3.0    # single credit > 3x avg monthly credit
 _MIN_PERIOD_MONTHS = 6        # corporate-loan policy: statements must cover >= 6 months
@@ -92,19 +98,64 @@ def _closing_check(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
-def _period_continuity(ing: IngestionResult) -> list[Finding]:
+def gaps_between_active_days(dates: Sequence[date]) -> list[int]:
+    """Days of silence between consecutive distinct transaction dates."""
+    days = sorted(set(dates))
+    return [(b - a).days for a, b in zip(days, days[1:])]
+
+
+def gap_limit(baseline_gaps: Sequence[int]) -> tuple[float, str]:
+    """Learn how long this company normally goes without a transaction.
+
+    Returns ``(limit_in_days, basis)``. A busy account that posts nearly every day
+    gets a short limit; a sparse account gets a longer one. The limit is
+    ``median + _GAP_MAD_MULT * robust spread`` of the observed gaps, so a single
+    long silence (the thing we are hunting) cannot stretch its own limit. The result
+    is clamped to ``[_GAP_MIN_DAYS, _GAP_MAX_DAYS]``. With fewer than
+    ``_GAP_MIN_OBSERVATIONS`` gaps there is nothing to learn from, so the fixed
+    ``_GAP_DAYS`` default is used.
+    """
+    if len(baseline_gaps) < _GAP_MIN_OBSERVATIONS:
+        return float(_GAP_DAYS), "default (too few transactions to learn a pattern)"
+    med = statistics.median(baseline_gaps)
+    mad = statistics.median(abs(g - med) for g in baseline_gaps)
+    limit = med + _GAP_MAD_MULT * 1.4826 * mad
+    limit = min(max(limit, _GAP_MIN_DAYS), _GAP_MAX_DAYS)
+    return limit, f"learned (median gap {med:g} days, spread {mad:g} days)"
+
+
+def _period_continuity(
+    ing: IngestionResult,
+    trailing_gap_days: Optional[Sequence[int]] = None,
+    trailing_source: Optional[str] = None,
+) -> list[Finding]:
+    """Flag unusually long silences, judged against the company's own rhythm.
+
+    The baseline is the company's trailing statements when supplied
+    (``trailing_gap_days``), otherwise the gaps in this statement itself.
+    ``trailing_source`` is a short human-readable description of where the trailing
+    history came from; it is quoted in the evidence so a reviewer can audit it.
+    """
     findings: list[Finding] = []
     dated = [t for t in ing.transactions if t.date]
+    own_gaps = gaps_between_active_days([t.date for t in dated])
+    if trailing_gap_days is not None and len(trailing_gap_days) >= _GAP_MIN_OBSERVATIONS:
+        limit, basis = gap_limit(list(trailing_gap_days))
+        basis = "trailing statements" + (f" ({trailing_source})" if trailing_source else "") \
+            + ", " + basis
+    else:
+        limit, basis = gap_limit(own_gaps)
     for a, b in zip(dated, dated[1:]):
         gap = (b.date - a.date).days
-        if gap > _GAP_DAYS:
+        if gap > limit:
             findings.append(Finding(
                 agent=AGENT, code="FL_PERIOD_GAP",
                 title="Unexplained gap in statement period",
                 severity=Severity.MEDIUM, weight=12, page=b.page,
                 evidence=(f"{gap}-day gap between {a.date} and {b.date} with no "
-                          f"transactions. Continuous business accounts rarely go this "
-                          f"long silent; may indicate removed pages/rows."),
+                          f"transactions. This account's normal limit is about "
+                          f"{limit:.0f} days ({basis}). A silence this long may "
+                          f"indicate removed pages/rows."),
             ))
     return findings
 
@@ -425,11 +476,13 @@ def _entity_crosscheck(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
-def analyze(ing: IngestionResult, fabrication_config=None) -> AgentReport:
+def analyze(ing: IngestionResult, fabrication_config=None,
+            trailing_gap_days: Optional[Sequence[int]] = None,
+            trailing_source: Optional[str] = None) -> AgentReport:
     findings: list[Finding] = []
     findings += _reconcile(ing)
     findings += _closing_check(ing)
-    findings += _period_continuity(ing)
+    findings += _period_continuity(ing, trailing_gap_days, trailing_source)
     findings += _period_length(ing)
     findings += _month_missing(ing)
     findings += _month_duplicate(ing)
