@@ -55,7 +55,8 @@ def _flags(label: TamperLabel) -> dict:
 
 def build_manifest(plan: DocumentPlan, ledger: Ledger, rendered: RenderResult,
                    label: TamperLabel, *, master_seed: int,
-                   edits: Sequence[EditOp] = (), file_ops: Sequence[FileOp] = ()) -> dict:
+                   edits: Sequence[EditOp] = (), file_ops: Sequence[FileOp] = (),
+                   style_block: dict | None = None) -> dict:
     """Build the manifest dict for one document (genuine or tampered)."""
     led_by_id = {r.row_id: r for r in ledger.rows}
     affected = [dict(a) for a in label.affected_rows]
@@ -84,7 +85,7 @@ def build_manifest(plan: DocumentPlan, ledger: Ledger, rendered: RenderResult,
 
     spilled = tuple(rendered.spilled_months)
     c = ledger.company
-    return {
+    manifest = {
         "doc_id": plan.doc_id,
         "generator_version": GENERATOR_VERSION,
         "synthetic": True,
@@ -115,6 +116,9 @@ def build_manifest(plan: DocumentPlan, ledger: Ledger, rendered: RenderResult,
         "section_summaries": [asdict(s) for s in rendered.section_summaries],
         "text_layer_sha256": text_layer_sha256(rendered.pdf),
     }
+    if style_block is not None:
+        manifest["style"] = style_block
+    return manifest
 
 
 def write_manifest(path: Path | str, manifest: dict) -> None:

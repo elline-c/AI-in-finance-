@@ -23,7 +23,7 @@ import importlib
 from dataclasses import dataclass
 from typing import Callable
 
-from fraud_detect.corpus.schema import TAMPER_TYPES, TamperResult
+from fraud_detect.corpus.schema import ALL_TAMPER_TYPES, TamperResult
 
 
 @dataclass(frozen=True)
@@ -87,9 +87,11 @@ TAMPER_INFO: dict[str, TamperInfo] = dict([
     _i("uen_mismatch", "Behaviour", ("content",), "yes",
        ("Node3:FL_UEN_NAME_MISMATCH",),
        "Printed holder name differs from the registered name."),
+    _i("subtle_amount_edit", "Document", ("overlay", "rerender"), "random", (),
+       "One amount changed by 1.0% to 4.9%; balances recomputed or left as printed."),
 ])
 
-assert set(TAMPER_INFO) == set(TAMPER_TYPES), "TAMPER_INFO must cover every TAMPER_TYPES name"
+assert set(TAMPER_INFO) == set(ALL_TAMPER_TYPES), "TAMPER_INFO must cover every ALL_TAMPER_TYPES name"
 
 PlanFn = Callable[..., TamperResult]
 

@@ -90,14 +90,25 @@ def new_canvas(buffer: io.BytesIO, pagesize: tuple[float, float], *,
     c.setTitle(title)
     c.setSubject(subject)
     c.setAuthor(style.bank_name if style else "")
-    c.setCreator(CREATOR)
+    c.setCreator((style.creator if style else "") or CREATOR)
     return c
 
 
-def draw_footer(c: Canvas, page_width: float, *, margin: float = 40.0) -> None:
-    """Specimen footer on the current page (built-in Helvetica)."""
-    c.setFont(FOOTER_FONT, FOOTER_SIZE)
+def draw_footer(c: Canvas, page_width: float, *, margin: float = 40.0,
+                font: str = FOOTER_FONT) -> None:
+    """Specimen footer on the current page (built-in Helvetica by default)."""
+    c.setFont(font, FOOTER_SIZE)
     c.drawString(margin, FOOTER_BASELINE, FOOTER_TEXT)
+
+
+def draw_address(c: Canvas, x: float, y_baseline: float, style: StyleKnobs) -> None:
+    """Print the bank address line (Balanced_Styling only); no-op otherwise."""
+    if not style.print_address:
+        return
+    from fraud_detect.corpus import styling  # lazy: avoids an import cycle
+
+    c.setFont(style.font_regular, 6.5)
+    c.drawString(x, y_baseline, styling.address_text(style))
 
 
 def finish_pdf(pdf: bytes, *, style: StyleKnobs, created: datetime,
@@ -114,7 +125,7 @@ def finish_pdf(pdf: bytes, *, style: StyleKnobs, created: datetime,
         "/Title": title,
         "/Subject": subject,
         "/Author": style.bank_name,
-        "/Creator": CREATOR,
+        "/Creator": style.creator or CREATOR,
         "/Producer": style.producer or "ReportLab PDF Library",
         "/CreationDate": pdf_date(created),
         "/ModDate": pdf_date(modified or created),

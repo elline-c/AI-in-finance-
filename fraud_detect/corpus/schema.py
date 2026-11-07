@@ -33,13 +33,16 @@ Design choices where the design document was silent or loose (kept simple):
 * ``RenderResult`` adds ``n_pages`` and ``spilled_months`` (months continued on a
   second page) so the manifest can report ``spill_not_in_real_samples``.
 * ``StyleKnobs``: bank_name, address_lines, producer, creation_time (HH:MM:SS),
-  row_step, second_address_line.
+  row_step, second_address_line, plus seven defaulted fields used by Balanced_Styling
+  (creator, font_regular, font_bold, print_address, address_wording, producer_family,
+  style_version); the defaults reproduce the legacy output.
 * ``SimulatorKnobs``: growth_range, seasonality_strength, instalment_rate (0.04),
   invoice_disorder (0.0), rows_per_month_range (20, 60), plus ``max_rows_per_month``
   is NOT a knob (passed separately, as in the design signature).
 * ``BuildConfig``: as in the design; ``tamper_mix`` is a tuple of (type, weight)
   pairs or None (a frozen class should not hold a mutable mapping);
-  ``force`` and ``command_line`` added for the build command and README.
+  ``force`` and ``command_line`` added for the build command and README;
+  ``style_version`` (1 legacy, 2 balanced; default 1) is the last field.
 * ``DocumentPlan``: doc_id, index, layout, company_id, company_key, split,
   start (date), n_months, tamper_type (None = genuine), variant ("" if none),
   doc_seed, plus ``style`` / ``knobs`` left out: the builder derives them from
@@ -83,6 +86,12 @@ TAMPER_TYPES: tuple[str, ...] = (
     "period_gap",
     "uen_mismatch",
 )
+
+STYLE_VERSIONS: tuple[int, ...] = (1, 2)
+
+EXTRA_TAMPER_TYPES: tuple[str, ...] = ("subtle_amount_edit",)
+
+ALL_TAMPER_TYPES: tuple[str, ...] = TAMPER_TYPES + EXTRA_TAMPER_TYPES
 
 TAMPER_METHODS: tuple[str, ...] = ("overlay", "rerender", "content", "file")
 
@@ -254,6 +263,14 @@ class StyleKnobs:
     creation_time: str = "09:00:00"
     row_step: float = 0.0
     second_address_line: bool = False
+    # Balanced_Styling additions; defaults keep the legacy output.
+    creator: str = ""                      # "" -> finish.CREATOR
+    font_regular: str = "Helvetica"
+    font_bold: str = "Helvetica-Bold"
+    print_address: bool = False
+    address_wording: int = 0
+    producer_family: str = ""              # "base" | "export" | "editor" | ""
+    style_version: int = 1
 
 
 @dataclass(frozen=True)
@@ -280,6 +297,7 @@ class BuildConfig:
     command_line: str = ""
     uen_snapshot: Path | None = None
     check_live_uen: bool = False
+    style_version: int = 1
 
 
 @dataclass(frozen=True)

@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from fraud_detect.corpus.builder import BuildConfig, CorpusBuilder
-from fraud_detect.corpus.schema import LAYOUTS, TAMPER_TYPES
+from fraud_detect.corpus.schema import ALL_TAMPER_TYPES, LAYOUTS
 from fraud_detect.corpus.uen_check import UenCheckError
 
 DEFAULT_OUT = "data/corpus"
@@ -69,9 +69,11 @@ def _parser() -> argparse.ArgumentParser:
                    help="layout kept for the test_unseen_layout split; one of: " + ", ".join(LAYOUTS))
     p.add_argument("--tamper-mix", type=_parse_mix, default=None, metavar="TYPE=WEIGHT,...",
                    help="tamper types by weight, e.g. metadata_inconsistency=1,font_swap=2 "
-                        "(default: even). Types: " + ", ".join(TAMPER_TYPES))
+                        "(default: even). Types: " + ", ".join(ALL_TAMPER_TYPES))
     p.add_argument("--split-fractions", type=_parse_fractions, default=(0.70, 0.15, 0.15),
                    metavar="TRAIN,VAL,TEST", help="split fractions, summing to 1 (default: 0.70,0.15,0.15)")
+    p.add_argument("--style-version", type=int, default=1, metavar="N",
+                   help="styling mode: 1 legacy (default), 2 balanced")
     p.add_argument("--force", action="store_true",
                    help="build into a non-empty folder (existing files are never deleted)")
     p.add_argument("--uen-snapshot", default=None, metavar="PATH",
@@ -94,7 +96,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         split_fractions=args.split_fractions, force=args.force,
         command_line="python -m fraud_detect.corpus.build " + shlex.join(args_list),
         uen_snapshot=Path(args.uen_snapshot) if args.uen_snapshot else None,
-        check_live_uen=args.check_live_uen)
+        check_live_uen=args.check_live_uen, style_version=args.style_version)
     try:
         builder = CorpusBuilder(cfg)
         builder._check_out_dir()  # refuse before anything is written

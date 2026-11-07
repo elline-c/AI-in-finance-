@@ -17,7 +17,7 @@ from typing import Optional
 
 from reportlab.lib.pagesizes import A4
 
-from fraud_detect.corpus.finish import creation_datetime, draw_footer, finish_pdf, new_canvas
+from fraud_detect.corpus.finish import creation_datetime, draw_address, draw_footer, finish_pdf, new_canvas
 from fraud_detect.corpus.layouts.base import (
     RowMapBuilder,
     baseline_from_top,
@@ -102,16 +102,18 @@ class TableRenderer:
             self._put(c, page, top, spec.bal_suffix, x_left=spec.bal_suffix_x0)
         return box
 
-    def _page_head(self, c, page: int, text: str, bank: str) -> None:
+    def _page_head(self, c, page: int, text: str, style: StyleKnobs) -> None:
         self._put(c, page, 30, "STATEMENT OF ACCOUNT", x_left=40.0, font=FONT_BOLD, size=10.0)
-        self._put(c, page, 44, bank, x_left=40.0)
+        self._put(c, page, 44, style.bank_name, x_left=40.0, font=style.font_regular)
+        # Balanced_Styling only; draws nothing when style.print_address is false.
+        draw_address(c, 300.0, baseline_from_top(PAGE_H, 44, SIZE), style)
         self._put(c, page, 56, text, x_left=40.0)
         self._put(c, page, 66, "SPECIMEN", x_left=40.0)
 
     def _first_page_block(self, c, page: int, ledger: Ledger, style: StyleKnobs, month: date,
                           marker: str, summary: SectionSummary) -> None:
         spec = self.spec
-        self._page_head(c, page, marker, style.bank_name)
+        self._page_head(c, page, marker, style)
         last = date(month.year, month.month, 1)
         nxt = date(month.year + (month.month == 12), month.month % 12 + 1, 1)
         end = nxt - timedelta(days=1)
@@ -206,7 +208,7 @@ class TableRenderer:
                     self._balance_cell(c, page, _TOP_BF, opening)
                     top = _TOP_ROWS_1
                 else:
-                    self._page_head(c, page, marker, style.bank_name)
+                    self._page_head(c, page, marker, style)
                     self._table_header(c, page, _TOP_HEADER_N)
                     top = _TOP_ROWS_N
                 for row in rows[pos:pos + n]:
@@ -217,7 +219,7 @@ class TableRenderer:
                 if k == n_pages - 1:
                     self._put(c, page, round(top, 2), "CLOSING BALANCE", x_left=spec.desc_x0)
                     self._balance_cell(c, page, round(top, 2), closing)
-                draw_footer(c, PAGE_W)
+                draw_footer(c, PAGE_W, font=style.font_regular)
                 c.showPage()
             rb.end_month(n_pages)
             prev_close = closing

@@ -18,6 +18,7 @@ from reportlab.lib.units import mm
 
 from fraud_detect.corpus.finish import (
     creation_datetime,
+    draw_address,
     draw_footer,
     finish_pdf,
     new_canvas,
@@ -99,7 +100,7 @@ class GeneratorV1Renderer:
                 page_no = p_in_month + 1
                 n_pages += 1
                 y = self._header(c, page_no, title, holder_name(ledger), company.uen,
-                                 company.account_number, first_day, last_day, opening)
+                                 company.account_number, first_day, last_day, opening, style)
                 for _ in range(count):
                     row = rows[idx]
                     bal = month_bal[idx]
@@ -123,7 +124,7 @@ class GeneratorV1Renderer:
                 if p_in_month == len(counts) - 1:
                     c.setFont(_BOLD, 10)
                     c.drawString(_X_DATE, y - 4 * mm, f"Closing Balance: SGD{closing:,.2f}")
-                draw_footer(c, _PAGE_W, margin=_X_DATE)
+                draw_footer(c, _PAGE_W, margin=_X_DATE, font=style.font_regular)
                 c.showPage()
 
             builder.end_month(len(counts))
@@ -157,9 +158,13 @@ class GeneratorV1Renderer:
 
     @staticmethod
     def _header(c, page_no: int, title: str, holder: str, uen: str, account: str,
-                first_day: date, last_day: date, opening: float) -> float:
+                first_day: date, last_day: date, opening: float,
+                style: StyleKnobs) -> float:
         c.setFont(_BOLD, 16)
         c.drawString(_X_DATE, _PAGE_H - 25 * mm, title)
+        # Balanced_Styling only (no-op for style_version 1): bank address line between
+        # the title (baseline 25 mm) and the first header line (33 mm).
+        draw_address(c, _X_DATE, _PAGE_H - 29 * mm, style)
         c.setFont(_FONT, _SIZE)
         y = _PAGE_H - 33 * mm
         if page_no == 1:

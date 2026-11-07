@@ -28,7 +28,7 @@ from fraud_detect.corpus.tamper._registry import (  # noqa: F401
 
 # Modules that call ``register``. Later tasks append their module here
 # (e.g. "pdf_ops", "content_ops", "behaviour_ops").
-_IMPLEMENTATIONS: tuple[str, ...] = ("ledger_ops", "pdf_ops", "content", "behaviour")
+_IMPLEMENTATIONS: tuple[str, ...] = ("ledger_ops", "pdf_ops", "content", "behaviour", "subtle")
 
 for _mod in _IMPLEMENTATIONS:
     importlib.import_module(f"fraud_detect.corpus.tamper.{_mod}")

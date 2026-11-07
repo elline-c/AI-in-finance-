@@ -1,0 +1,851 @@
+{
+ "cases": {
+  "seed_20260801_default_mix": {
+   "files": {
+    "companies.json": "2f109afcd620ab2b2a7a694aafd1333a24eca1a65bbb70d59a5fc4726b79b11a",
+    "corpus_manifest.json": "12a81e4254030640e37e5c05914f212c26d8d45bfc6d34981169692f58380462",
+    "labels.csv": "1c0c39400af1f3caf31483a8fa1f138174b784c6dea59b27fcc579617741e597",
+    "rows.csv": "cf75d558ac4023fe21565d8a25269eded83ff2e648e7424171e1fb0c9b82a76c"
+   },
+   "manifests": {
+    "generator_v1-g0001": "5c7fb3557179701ec755c143efb7f0870fe26a25808450fef2986b84c27a3d00",
+    "generator_v1-g0002": "ef2699a7990a39103dade1d185d8b1c84b116bc3a78af0dac7d2d8c5036a7a5f",
+    "generator_v1-t0001": "3ea1b39d91cc06ea6e949a115c4b469bc8f9398e4be649a7d3c6ac626d05c563",
+    "generator_v1-t0002": "e7aa80a4a6f37c4d4b2e14cbf50578dae294e3ced9dfa344d3dcbb90d7a40639",
+    "signed_amount_iso-g0001": "fd1ccee6976ea195ee5a6085b6c55dd7b3297d65e32b516822a2359041551f85",
+    "signed_amount_iso-g0002": "a36c1e5e7177a1815f482f58c9dde66fce514e76d26f21ccc1fd9fd4c690a104",
+    "signed_amount_iso-t0001": "3caf7663cade328ff442e99ea6b7f4b421acc172329a1527eabb2591004c66d5",
+    "signed_amount_iso-t0002": "e15f13b29d61d173d1f730f8af1ee87ed56de42721afcc4dbe39104be50b2203",
+    "two_col_ddmmyy_cr-g0001": "4fe2b043d45060e288cfb69620f2391366248d38073181711d333c25984ffaf0",
+    "two_col_ddmmyy_cr-g0002": "fca9e6c70c781dae1db95c276f4fe52c2ec9f343cdd9541ad1604f8f6ce48cbe",
+    "two_col_ddmmyy_cr-t0001": "ffc9595e24ef2e6b5df478627f41a6b7740ffd3b94a0a831c8c781983c74f0fe",
+    "two_col_ddmmyy_cr-t0002": "0aa14f86c92fcba49b283e9b5ea28b368adaaf4c6b879c1129d98917cb0b2930",
+    "two_col_dmon-g0001": "42759dbdf5576e2a7cd2406e6268dcf9f237d7774c65dc75ad262c49fc0e47b7",
+    "two_col_dmon-g0002": "111f2a4a62d5f0a2f0d987e664fd304d3672c0c23c22f03e666b53bab7c7ef87",
+    "two_col_dmon-t0001": "ce4a6c55bab13d16935039d226b06739fe9a07affa74bd920bb7e109f181cab8",
+    "two_col_dmon-t0002": "06e82e6fb72a67c37e2d6e36b6eb2793d3ab6da25dcf75b52af7dd71b1efa016",
+    "two_col_dual_date-g0001": "e72b77fba57e39491261fe48e9df7e27fd511762a0dc0ca61235f806674da268",
+    "two_col_dual_date-g0002": "a90672e0da1eb46092427cd9a9e817cbff613059821962df7629aaf3981b0725",
+    "two_col_dual_date-t0001": "692edea290d89d9916019172ece006e34708fba41d9e77c9a67a43290bc87012",
+    "two_col_dual_date-t0002": "bbb8eef4a35221fb6eb8cf703a4cb109cfa904654cb1c2e8e494cfc584433d9c",
+    "two_col_slash-g0001": "44d596d5bd30c61019ef3d6b90705fbe4067b9b818f43508bf5d97891b5ffb59",
+    "two_col_slash-g0002": "421b0f46274411fabb18539172513436f0d416f3add708023d2d0a2204d7f34a",
+    "two_col_slash-t0001": "29a5f2a2e49afee800d023ff2bc2a18d22ba816463d5985197e6a4f2901f6a59",
+    "two_col_slash-t0002": "66b879b0f5bac229092e3f3706778de5effc1e3ef42056440d12e20a20c5d00e"
+   },
+   "pdfs": {
+    "generator_v1-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "CASTLE ROCK SAMPLE BANK",
+      "/CreationDate": "D:20260303084504Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260303084504Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "b3dde31a15274c348e5dab9920fb7342f71a3c6c37a3e527c39e2715c8a9a9db"
+    },
+    "generator_v1-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "KAMPONG DEMO BANK",
+      "/CreationDate": "D:20260303143712Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260303143712Z",
+      "/Producer": "BankDoc Composer",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "9c59bfbd8f64a88b00a9e0f12b4591cb3e93caad8a5ac052323f2d4f4c343625"
+    },
+    "generator_v1-t0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "KAMPONG DEMO BANK",
+      "/CreationDate": "D:20260101201426Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260110120337Z",
+      "/Producer": "DocuMender PDF Editor 11",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "25e4790f87b61006b464134552329afa468ab4226f50298603c746409fa9f12c"
+    },
+    "generator_v1-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "ORCHARD SPECIMEN BANK",
+      "/CreationDate": "D:20260401071237Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260403132747Z",
+      "/Producer": "Microsoft: Print To PDF",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "7fdfceb991305b9090243efb9d77aec3bcb12c6ac76454ec55c48fb15321519e"
+    },
+    "signed_amount_iso-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "LANTERN COVE BANK",
+      "/CreationDate": "D:20260503130319Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260503130319Z",
+      "/Producer": "LedgerPrint Service",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "533a6613dbafae7a35b5bf45b55749e714592ad7a1140ce66bdc7b4ff193f4da"
+    },
+    "signed_amount_iso-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "MERLION SAMPLE BANK",
+      "/CreationDate": "D:20260203091546Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260203091546Z",
+      "/Producer": "LedgerPrint Service",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "a90f6fa04bf065fad3356189b8e70b6444a30edd2121a263d43a6383203719ca"
+    },
+    "signed_amount_iso-t0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "CASTLE ROCK SAMPLE BANK",
+      "/CreationDate": "D:20260103192308Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260103192308Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "b461c62948307537f76dc257b43815eda249ae3236a8966072a8d8158ad916e8"
+    },
+    "signed_amount_iso-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "LANTERN COVE BANK",
+      "/CreationDate": "D:20250702185441Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20250702185441Z",
+      "/Producer": "LedgerPrint Service",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "c9e37b765209ea0fb192c08e4c94c7713ccc8459d44919274e2730b007d6425b"
+    },
+    "two_col_ddmmyy_cr-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "BAYFRONT MODEL BANK",
+      "/CreationDate": "D:20251101192231Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251101192231Z",
+      "/Producer": "BankDoc Composer",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "5a7c68725d77aeeac513a14221d4f2b999ea5e6cacc66f6a1dd7d27e88f80bf0"
+    },
+    "two_col_ddmmyy_cr-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "CASTLE ROCK SAMPLE BANK",
+      "/CreationDate": "D:20250802172141Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20250802172141Z",
+      "/Producer": "LedgerPrint Service",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "6cc92f0f8fb055cc91c18eb197dee6448014461f834190ac0d8030cc53280f20"
+    },
+    "two_col_ddmmyy_cr-t0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "CASTLE ROCK SAMPLE BANK",
+      "/CreationDate": "D:20251102112104Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251102112104Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "9c3f20f2dd34a28c1a49cdb3db4c66456cb816486f49252112692bc4a900794e"
+    },
+    "two_col_ddmmyy_cr-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "BAYFRONT MODEL BANK",
+      "/CreationDate": "D:20260501190825Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260501190825Z",
+      "/Producer": "ReportLab PDF Library",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "7e577bd1e6c1f878a13a66bc8768e1aadd40980a71c4043c7326388a0ce8d32e"
+    },
+    "two_col_dmon-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "BAYFRONT MODEL BANK",
+      "/CreationDate": "D:20260401120943Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260401120943Z",
+      "/Producer": "LedgerPrint Service",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "92d6541ebae9db99b5c2f1e09f1d01dba1911a9e895272c86e4293d717e1e8db"
+    },
+    "two_col_dmon-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "MERLION SAMPLE BANK",
+      "/CreationDate": "D:20251203063457Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251203063457Z",
+      "/Producer": "BankDoc Composer",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "5cd1bd0f2f3269d26d5bbd79cb187591936299639785428a2af57bdbffd93e7c"
+    },
+    "two_col_dmon-t0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "LANTERN COVE BANK",
+      "/CreationDate": "D:20260603075022Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260603075022Z",
+      "/Producer": "BankDoc Composer",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "848637e9b7b75a0fcfbcd3d621b9d276c18a1eb70ff631829cc50eac85bfa244"
+    },
+    "two_col_dmon-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "NORTHERN TEST BANK",
+      "/CreationDate": "D:20260203081641Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260203081641Z",
+      "/Producer": "ReportLab PDF Library",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "2af5df9b730dc50ece4cb4e8f7b9a28519e47c05174c8a3352d55dff232cc65d"
+    },
+    "two_col_dual_date-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "LANTERN COVE BANK",
+      "/CreationDate": "D:20251001181600Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251001181600Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "486f2838ec68891d1384a7144171abc4475eb4f2669411bbcdd80e38c4e54f9a"
+    },
+    "two_col_dual_date-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "NORTHERN TEST BANK",
+      "/CreationDate": "D:20260303181813Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260303181813Z",
+      "/Producer": "LedgerPrint Service",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "761d96bbc3f29944e948a8c19c382506fb860535e15c9717364fd1967e22ca8f"
+    },
+    "two_col_dual_date-t0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "KAMPONG DEMO BANK",
+      "/CreationDate": "D:20251002195455Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251002195455Z",
+      "/Producer": "ReportLab PDF Library",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "45c83e0db30c74d5ad7d444ee0bf4c0c5417d95506ac536f0c95673983edaaaa"
+    },
+    "two_col_dual_date-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "ORCHARD SPECIMEN BANK",
+      "/CreationDate": "D:20251203134227Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251203134227Z",
+      "/Producer": "BankDoc Composer",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "7d76f02755be027a16b72741a5f9debf71fee86e5c834968e5012f48fa4d9011"
+    },
+    "two_col_slash-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "ORCHARD SPECIMEN BANK",
+      "/CreationDate": "D:20260303133217Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260303133217Z",
+      "/Producer": "BankDoc Composer",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "7aa576e3d7f1b8bd9b213984bfa1ef60bf322808666fe7c8842126bfccc6d42e"
+    },
+    "two_col_slash-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "LANTERN COVE BANK",
+      "/CreationDate": "D:20251002120800Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251002120800Z",
+      "/Producer": "ReportLab PDF Library",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "0fcedad2109fbefc49ca85f4b8d78e607be7e389206efd6716fe119b7f65d8fd"
+    },
+    "two_col_slash-t0001": {
+     "fonts": [
+      "/Courier",
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "MERLION SAMPLE BANK",
+      "/CreationDate": "D:20260103155654Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260103155654Z",
+      "/Producer": "LedgerPrint Service",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "060d55060883cab473784d21ad1ea128e48c23dddf1ee85b011185bc648da67a"
+    },
+    "two_col_slash-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "MERLION SAMPLE BANK",
+      "/CreationDate": "D:20251103060419Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251103060419Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "55bcc401a9304a916cbde9751136e01ba5b21c22704e19e84fddf0e853ef9ffa"
+    }
+   }
+  },
+  "seed_20260802_six_type_mix": {
+   "files": {
+    "companies.json": "2f811417adab4ee7800138589786ea9e2f75a386fda95298f5b0c54b3a2d2cb0",
+    "corpus_manifest.json": "19754750e908503de596825f45492092e57db9e061d099d4179ba9a25c66fced",
+    "labels.csv": "39ad981ac294bd7ba21bd790363d611ee62629411b4d90470ba6de03fb830cce",
+    "rows.csv": "f568e2124d554a71132950582ce9a989238c79083e725b958e1db6b99f7eb57e"
+   },
+   "manifests": {
+    "generator_v1-g0001": "637ae8d23703df0ca0fe1f5fea9725758cb12783161cfd10c45d3792ca47e3f6",
+    "generator_v1-g0002": "8f6ae1e5d8b0ffa1eafb2fd65ffc6fdd450ee9a5096c5895fb45732a298c573e",
+    "generator_v1-t0001": "c3be77ca2c7a189451aae47cae7312eacc53cb53398e51920b73b3df0c6465c9",
+    "generator_v1-t0002": "b2c74a0ac2a6d822de41f682ca231921572762dd9df4dc58a3d46708594dbf46",
+    "signed_amount_iso-g0001": "092a7053ba622f48067cee7aa5c9cc4f502ed346d98ef6fc63b6b7b30950a502",
+    "signed_amount_iso-g0002": "b686c8640e59118a72ad9f28e52dceebd5f109d3f3eaf135f4c920feb57dc86f",
+    "signed_amount_iso-t0001": "d4743fed892fd85f37632b6703506e9601145c7b90416d0c28f169e3732fd83c",
+    "signed_amount_iso-t0002": "fa0168f676464f1edf1b167d74a9f8ee18ba7567742d79a913987df8576f3291",
+    "two_col_ddmmyy_cr-g0001": "31b650657ad93f627ec1246fa7d57d60bd6205551b6d714c14604b7f7decc29c",
+    "two_col_ddmmyy_cr-g0002": "ab649df3f487c50bc2ff38b6b5c470765fabbb4a6e7b1a301fb1e216fa656de5",
+    "two_col_ddmmyy_cr-t0001": "3367deda90023a805c4365e54b059c9581a6e6fc48cfecd16addae393230b5b3",
+    "two_col_ddmmyy_cr-t0002": "bebaec7b0eafb3281e2c0cdeed39656624c1efb373a710c86321e349bf321347",
+    "two_col_dmon-g0001": "691b7af97d90c5fbc2f459b9f6117bdd30b22bbceac52d3eb3926fd012ed8c9c",
+    "two_col_dmon-g0002": "b011a0324c11ecfe9fe20d2668eb77bae3b0f342a781d7d686c1c90b4e7efd61",
+    "two_col_dmon-t0001": "3a5070acf999b6d4b6598a38f8ece6260cc5ba6468c33259ed75e823d0509207",
+    "two_col_dmon-t0002": "f987ec600e9be9b7d61d68a8e3acc09b87e2e94d6156e7585809371cdee03852",
+    "two_col_dual_date-g0001": "f17157c164b8d09de7bdfb2beba598f4c999b8c7dbc5e36897876216d027bfc4",
+    "two_col_dual_date-g0002": "45257eea5d407578872b65dedb85e4fe85cd7742f95afe24e96b238f90b7385f",
+    "two_col_dual_date-t0001": "c02fed0500cc904e7a189e05db5401c7fe3fb98c202aef5af5097138db3249c8",
+    "two_col_dual_date-t0002": "ed00a1413aa881151729360b8ccaa12c57489933612f5f59740c6e1b6fceafcf",
+    "two_col_slash-g0001": "a3824b4b834f8484bc83d322190862b1c1e58d2edac969724eb6f09e78601607",
+    "two_col_slash-g0002": "a4d1c74b6a15260b308dd322a43213a560f82355504b440bf5efad16671cb2a1",
+    "two_col_slash-t0001": "328d1c0f3e3b515f53ec18dfcf91e9219adbd813cda39707f31b08284cf51f21",
+    "two_col_slash-t0002": "e2315aa738be5a3de997f3f18d156620b15c0accfb02d2db58971915eb051403"
+   },
+   "pdfs": {
+    "generator_v1-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "NORTHERN TEST BANK",
+      "/CreationDate": "D:20260303073700Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260303073700Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "6b50d31ac37d882919b8efdc5b35b25661b9f5a6697f37542a9ef9d1dbd0e8cb"
+    },
+    "generator_v1-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "CASTLE ROCK SAMPLE BANK",
+      "/CreationDate": "D:20260202201003Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260202201003Z",
+      "/Producer": "ReportLab PDF Library",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "6445a2dfe78daf57fa17de9acb3a2bc0ae92e0658431c72cd76365eeef2c2369"
+    },
+    "generator_v1-t0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "LANTERN COVE BANK",
+      "/CreationDate": "D:20251001204228Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251003030836Z",
+      "/Producer": "Microsoft: Print To PDF",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "1517094b32f646f25fd9a5889fd1c841d1b0bbea43cac4df661e5155dd145db1"
+    },
+    "generator_v1-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "BAYFRONT MODEL BANK",
+      "/CreationDate": "D:20241230112500Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20250808140539Z",
+      "/Producer": "DocuMender PDF Editor 11",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "04438e619995d5a0d220bb4ff4ae32464d2ec95d72850fd58503b961ae43e2f5"
+    },
+    "signed_amount_iso-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "MERLION SAMPLE BANK",
+      "/CreationDate": "D:20260303182225Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260303182225Z",
+      "/Producer": "ReportLab PDF Library",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "bb23a1fef51ced1e1ae7defb0f10caf56722e474286cc313af88a3a42124f7c4"
+    },
+    "signed_amount_iso-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "CASTLE ROCK SAMPLE BANK",
+      "/CreationDate": "D:20250703174344Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20250703174344Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "87849870577435feeae642f1aa54f37e1672e5c44853088fe6b679518be386fd"
+    },
+    "signed_amount_iso-t0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "KAMPONG DEMO BANK",
+      "/CreationDate": "D:20260602062921Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260602062921Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "d96866946d816f6d1100f737635c6c60ca23b61ece444f85ff9973f4fcfbb5f8"
+    },
+    "signed_amount_iso-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "ORCHARD SPECIMEN BANK",
+      "/CreationDate": "D:20250803075930Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20250803075930Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "a644735808c189fda8f12cb9a7280ba71c8e27828ca1b7d682b917372aca3963"
+    },
+    "two_col_ddmmyy_cr-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "HARBOUR LION BANK",
+      "/CreationDate": "D:20251001185414Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251001185414Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "f312ec304afcd467d925e34a77afb0f41f1c05180af640aed6f942aeee07b8cc"
+    },
+    "two_col_ddmmyy_cr-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "HARBOUR LION BANK",
+      "/CreationDate": "D:20260102084504Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260102084504Z",
+      "/Producer": "LedgerPrint Service",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "4033620715315c126db39400e8624aaa317bc5dae6c08267568461c5f19b28cd"
+    },
+    "two_col_ddmmyy_cr-t0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "BAYFRONT MODEL BANK",
+      "/CreationDate": "D:20260601204540Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260601204540Z",
+      "/Producer": "ReportLab PDF Library",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "fad82b45a51c8790410ea57cf89e817b4c3535a9df458b27c3d9a3658f8e95b1"
+    },
+    "two_col_ddmmyy_cr-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "KAMPONG DEMO BANK",
+      "/CreationDate": "D:20260101143708Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260102061141Z",
+      "/Producer": "Skia/PDF m118",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "f75a9db49f80bde585916664ec66c3a47e98a3b499def606168f22851529e132"
+    },
+    "two_col_dmon-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "KAMPONG DEMO BANK",
+      "/CreationDate": "D:20260602092304Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260602092304Z",
+      "/Producer": "LedgerPrint Service",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "6781b2d4f4bd56c0d0b1cad010ea0bf68422d8bf64b8862b36feebcd8a37c915"
+    },
+    "two_col_dmon-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "ORCHARD SPECIMEN BANK",
+      "/CreationDate": "D:20260202203112Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260202203112Z",
+      "/Producer": "ReportLab PDF Library",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "46b9ad1ecaf532193f8362a25c02f591bc9dc143f192c281da36b65ae9d797d7"
+    },
+    "two_col_dmon-t0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "MERLION SAMPLE BANK",
+      "/CreationDate": "D:20260201063242Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260201063242Z",
+      "/Producer": "BankDoc Composer",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "0c37619e95b69ea17ac33cd5b4daacff7fc8c823e123ac944c1a0192feb00f90"
+    },
+    "two_col_dmon-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "ORCHARD SPECIMEN BANK",
+      "/CreationDate": "D:20260201114522Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260309183833Z",
+      "/Producer": "DocuMender PDF Editor 11",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "140a6f60cf7601450e20a713c97f13ef57abc82983da545a343385fea3f221bd"
+    },
+    "two_col_dual_date-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "BAYFRONT MODEL BANK",
+      "/CreationDate": "D:20260603204558Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260603204558Z",
+      "/Producer": "BankDoc Composer",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "9473865d78050ce2b077a60f4963d56a93454e7f497d3ce03b022245ac44b884"
+    },
+    "two_col_dual_date-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "CASTLE ROCK SAMPLE BANK",
+      "/CreationDate": "D:20250801142007Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20250801142007Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "2979cbf7e2e2e505d6d740a36534f068b1a2849cd4a1c565fb5e0be0226aa675"
+    },
+    "two_col_dual_date-t0001": {
+     "fonts": [
+      "/Courier",
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "KAMPONG DEMO BANK",
+      "/CreationDate": "D:20251201105720Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251201105720Z",
+      "/Producer": "BankDoc Composer",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "1378f29b64c78721a5132f564764e6650718b15cde3d5ba41f66f3630f816ade"
+    },
+    "two_col_dual_date-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "ORCHARD SPECIMEN BANK",
+      "/CreationDate": "D:20260601084126Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260601084126Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "27fcbd558ac09a6d9e47092fdbaf316355b563937c7bb1d0eb5fa0494743306e"
+    },
+    "two_col_slash-g0001": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "KAMPONG DEMO BANK",
+      "/CreationDate": "D:20260102083714Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260102083714Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "95fb3c075abad5bea7358cedcac23dc2fa3ee876e94fb897a4da61ded335f26a"
+    },
+    "two_col_slash-g0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "NORTHERN TEST BANK",
+      "/CreationDate": "D:20260401153904Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260401153904Z",
+      "/Producer": "ReportLab PDF Library",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "822b6fde67b5c47d4682bea9abbdd00c235a41dae17b7b32f3139c1722411d45"
+    },
+    "two_col_slash-t0001": {
+     "fonts": [
+      "/Courier",
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "KAMPONG DEMO BANK",
+      "/CreationDate": "D:20260203144211Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20260203144211Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "47bad2c53c020a8bd853508a68560c77beda80aa466de6e1086fcbbcde356e70"
+    },
+    "two_col_slash-t0002": {
+     "fonts": [
+      "/Helvetica",
+      "/Helvetica-Bold"
+     ],
+     "metadata": {
+      "/Author": "HARBOUR LION BANK",
+      "/CreationDate": "D:20251002143556Z",
+      "/Creator": "synthetic-corpus-generator 1.0.0",
+      "/ModDate": "D:20251002143556Z",
+      "/Producer": "Statement Engine 4.2",
+      "/Subject": "Synthetic data for testing only; not a real bank document",
+      "/Title": "Synthetic specimen bank statement"
+     },
+     "text_layer_sha256": "1747dfb37577f2c6051096461d366f5ca488cccc2e2ca80cb096ef94cb57a5d1"
+    }
+   }
+  }
+ },
+ "recorded_from": {
+  "date": "2026-11-07",
+  "git_commit": "c5279b39b6a7d8cf48b51ed4557a80704b1d5750"
+ }
+}

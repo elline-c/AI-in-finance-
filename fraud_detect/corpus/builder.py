@@ -41,9 +41,12 @@ from fraud_detect.corpus.layouts import get_renderer
 from fraud_detect.corpus.ledger import simulate_ledger
 from fraud_detect.corpus.finish import make_style
 from fraud_detect.corpus.schema import (
+    ALL_TAMPER_TYPES,
+    EXTRA_TAMPER_TYPES,
     GENERATOR_VERSION,
     LAYOUTS,
     SPLITS,
+    STYLE_VERSIONS,
     TAMPER_TYPES,
     BuildConfig,
     DocumentPlan,
@@ -104,6 +107,9 @@ class CorpusBuilder:
     # ------------------------------------------------------------------ validation
     def _validate(self) -> None:
         cfg = self.cfg
+        if cfg.style_version not in STYLE_VERSIONS:
+            raise ValueError("style_version must be one of "
+                             f"{', '.join(map(str, STYLE_VERSIONS))}, got {cfg.style_version!r}")
         lo, hi = self._month_range()
         if not (MONTHS_LOW <= lo <= MONTHS_HIGH and MONTHS_LOW <= hi <= MONTHS_HIGH):
             raise ValueError(f"months must be between {MONTHS_LOW} and {MONTHS_HIGH}, got {lo}..{hi}")
@@ -117,7 +123,7 @@ class CorpusBuilder:
             raise ValueError("document counts must not be negative")
         if cfg.tamper_mix is not None:
             for name, weight in cfg.tamper_mix:
-                if name not in TAMPER_TYPES:
+                if name not in ALL_TAMPER_TYPES:
                     raise ValueError(f"unknown tamper type {name!r}")
                 if weight < 0:
                     raise ValueError(f"tamper weight for {name!r} is negative")
@@ -235,13 +241,21 @@ class CorpusBuilder:
         else:
             tamper_rng = make_rng(cfg.master_seed, "tamper", plan.doc_id)
             result = CATALOG[plan.tamper_type].plan(ledger, renderer, tamper_rng)
-        style = make_style(cfg.master_seed, plan.doc_id)
+        style_block = None
+        if cfg.style_version == 2:
+            from fraud_detect.corpus import styling
+            style = styling.make_style_v2(cfg.master_seed, plan.doc_id)
+            result = styling.normalise_tamper_result(result, master_seed=cfg.master_seed,
+                                                     doc_id=plan.doc_id)
+            style_block = styling.style_block(style)
+        else:
+            style = make_style(cfg.master_seed, plan.doc_id)
         rendered = renderer.render(result.ledger, style, plan.doc_seed)
         pdf = apply_file_ops(rendered.pdf, result.file_ops, rendered.row_map, plan.doc_seed)
         rendered = dataclasses.replace(rendered, pdf=pdf)
         manifest = build_manifest(plan, result.ledger, rendered, result.label,
                                   master_seed=cfg.master_seed, edits=result.edits,
-                                  file_ops=result.file_ops)
+                                  file_ops=result.file_ops, style_block=style_block)
         (out / "pdfs").mkdir(parents=True, exist_ok=True)
         (out / "pdfs" / f"{plan.doc_id}.pdf").write_bytes(pdf)
         write_manifest(out / "manifests" / f"{plan.doc_id}.json", manifest)
@@ -298,6 +312,8 @@ class CorpusBuilder:
             "failed": failed,
             "warnings": warnings,
         }
+        if cfg.style_version == 2:
+            corpus_manifest["styling_version"] = 2
         self._write_json(out / "corpus_manifest.json", corpus_manifest)
         (out / "README.txt").write_text(self._readme(counts, failed, warnings, uen_info), encoding="utf-8")
         return CorpusSummary(out_dir=out, planned=len(plans), built=len(manifests),
@@ -309,8 +325,16 @@ class CorpusBuilder:
         path.write_text(json.dumps(data, sort_keys=True, indent=2, ensure_ascii=False) + "\n",
                         encoding="utf-8")
 
-    @staticmethod
-    def _counts(manifests: list[dict]) -> dict:
+    def _extra_types(self) -> tuple[str, ...]:
+        """Extra_Tamper_Types named in the mix (they are listed in counts and warnings)."""
+        mix = self.cfg.tamper_mix
+        if not mix:
+            return ()
+        named = {n for n, _ in mix}
+        return tuple(t for t in EXTRA_TAMPER_TYPES if t in named)
+
+    def _counts(self, manifests: list[dict]) -> dict:
+        listed = TAMPER_TYPES + self._extra_types()
         per_layout = Counter(m["layout"] for m in manifests)
         per_split = Counter(m["split"] for m in manifests)
         per_type: dict[str, Counter] = {s: Counter() for s in per_split}
@@ -321,7 +345,7 @@ class CorpusBuilder:
             "documents": len(manifests),
             "per_layout": {k: per_layout[k] for k in LAYOUTS if per_layout[k]},
             "per_split": {k: per_split[k] for k in SPLITS if per_split[k]},
-            "per_tamper_type": {s: {t: per_type[s][t] for t in TAMPER_TYPES}
+            "per_tamper_type": {s: {t: per_type[s][t] for t in listed}
                                 for s in SPLITS if s in per_type},
         }
 
@@ -333,7 +357,7 @@ class CorpusBuilder:
         if failed:
             warnings.append(f"{len(failed)} document(s) failed and are missing from the corpus.")
         if self.cfg.per_layout_tampered:
-            for split, missing in find_gaps(TAMPER_TYPES, counts["per_tamper_type"]).items():
+            for split, missing in find_gaps(TAMPER_TYPES + self._extra_types(), counts["per_tamper_type"]).items():
                 if missing:
                     warnings.append(f"split {split} has no document of tamper type: "
                                     + ", ".join(missing))
@@ -350,6 +374,10 @@ class CorpusBuilder:
             f"Master seed       : {cfg.master_seed}",
             f"Command line      : {cfg.command_line}",
             f"Held-out layout   : {cfg.hold_out_layout or 'none'}",
+        ]
+        if cfg.style_version == 2:
+            lines.append("Styling version : 2 (balanced)")
+        lines += [
             "",
             "Folder contents",
             "  pdfs/                 the statements (one PDF per document)",

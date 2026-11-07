@@ -118,8 +118,10 @@ def _apply_metadata(pdf: bytes, op: FileOp) -> bytes:
     modified = (orig if "created" in params else created) + delta
     writer = PdfWriter(clone_from=reader)
     info = {str(k): str(v) for k, v in (meta or {}).items()}
-    info.update({"/Producer": params["producer"], "/CreationDate": pdf_date(created),
-                 "/ModDate": pdf_date(modified)})
+    # A missing "producer" keeps the PDF's own Producer (Balanced_Styling ops).
+    if "producer" in params:
+        info["/Producer"] = params["producer"]
+    info.update({"/CreationDate": pdf_date(created), "/ModDate": pdf_date(modified)})
     writer.add_metadata(info)
     out = io.BytesIO()
     writer.write(out)
