@@ -4,11 +4,13 @@
 
 Date of the runs: 2 November 2026. Generator_Version: 1.0.0. Machine: the development laptop (macOS).
 
+**Update.** Sections 1 to 11 describe the 2 November runs. Node 3 changed afterwards (commits `064783a` to `e12a5f3`). **Section 12 re-runs the large corpus with the current Node 3.** Where it supersedes a statement below, that statement carries an "Update" note. The original numbers are kept as measured.
+
 ## 1. What was built
 
 A small program that makes fake but realistic company bank statements as PDFs, in the six layouts that Node 1 (the statement reader) already knows. For each PDF it also writes the "answer": which rows are fake, what was changed, how, and in which layout. It can make clean ("genuine") statements and 16 kinds of tampered ones. Then a second command feeds all the PDFs through Nodes 1 to 4 and reports what they read and what they flagged.
 
-The fake companies are registered only for the length of the measurement, in memory. Nothing in Nodes 1 to 4 and nothing in the reference data was changed. The PDFs are in `data/` which git ignores; none is committed.
+The fake companies are registered only for the length of the measurement, in memory. Nothing in Nodes 1 to 4 and nothing in the reference data was changed. (True for the runs in sections 1 to 11; Node 3 changed later, see section 12.) The PDFs are in `data/` which git ignores; none is committed.
 
 ## 2. How it was run
 
@@ -105,7 +107,7 @@ Things worth noticing:
 - **edited_amount (rerender), 2 of 4 caught.** The two caught are the ones where the later balances were left unchanged, so the arithmetic breaks. The two missed (two_col_dual_date-t0010, two_col_slash-t0002) had their balances recomputed so the sums still add up; with no font change in a re-rendered file there is nothing left to see. That is a realistic limit of what a statement alone can show.
 - **fabricated_receipts, 75%.** The one miss (generator_v1-t0007) came out of screening with no findings at all, not even the DUP note.
 - **metadata_inconsistency, 4 of 4** is a good result but the easy one: the file literally names an editing tool.
-- **sudden_large_deposit** was caught every time, but only half the time by the rule named for it (see section 6).
+- **sudden_large_deposit** was caught every time, but only half the time by the rule named for it (see section 6). **Update:** the other catches came from a substring match in `FL_UNVERIFIED_COUNTERPARTY`, not from an unknown name; see section 12.
 
 ## 6. Blind spots
 
@@ -114,9 +116,9 @@ The report's automatic rule lists a type as a blind spot when no MEDIUM/HIGH fin
 | Blind spot | What was measured | What it means, plainly |
 |---|---|---|
 | broken_balance as overlay (1 doc) | 0% material; FL_BALANCE_BREAK expected, not seen | The balance was patched by drawing over the PDF, and Node 1 did not drop the row (dropped count is 0). Yet the balance rule did not fire. With one document I cannot say whether it is a Node 1 or a Node 3 matter. The smoke corpus shows the same miss on its one overlay document |
-| rapid_pass_through (3 docs) | 0% material; nothing at all fired | Money in and out again within days is not looked for by any rule. No node has a rule for it |
+| rapid_pass_through (3 docs) | 0% material; nothing at all fired | Money in and out again within days is not looked for by any rule. No node has a rule for it. **Update:** `FL_RAPID_PASS_THROUGH` now exists and fires on 3 of 3 (section 12) |
 | altered_date as overlay (3 docs) | 33% material, and only by the unrelated TURNOVER code | The date rule VF_MIXED_DATE_FORMATS **never fired** in either corpus, for overlay or for re-rendered tampers. The one overlay and one re-render that got flagged did so for a different reason (side effect on turnover figures) |
-| sudden_large_deposit | Flagged 4 of 4, but FL_SUDDEN_DEPOSIT fired on only 2 | The other two were caught by FL_UNVERIFIED_COUNTERPARTY instead (the deposit was from an unknown name). Either the sudden-deposit rule's threshold is higher than the generator's "moderate" variant, or the expected code in the label is too narrow; I did not check which. Smoke corpus: 0 of 1 |
+| sudden_large_deposit | Flagged 4 of 4, but FL_SUDDEN_DEPOSIT fired on only 2 | The other two were caught by FL_UNVERIFIED_COUNTERPARTY instead (the deposit was from an unknown name). Either the sudden-deposit rule's threshold is higher than the generator's "moderate" variant, or the expected code in the label is too narrow; I did not check which. Smoke corpus: 0 of 1. **Update (section 12):** the threshold was the cause for the moderate variant, and the "unknown name" catches were a letters-inside-a-word match; both are fixed and the rule named for it now fires on 4 of 4 |
 | Nearby-month copies with different amounts | cross_month_copy was caught 4 of 4 | Not a blind spot in this sample, but the catch is by FL_INVOICE_SEQUENCE_BREAK, not by the duplicate rule. The smoke corpus missed its one cross_month_copy |
 | Overlay rows dropped by Node 1 | **0** | This known risk (Node 1 might drop the pasted-over row) was **not observed** in these runs. It remains untested rather than cleared, because only a few overlay documents were made |
 
@@ -152,16 +154,16 @@ Do not read a trend into these. The nodes are rule-based and were not trained on
 - **Possible circularity.** The generator and the nodes were written by the same team; a rule may look good because the generator makes things the way the rule expects. The held-out layout and the extra seed help a little but do not remove that.
 - **Document level.** The score is "was the document flagged", not "was the right row pointed out". Row-level accuracy was not measured.
 - **Findings are partly shared noise.** The DUP note appears on most documents, so "any finding" is not a clean signal. The report counts only MEDIUM/HIGH ("material") for that reason.
-- **False-alarm cause not fully traced.** The 4 TURNOVER_COST_MISMATCH false alarms on genuine documents were not investigated down to the rule. The "TT substring" false-alarm risk was not seen in the figures, but the report could not show it either way.
+- **False-alarm cause not fully traced.** The 4 TURNOVER_COST_MISMATCH false alarms on genuine documents were not investigated down to the rule. The "TT substring" false-alarm risk was not seen in the figures, but the report could not show it either way. **Update:** it was real. The substring match was the reason `FL_UNVERIFIED_COUNTERPARTY` fired on `sudden_large_deposit` documents (section 12). It did not show up as a false alarm on genuine documents.
 - **Overlay drop risk not yet seen.** Node 1 dropped 0 overlay rows, so that blind spot is unobserved, not ruled out.
-- **Bad numbers are reported as found.** Nothing was tuned to improve a number. No node or generator code was changed for this task.
+- **Bad numbers are reported as found.** Nothing was tuned to improve a number. No node or generator code was changed for this task. (True for sections 1 to 11. Node 3 changed afterwards, and its new settings were chosen after looking at synthetic results, so section 12 is not untuned in that sense.)
 
 ## 9. What to do next (suggestions only)
 
 1. Look into the 4 genuine documents that raised FL_TURNOVER_COST_MISMATCH (list in section 4) and decide whether the rule or the simulator's cost mix is at fault.
 2. Look at why FL_BALANCE_BREAK stays silent on the overlay `broken_balance` document and why VF_MIXED_DATE_FORMATS never fires. Decide whether those are rule gaps or unrealistic corpus variants.
-3. Decide whether "rapid pass-through" deserves a rule, or whether the corpus variant is too mild.
-4. Fix the `sudden_large_deposit` "expected code" label or the deposit size so it matches the rule threshold.
+3. Decide whether "rapid pass-through" deserves a rule, or whether the corpus variant is too mild. **Status:** a rule was added (`FL_RAPID_PASS_THROUGH`); it catches the corpus variant 3 of 3, which is partly circular (section 12).
+4. Fix the `sudden_large_deposit` "expected code" label or the deposit size so it matches the rule threshold. **Status:** resolved by changing the rule, not the label: it now fires on both the moderate and the large variant (4 of 4).
 5. Split the Node 1 Balance and Header columns into genuine and tampered so intentional tampering no longer looks like a reading dip.
 6. Build more documents (for example 30 per type) with several seeds, to find out which numbers above are stable.
 7. Optionally record the build time in `build.log` for next time.
@@ -190,3 +192,68 @@ Same seed and settings rebuild the same labels and text layers. The reports used
 ## 11. Note on the UEN check
 
 The runs reported above were made before the build-time UEN check existed, so they used the default behaviour: each invented UEN was compared only with the in-repo registry and with the other UENs of the corpus, and the real ACRA registry was **not** checked. A rebuild with the same seed gives the same corpus unless a UEN clashes with a snapshot or with live data, in which case only that company's UEN changes. The check stores no real company data: only the check source, the snapshot file name and hash, and counts (see `FRAUD_DETECT_README.md`, "UEN check"). The numbers in this file are not affected by the check.
+
+## 12. Re-run after the Node 3 changes
+
+### What changed in Node 3 since sections 1 to 11
+
+Details and settings are in `FRAUD_DETECT_README.md`, "Node 3 learned baselines".
+
+- `FL_PERIOD_GAP`: the silence limit is learned from the company's own rhythm (floor 10 days, cap 35) instead of a fixed 25 days.
+- `FL_SUDDEN_DEPOSIT`: a credit must be above the company's normal credit sizes and at least half of a normal month of credits. The baseline is the company's approved earlier statements, else this statement's own complete months, else the declared per-UEN figure (the old 3x rule). Severity is MEDIUM.
+- `FL_RAPID_PASS_THROUGH` (new): a large credit followed within 3 days by one payment out of 90% to 105% of it.
+- `FL_UNVERIFIED_COUNTERPARTY`: a large credit from a payer not seen elsewhere, matched on whole words.
+- `FL_STRUCTURING`: unchanged without a baseline; with one, small or routine clusters are dropped.
+
+### How it was re-run
+
+The same 120 PDFs (seed 20260602, nothing rebuilt) were screened by the current code (commit `e12a5f3`):
+
+```
+python -m fraud_detect.corpus.verify --corpus data/corpus_large --json <file> --markdown <file>
+```
+
+It took 117 seconds. The reports saved in the corpus folder were not overwritten. The smoke corpus was not re-run. Node 1 results are identical to section 3 (same rows, balance and header figures, 0 overlay rows dropped).
+
+### Results
+
+| | Sections 1 to 11 | Re-run |
+|---|---|---|
+| Genuine documents auto-cleared | 93.3% (56 of 60) | 93.3% (56 of 60) |
+| Genuine false alarms | FL_TURNOVER_COST_MISMATCH on 4 | the same 4, nothing new |
+| Genuine re-saved auto-cleared | 100% | 100% |
+| Truly tampered, material finding | 43 of 56 (76.8%) | 47 of 56 (83.9%) |
+| Automatic blind-spot list | broken_balance overlay, rapid_pass_through | broken_balance overlay |
+
+Tamper types whose result changed (the other types are identical in material share and expected code):
+
+| Tamper type | Docs | Material before → after | Expected code seen before → after | Codes now seen (excluding DUP) |
+|---|---|---|---|---|
+| rapid_pass_through | 3 | **0% → 100%** | n/a | FL_RAPID_PASS_THROUGH |
+| sudden_large_deposit | 4 | 100% → 100% | 50% → **100%** | FL_SUDDEN_DEPOSIT (FL_UNVERIFIED_COUNTERPARTY no longer fires) |
+| shell_counterparty | 4 | 75% → **100%** | 75% → **100%** | FL_UNVERIFIED_COUNTERPARTY, FL_SUDDEN_DEPOSIT |
+| altered_date (rerender) | 1 | 100% → 100% | 0% → 0% | adds FL_PERIOD_GAP on this one document (probably because the changed date leaves a long gap; the cause was not checked) |
+
+Results by split and layout (genuine auto-clear is unchanged in every row):
+
+| Split | Material before → after | Layout | Material before → after |
+|---|---|---|---|
+| train | 76.5% → 82.4% | generator_v1 | 55.6% → 77.8% |
+| validation | 75.0% → 87.5% | two_col_dmon | 90% → 100% |
+| test | 50.0% → 66.7% | two_col_slash | 50% → 60% |
+| test_unseen_layout | 100% → 100% | the other three layouts | unchanged |
+
+### Why sudden_large_deposit was only half caught
+
+Two things were going on, and the earlier note in section 6 had them mixed up:
+
+- The old 3x rule only fires above three times the declared month, so it saw the "large" variant and missed the "moderate" one (1.5x to 2.5x). The new rule fires on both.
+- The other catches came from `FL_UNVERIFIED_COUNTERPARTY`, which matched the letters "TT" inside "INWARD REMITTANCE", the description the generator gives this tamper. They were not a deposit from an unknown name. In a separate run on 200 in-memory fictional statements, the old rule fired on all 200 such statements and the new one on none. Whole-word matching removed it.
+
+### What this does not show
+
+- **Still synthetic and small.** 3 or 4 documents per type; one document is 25 to 33 points.
+- **Partly circular.** The 3-day window and the "almost the same amount" band of the pass-through rule follow how the generator plants it, so 3 of 3 says the rule finds what the generator plants, not that it finds real pass-through. The rule needs at least 5 credits to know what a normal credit is, which these long statements have.
+- **No change in genuine false alarms here is not proof of none.** A run on 200 in-memory fictional statements (`python -m fraud_detect.nodes.node3_eval`, see the README) found `FL_PERIOD_GAP` on 1 of 200 genuine statements at the shipped floor of 10 days.
+- **The pass-through rule accepts a single outgoing payment only.** Money split over two payments is missed by design (README, "Honest limits").
+- **Section 7's warning still applies.** The nodes were not trained on this data, so the split changes are not a train versus test effect.
