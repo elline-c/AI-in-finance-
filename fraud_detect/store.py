@@ -10,13 +10,13 @@ from __future__ import annotations
 import json
 import os
 import threading
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from .audit import AuditChain, build_signer_from_env
 from .audit.verify import VerificationStatus
+from .history import TrailingHistory, credit_sizes, monthly_credit_totals
 from .registry import names_match
 from .models import (
     Case,
@@ -34,18 +34,6 @@ _LOCK = threading.Lock()
 # Trailing-history settings (Node 3 gap learning).
 _ENV_REQUIRE_CHAIN = "TRAILING_HISTORY_REQUIRE_CHAIN"   # "0" switches the chain check off
 _MAX_TRAILING_STATEMENTS = 6                             # moving window: most recent N
-
-
-@dataclass(frozen=True)
-class TrailingHistory:
-    """Transaction-gap history of one company, taken from trusted earlier cases."""
-    gap_days: tuple[int, ...] = ()
-    case_ids: tuple[str, ...] = ()
-
-    def describe(self) -> str:
-        n = len(self.case_ids)
-        ids = ", ".join(self.case_ids)
-        return f"{n} approved earlier statement{'s' if n != 1 else ''}: {ids}"
 
 
 # --------------------------------------------------------------------------- #
@@ -251,7 +239,8 @@ class CaseStore:
         require_chain: Optional[bool] = None,
         max_statements: int = _MAX_TRAILING_STATEMENTS,
     ) -> TrailingHistory:
-        """Transaction-gap history of a company, from earlier cases we can trust.
+        """Behaviour history of a company (gaps, credit sizes, monthly credit totals),
+        from earlier cases we can trust.
 
         A past case counts only when ALL of these hold:
           * a human reviewer APPROVED it (an auto-clear is a machine's guess and is
@@ -291,11 +280,21 @@ class CaseStore:
         picked = picked[:max_statements]
 
         gaps: list[int] = []
+        credits: list[float] = []
+        monthly: list[float] = []
         for case in picked:
-            gaps += gaps_between_active_days(
-                [t.date for t in case.report.transactions if t.date is not None])
+            txns = case.report.transactions
+            gaps += gaps_between_active_days([t.date for t in txns if t.date is not None])
+            credits += credit_sizes(txns)
+            segs = case.report.statement_segments
+            starts = [s.period_start for s in segs if s.period_start is not None]
+            ends = [s.period_end for s in segs if s.period_end is not None]
+            monthly += monthly_credit_totals(
+                txns, min(starts) if starts else None, max(ends) if ends else None)
         return TrailingHistory(
             gap_days=tuple(gaps),
+            credits=tuple(credits),
+            monthly_credits=tuple(monthly),
             case_ids=tuple(c.case_id for c in picked),
         )
 

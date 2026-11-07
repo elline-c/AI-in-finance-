@@ -81,20 +81,17 @@ def run_pipeline(
     # human-approved statements when a store is available. Any trouble reading
     # the history falls back to learning from this statement alone, so screening
     # never fails because of it.
-    trailing_gaps, trailing_source = None, None
+    history = None
     if store is not None and ing.uen:
         try:
             history = store.trailing_history(
                 ing.uen, ing.account_holder,
                 exclude_case_id=risk_synthesis._case_id(ing.source_path),
             )
-            if history.case_ids:
-                trailing_gaps, trailing_source = list(history.gap_days), history.describe()
         except Exception:  # noqa: BLE001 - history is an optional refinement
             _log.warning("trailing history unavailable; using the statement itself",
                          exc_info=True)
-    financial_report = financial_logic.analyze(
-        ing, trailing_gap_days=trailing_gaps, trailing_source=trailing_source)
+    financial_report = financial_logic.analyze(ing, history=history)
 
     reports = [security_report, visual_report, financial_report]
 

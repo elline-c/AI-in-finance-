@@ -16,11 +16,15 @@ Findings are explainable and carry the offending page/row where possible.
 """
 from __future__ import annotations
 
+import itertools
+import re
 import statistics
 from collections import Counter
+from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Optional, Sequence
 
+from ..history import TrailingHistory, credit_sizes, monthly_credit_totals
 from ..models import AgentReport, Finding, IngestionResult, Severity, Transaction
 from . import fabrication
 from .fabrication import DEFAULT_CONFIG
@@ -49,7 +53,6 @@ _GAP_MAX_DAYS = 35            # never excuse a silence longer than this (a missi
 _GAP_MIN_OBSERVATIONS = 10    # gaps needed before trusting a learned pattern
 _GAP_MAD_MULT = 6.0           # how many robust spreads above the median is "unusual"
 _STRUCTURING_WINDOW = 0.05    # within 5% below threshold
-_SUSPICIOUS_MULTIPLE = 3.0    # single credit > 3x avg monthly credit
 _MIN_PERIOD_MONTHS = 6        # corporate-loan policy: statements must cover >= 6 months
 _MAX_PERIOD_MONTHS = 12       # corporate-loan policy: statements must cover <= 12 months
 
@@ -350,25 +353,195 @@ def _month_out_of_order(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
-def _suspicious_transactions(ing: IngestionResult) -> list[Finding]:
-    findings: list[Finding] = []
-    baseline = CASHFLOW_BASELINE.get(ing.uen or "", {})
-    avg_credit = baseline.get("avg_monthly_credit")
+# --------------------------------------------------------------------------- #
+# Credit baseline: what is a normal credit, and a normal month, for THIS company?
+# --------------------------------------------------------------------------- #
+# A bank judges a deposit against the customer's own moving history, not against one
+# fixed number. The baseline comes from, in order of preference:
+#   1. the company's earlier human-approved statements (``history``);
+#   2. this statement's own complete months (median, so one spike cannot move it);
+#   3. a declared per-UEN monthly figure in ``CASHFLOW_BASELINE`` (old 3x rule).
+_CREDIT_MIN_OBS = 10          # credits needed to describe a normal credit size
+_CREDIT_MIN_MONTHS = 3        # complete months needed to describe a normal month
+_SPIKE_MONTH_SHARE = 0.5      # a spike must be at least this share of a normal month's credits
+_SPIKE_MAD_MULT = 6.0         # ... and above the normal credit size by this many robust spreads
+_LEGACY_PRIOR_MULT = 3.0      # declared-figure fallback: a credit above 3x the declared month
 
+_DOCS_TO_REQUEST = ("Suggested request: the invoice or contract (or purchase order) behind "
+                    "this payment, and who the payer is and why they paid.")
+
+
+@dataclass(frozen=True)
+class CreditBaseline:
+    typical_monthly: float                 # median total credits of a complete month
+    sizes: tuple[float, ...]               # sizes of the company's credits (empty if unknown)
+    source: str                            # where this came from, quoted in the evidence
+    declared_only: bool = False            # True when only a declared monthly figure exists
+
+
+def _credit_baseline(ing: IngestionResult,
+                     history: Optional[TrailingHistory]) -> Optional[CreditBaseline]:
+    if history is not None and len(history.credits) >= _CREDIT_MIN_OBS \
+            and len(history.monthly_credits) >= _CREDIT_MIN_MONTHS:
+        return CreditBaseline(statistics.median(history.monthly_credits),
+                              tuple(history.credits), f"trailing statements ({history.describe()})")
+    sizes = credit_sizes(ing.transactions)
+    monthly = monthly_credit_totals(
+        ing.transactions, ing.statement_period_start, ing.statement_period_end)
+    if len(sizes) >= _CREDIT_MIN_OBS and len(monthly) >= _CREDIT_MIN_MONTHS:
+        return CreditBaseline(statistics.median(monthly), tuple(sizes),
+                              f"this statement's {len(monthly)} complete months")
+    declared = CASHFLOW_BASELINE.get(ing.uen or "", {}).get("avg_monthly_credit")
+    if declared and declared > 0:
+        return CreditBaseline(float(declared), (), "the declared per-UEN monthly baseline",
+                              declared_only=True)
+    return None
+
+
+def _spike_fence(sizes: Sequence[float]) -> tuple[float, float]:
+    """(typical credit, upper fence) from the robust centre and spread of credit sizes."""
+    med = statistics.median(sizes)
+    mad = statistics.median(abs(x - med) for x in sizes)
+    return med, med + _SPIKE_MAD_MULT * 1.4826 * mad
+
+
+def _sudden_deposits(ing: IngestionResult, history: Optional[TrailingHistory],
+                     passed_through: set[int]) -> list[Finding]:
+    """Credits that are large for THIS company, as a prompt to ask for documents.
+
+    A credit is flagged when it is both above the company's normal credit sizes and a
+    big share of a normal month. That is a request for invoices or contracts, not an
+    accusation, so the severity is MEDIUM. It is raised to HIGH only when the money
+    also left again within days (``passed_through``, see FL_RAPID_PASS_THROUGH).
+    """
+    base = _credit_baseline(ing, history)
+    if base is None or base.typical_monthly <= 0:
+        return []
+    if base.sizes:
+        typical, fence = _spike_fence(base.sizes)
+    findings: list[Finding] = []
     for t in ing.transactions:
         if t.amount is None or t.amount <= 0:
             continue
-        # Sudden massive deposit vs baseline
-        if avg_credit and t.amount > _SUSPICIOUS_MULTIPLE * avg_credit:
-            findings.append(Finding(
-                agent=AGENT, code="FL_SUDDEN_DEPOSIT",
-                title="Sudden deposit far above historical baseline",
-                severity=Severity.HIGH, weight=20, page=t.page,
-                field=f"row {t.index}",
-                evidence=(f"Credit of {t.amount:,.2f} on {t.date} ({t.description}) is "
-                          f"{t.amount/avg_credit:.1f}x the historical average monthly "
-                          f"credit ({avg_credit:,.0f}). Off-baseline inflow warrants review."),
-            ))
+        if base.declared_only:
+            if t.amount <= _LEGACY_PRIOR_MULT * base.typical_monthly:
+                continue
+            how = (f"{t.amount/base.typical_monthly:.1f}x the declared monthly credit "
+                   f"({base.typical_monthly:,.0f})")
+        else:
+            if t.amount <= fence or t.amount < _SPIKE_MONTH_SHARE * base.typical_monthly:
+                continue
+            how = (f"{t.amount/typical:.1f}x this company's normal credit ({typical:,.0f}) "
+                   f"and {t.amount/base.typical_monthly:.0%} of its normal month of credits "
+                   f"({base.typical_monthly:,.0f})")
+        also = t.index in passed_through
+        findings.append(Finding(
+            agent=AGENT, code="FL_SUDDEN_DEPOSIT",
+            title="Deposit unusually large for this company",
+            severity=Severity.HIGH if also else Severity.MEDIUM,
+            weight=20 if also else 12, page=t.page, field=f"row {t.index}",
+            evidence=(f"Credit of {t.amount:,.2f} on {t.date} ({t.description}) is {how}, "
+                      f"judged against {base.source}. "
+                      + ("The money also left the account within days (see "
+                         "FL_RAPID_PASS_THROUGH). " if also else "")
+                      + _DOCS_TO_REQUEST),
+        ))
+    return findings
+
+
+# --------------------------------------------------------------------------- #
+# Velocity: large money in, almost the same money out again within days
+# --------------------------------------------------------------------------- #
+_PASS_WINDOW_DAYS = 3         # money out within this many days of the credit
+_PASS_MATCH_RATIO = 0.9       # ... totalling at least this share of the credit
+_PASS_MAX_RATIO = 1.05        # ... but not much more: it must be "almost the same money"
+_PASS_MAX_PAYMENTS = 1        # ... paid out in at most this many payments. 2 also catches
+#                               money split over two payments, but flagged 3.5% of 200 genuine
+#                               synthetic statements (one payment: 0%). Revisit on real data.
+_PASS_MAX_CANDIDATES = 12     # largest outflows considered per credit (bounds the search)
+_PASS_LARGE_MULT = 3.0        # only credits this many times the normal credit are considered
+_PASS_MIN_CREDITS = 5         # credits needed to know what a normal credit is
+_PASS_ESCALATE_PAIRS = 3      # repeated this often, the finding is HIGH instead of MEDIUM
+_PASS_MAX_SHOWN = 5
+# Regular scheduled outflows that naturally follow receipts are not pass-through.
+_PASS_EXCLUDE = re.compile(r"\b(CPF|PAYROLL|SALARY|RENT|GST|IRAS|TAX)\b", re.IGNORECASE)
+
+
+def _pass_through_pairs(ing: IngestionResult, history: Optional[TrailingHistory]):
+    """[(credit, [debits], total_out)] for large credits that leave again within days.
+
+    "Large" is relative to the company: a multiple of its normal credit (from the
+    trailing history when available, otherwise this statement). Each debit is matched
+    to at most one credit, earliest credit first.
+    """
+    base = _credit_baseline(ing, history)
+    sizes = list(base.sizes) if base is not None and base.sizes else credit_sizes(ing.transactions)
+    if len(sizes) < _PASS_MIN_CREDITS:
+        return []
+    cutoff = _PASS_LARGE_MULT * statistics.median(sizes)
+    dated = sorted((t for t in ing.transactions if t.date is not None and t.amount is not None),
+                   key=lambda t: (t.date, t.index))
+    credits = [t for t in dated if t.amount > 0 and t.amount >= cutoff]
+    debits = [t for t in dated if t.amount < 0 and not _PASS_EXCLUDE.search(t.description or "")]
+    window = timedelta(days=_PASS_WINDOW_DAYS)
+    used: set[int] = set()
+    pairs = []
+    for c in credits:
+        # The money must leave AFTER it arrived: a debit printed above the credit
+        # (same day, earlier row) cannot have been paid out of it.
+        cands = [d for d in debits
+                 if d.index not in used and (d.date, d.index) > (c.date, c.index)
+                 and d.date <= c.date + window]
+        cands = sorted(cands, key=lambda d: d.amount)[:_PASS_MAX_CANDIDATES]   # biggest outflows
+        best, best_gap = None, None
+        for k in range(1, _PASS_MAX_PAYMENTS + 1):
+            for combo in itertools.combinations(cands, k):
+                total = -sum(d.amount for d in combo)
+                if _PASS_MATCH_RATIO * c.amount <= total <= _PASS_MAX_RATIO * c.amount:
+                    gap = abs(total - c.amount)
+                    if best_gap is None or gap < best_gap:
+                        best, best_gap = (combo, total), gap
+        if best is not None:
+            combo, total = best
+            used.update(d.index for d in combo)
+            pairs.append((c, sorted(combo, key=lambda d: (d.date, d.index)), total))
+    return pairs
+
+
+def _pass_through(pairs) -> list[Finding]:
+    if not pairs:
+        return []
+    shown = pairs[:_PASS_MAX_SHOWN]
+    parts = []
+    for c, out, total in shown:
+        days = (max(d.date for d in out) - c.date).days
+        parts.append(f"row {c.index}: {c.date.strftime('%d %b %Y')} credit {c.amount:,.2f} "
+                     f"({c.description}), then {total:,.2f} out within {days} day(s) "
+                     f"(row{'s' if len(out) > 1 else ''} {', '.join(str(d.index) for d in out)})")
+    more = f", and {len(pairs) - len(shown)} more" if len(pairs) > len(shown) else ""
+    rows = sorted({c.index for c, _, _ in pairs} | {d.index for _, o, _ in pairs for d in o})
+    many = len(pairs) >= _PASS_ESCALATE_PAIRS
+    return [Finding(
+        agent=AGENT, code="FL_RAPID_PASS_THROUGH",
+        title="Large credits leave the account again within days",
+        severity=Severity.HIGH if many else Severity.MEDIUM, weight=20 if many else 12,
+        page=pairs[0][0].page, field="rows " + ", ".join(str(r) for r in rows),
+        evidence=(f"{len(pairs)} large credit(s) were followed within {_PASS_WINDOW_DAYS} days "
+                  f"by payments out of {_PASS_MATCH_RATIO:.0%}-{_PASS_MAX_RATIO:.0%} of the "
+                  f"amount: "
+                  + "; ".join(parts) + more + ". Money that arrives and leaves this fast can "
+                  "be pass-through activity, but refunds and agency or trading flows can look "
+                  "the same. Suggested request: the contract or invoice for both the incoming "
+                  "and the outgoing payment, and the relationship with each counterparty."),
+    )]
+
+
+def _suspicious_transactions(ing: IngestionResult) -> list[Finding]:
+    """Large inflows from shell-like counterparties."""
+    findings: list[Finding] = []
+    for t in ing.transactions:
+        if t.amount is None or t.amount <= 0:
+            continue
         # Unverified counterparty on a large inflow
         desc = (t.description or "").strip()
         looks_shell = any(k in desc.upper() for k in ("UNKNOWN", "LLC", "HOLDINGS", "TT"))
@@ -478,7 +651,21 @@ def _entity_crosscheck(ing: IngestionResult) -> list[Finding]:
 
 def analyze(ing: IngestionResult, fabrication_config=None,
             trailing_gap_days: Optional[Sequence[int]] = None,
-            trailing_source: Optional[str] = None) -> AgentReport:
+            trailing_source: Optional[str] = None,
+            history: Optional[TrailingHistory] = None) -> AgentReport:
+    """Run all Node 3 checks.
+
+    ``history`` is what the case store knows about this company from earlier,
+    human-approved statements. It feeds the gap, sudden-deposit and pass-through
+    checks. ``trailing_gap_days`` / ``trailing_source`` override the gap part only.
+    """
+    if history is not None and history.case_ids:
+        if trailing_gap_days is None:
+            trailing_gap_days = history.gap_days
+        if trailing_source is None:
+            trailing_source = history.describe()
+    else:
+        history = None
     findings: list[Finding] = []
     findings += _reconcile(ing)
     findings += _closing_check(ing)
@@ -487,6 +674,10 @@ def analyze(ing: IngestionResult, fabrication_config=None,
     findings += _month_missing(ing)
     findings += _month_duplicate(ing)
     findings += _month_out_of_order(ing)
+    pairs = _pass_through_pairs(ing, history)
+    passed_through = {c.index for c, _, _ in pairs}
+    findings += _sudden_deposits(ing, history, passed_through)
+    findings += _pass_through(pairs)
     findings += _suspicious_transactions(ing)
     findings += _structuring(ing)
     findings += _entity_crosscheck(ing)

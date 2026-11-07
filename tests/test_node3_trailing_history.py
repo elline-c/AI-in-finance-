@@ -194,6 +194,16 @@ def test_evidence_names_the_cases_the_limit_came_from(store):
     assert "approved earlier statement" in gap.evidence
 
 
+def test_history_also_carries_credit_sizes_and_complete_month_totals(store):
+    days = list(range(0, 130, 4))                       # Jan to early May 2025, several per month
+    _approve(store, _report("CASE-A", days=days))
+    h = _hist(store)
+    assert len(h.credits) == len(days) and all(c == 1.0 for c in h.credits)
+    # Period unknown on the stored report, so the first and last month are dropped.
+    assert len(h.monthly_credits) == 3
+    assert sum(h.monthly_credits) <= sum(h.credits)
+
+
 def test_pipeline_survives_a_failing_history_lookup(store, monkeypatch):
     """A broken history lookup must not stop screening."""
     from fraud_detect import pipeline
