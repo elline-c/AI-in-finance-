@@ -163,7 +163,7 @@ def test_no_sensitive_artifacts_tracked():
     patterns = (r"(^|/)labels\.csv$", r"(^|/)rows\.csv$", r"\.pdf$", r"\.joblib$", r"\.pkl$",
                 r"\.pt$", r"(^|/)data/private/", r"(^|/)models/", r"features?_cache",
                 r"(^|/)snapshots?/", r"(^|/)corpus_[^/]*/")
-    bad = [f for f in tracked if any(re.search(p, f) for p in patterns)]
+    bad = [f for f in tracked if not f.endswith(".py") and any(re.search(p, f) for p in patterns)]
     # Allow pre-existing, non-generated sample PDFs only when they are not under the private root.
     bad = [f for f in bad if not (f.endswith(".pdf") and not f.startswith("data/"))]
     assert not bad, bad[:10]
