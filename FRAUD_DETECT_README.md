@@ -906,3 +906,69 @@ incident. The system never auto-repairs or rewrites the chain (auto-editing an
 append-only log would itself be a tamper vector), and an integrity failure never
 triggers an automated reject on a customer — consistent with the whole system's
 never-auto-reject stance.
+
+## Stage B: ML retraining
+
+**Purpose.** Stage B is an offline pipeline that retrains the two ML models (Node 6b, the statement model, and Node 6a, the transaction model) on synthetic data and compares each new model with the Current model. It is an end-to-end demonstration of the process on synthetic data. It does not produce a claim about real-world accuracy, and it changes no live behaviour unless the user runs `switch`. The code lives in `fraud_detect/ml/retraining/`. Everything it writes goes to git-ignored folders (`data/private/ml_retraining/`, `models/backup/`).
+
+### The circularity risk
+
+The Corpus is made by our own generator, so a model trained on synthetic data can learn the generator's output and habits instead of fraud. Scores on such a model can look good because the test data comes from the same source as the training data. This circularity risk is the main limit of Stage B, and all results here are measured on synthetic data.
+
+Seven mitigations are used together. None of them removes the risk on its own:
+
+1. Use held-out layouts: some statement layouts are kept out of training and used only for testing on synthetic data.
+2. Use held-out Master_Seeds: a separate seed is used only for the final evaluation on synthetic data.
+3. Use randomised styling: fonts, spacing and similar surface features vary, so a model cannot key on them in the synthetic data.
+4. The Leak_Test: checks whether a single feature, or the layout alone, separates the classes on synthetic data. A suspect stops the run until a person decides.
+5. The Real_Style_Files: labelled statements that were not made by the generator.
+6. The Switch_Rule: a fixed rule, written down before any evaluation, that decides whether a Candidate model replaces the Current model.
+7. The Awkward_Set: deliberately odd synthetic data used to look for brittle behaviour.
+
+### Real-style data is very small
+
+Only two labelled real-style statements exist (`statement_E` and `statement_F`). That is too small to estimate accuracy, so results on them are indicative only, and the synthetic data results must not be read as a substitute. With the default `real_style_role = required`, the Switch_Rule needs more than these two files, so it cannot be met.
+
+### Commands
+
+Run all commands from the repository root. Every command accepts `--help`.
+
+```
+python -m fraud_detect.ml.retraining init      # write run.json: hashes, code fingerprint, Switch_Rule, cutoff rule
+python -m fraud_detect.ml.retraining build     # build the seed corpora and the held-out-seed corpus
+python -m fraud_detect.ml.retraining check     # integrity gates; "check --plan" prints document counts
+python -m fraud_detect.ml.retraining audit     # audit the Corpus, writes audit/audit-v1.json
+python -m fraud_detect.ml.retraining leak-test # Leak_Test on synthetic data
+python -m fraud_detect.ml.retraining decide    # record a decision: leak-feature, waive-gate, investigation, awkward-review
+python -m fraud_detect.ml.retraining train     # freeze cutoffs, fit Candidate models (6b and 6a)
+python -m fraud_detect.ml.retraining compare   # Candidate vs Current, writes the report
+python -m fraud_detect.ml.retraining switch    # apply the Switch_Rule; backs up Current models first
+python -m fraud_detect.ml.retraining restore   # put the backed-up Current models back
+```
+
+The stop-and-decide flow: when a gate or the Leak_Test needs a person, the command stops with exit code 3 and names the offenders. Record the answer with `decide` (for example `exclude` or `accept` for a suspect feature, or `waive-gate`), then run the command again. A waiver is printed in the report. A failing gate leaves no model file. A lock file refuses a second run on the same run folder, and an interrupted run resumes at the first unwritten unit.
+
+The exit code of every command is one of these: 0 success; 1 other failure; 2 integrity gate failed, refused, bad arguments, missing run, lock held or write guard; 3 a waivable gate or Leak_Test suspect is waiting for a decision; 4 implausible measurement on synthetic data, so the run stops for a person to look.
+
+### Results
+
+The table below is a template, not a measurement. This end-to-end demonstration reports every score on synthetic data and is not real-world accuracy; the cells say "not yet run" until the user runs the pipeline by hand. Sources `generator_corpus`, `forgery_dataset` and `awkward_set` are synthetic data; `real_style` has two files and is indicative only.
+| Node | Source | Result (recall / precision) | Switch_Rule outcome |
+|---|---|---|---|
+| Node 6b | generator_corpus (synthetic data) | not yet run | not yet run |
+| Node 6b | forgery_dataset (synthetic data) | not yet run | not yet run |
+| Node 6b | awkward_set (synthetic data) | not yet run | not yet run |
+| Node 6b | real_style (statement_E, statement_F) | not yet run | not yet run |
+| Node 6a | generator_corpus (synthetic data) | not yet run | not yet run |
+
+### Status after Stage B
+
+Node 6a: under the default Switch_Rule (`real_style_role = required`, only two Real_Style files) it is not switched, because the required real-style evidence is not available, even when scores on synthetic data look good. The Current model stays in use (`models/txn_fraud_clf.joblib`). Any change needs the user to run `switch` after a manual run.
+
+Node 6b: under the default Switch_Rule (`real_style_role = required`, only two Real_Style files) it is not switched, because the required real-style evidence is not available, even when scores on synthetic data look good. The Current model stays in use until the user runs `switch`.
+
+Node 4: its weights and thresholds are not changed by Stage B.
+
+### Labels and open decisions
+
+Each Candidate bundle stores the label "model trained on synthetic data". The label is stored in the bundle and is not yet shown in the demo (decision 9). The other open decisions were settled as follows: `real_style_role` defaults to `required` (`veto_only` is accepted), and the Current models are always backed up before `switch`, so `restore` can undo it. Results on synthetic data are never presented as real-world accuracy.
