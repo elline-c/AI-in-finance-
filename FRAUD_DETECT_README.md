@@ -39,7 +39,7 @@ inconsistent manual review. This system:
 |------|------|--------------|
 | **1 Ingestion & Preprocessing** | `fraud_detect/nodes/ingestion.py` | PDF → text (OCR stand-in), extracts file **metadata**, captures per-page **font fingerprints**, parses the statement **header** + **transaction table** (several layouts, see below), emits explicit **data-quality** findings for missing/unreadable fields (never guesses). Output is a strict, validated `IngestionResult`. |
 | **2 Visual Forensics** | `fraud_detect/nodes/visual_forensics.py` | Localised **font inconsistency** (altered text), mixed **date formats**, mixed **currency notation in the transaction amounts** (the account-header label is ignored), **editing-software** traces in metadata (Photoshop, GIMP, PDF editors…), a file **modified after it was created** by something other than a print/export tool, and **creation-date-before-period**. See [Node 2 checks](#node-2-checks-metadata-and-currency). |
-| **3 Financial Logic & Validation** | `fraud_detect/nodes/financial_logic.py` | Row-by-row **running-balance reconciliation**, closing-balance check, **period-continuity** gaps, **sudden deposits** vs a historical baseline, **unverified counterparties**, **structuring** (3+ near-threshold credits within 14 days), **UEN↔ACRA** entity cross-check, and the **fabrication rules** (repeated invoice references, invoice numbers out of date order, turnover jumps against flat fixed costs; see [Node 3 fabrication rules](#node-3-fabrication-rules)). |
+| **3 Financial Logic & Validation** | `fraud_detect/nodes/financial_logic.py` | Row-by-row **running-balance reconciliation**, closing-balance check, **period-continuity** gaps (limit learned from the company's own transaction rhythm), **unusual deposits** and **rapid pass-through** judged against the company's own history (see [Node 3 learned baselines](#node-3-learned-baselines-gaps-deposits-pass-through)), **unverified counterparties**, **structuring** (3+ near-threshold credits within 14 days), **UEN↔ACRA** entity cross-check, and the **fabrication rules** (repeated invoice references, invoice numbers out of date order, turnover jumps against flat fixed costs; see [Node 3 fabrication rules](#node-3-fabrication-rules)). |
 | **4 Risk Scoring & Synthesis** | `fraud_detect/nodes/risk_synthesis.py` | Aggregates all findings into a **risk score (1–100)** + band, a **confidence score (1–100)** + band, a **routing** decision with reason, and a plain-language summary. |
 
 Orchestration lives in `fraud_detect/pipeline.py` (`run_pipeline(pdf_path) -> RiskReport`).
@@ -416,6 +416,97 @@ and 28 Aug; it raised a false alarm before and no longer does. The trade-off:
 
 ---
 
+## Node 3 learned baselines (gaps, deposits, pass-through)
+
+A bank does not judge a deposit against one fixed number. It asks whether the deposit
+is unusual **for that customer**, and a spike usually leads to a request for invoices
+or contracts rather than a rejection. Three Node 3 checks now work this way.
+They still never reject anyone; they add a reason and route the file to a human.
+
+### What "normal for this company" is built from
+
+In order of preference:
+
+1. **Earlier statements a human approved** for the same company (see the trust rules
+   below).
+2. **This statement's own complete months**, using medians so one spike cannot move
+   the baseline. It needs at least 10 credits and 3 complete months.
+3. **A declared per-UEN monthly figure** in `reference_data.CASHFLOW_BASELINE`. This is
+   the old rule (a credit above 3x the declared month) and is used only when the
+   statement is too short for option 2.
+
+With none of these, the deposit check says nothing instead of guessing.
+
+### The checks
+
+| Code | What it looks for | Severity (weight) |
+|---|---|---|
+| `FL_PERIOD_GAP` | A silence longer than the company's learned limit: median gap + 6 robust spreads, kept between 7 and 35 days. A busy account gets a short limit, a slow one a longer limit. Under 10 observed gaps it falls back to 25 days. | MEDIUM (12) |
+| `FL_SUDDEN_DEPOSIT` | A credit above the company's normal credit size (median + 6 robust spreads) **and** at least half of a normal month of credits. The evidence says what to request: the invoice or contract, and who the payer is. | MEDIUM (12); HIGH (20) if the money also left within days |
+| `FL_RAPID_PASS_THROUGH` | A large credit (at least 3x the company's normal credit) followed within 3 days by one payment out of 90% to 105% of it. The payment must come after the credit. Payroll, rent, CPF, GST and tax payments are ignored. | MEDIUM (12) for 1 or 2 pairs; HIGH (20) for 3 or more |
+
+The evidence text names where the baseline came from, for example "learned from
+2 approved earlier statements: CASE-..." or "this statement's 9 complete months".
+
+### Which earlier cases count (trust rules)
+
+An earlier case teaches Node 3 only if all of these hold. The reason is that a
+fraudster could otherwise submit a doctored statement first, let it auto-clear, and
+teach Node 3 a rhythm that excuses the next one.
+
+- A human reviewer **APPROVED** it. Auto-cleared, rejected, pending and needs-info cases
+  are ignored.
+- Same UEN and a matching account-holder name. The UEN is read from the PDF, so it is
+  not trusted on its own.
+- The audit chain is intact and its last human event for that case is an approval, so
+  editing `data/cases.json` alone cannot make a case trusted. Set
+  `TRAILING_HISTORY_REQUIRE_CHAIN=0` to switch this check off.
+- Only the 6 most recent qualifying statements are used, so the baseline moves with the
+  company. Gaps are measured inside each statement and never across two statements.
+
+An analyst approving a flagged case therefore teaches Node 3 that company's rhythm; the
+next statement from that company is judged against it. If the history is missing or
+the lookup fails, screening carries on using the statement itself.
+
+### Where the settings are
+
+They are module constants at the top of `fraud_detect/nodes/financial_logic.py`
+(`_GAP_*`, `_CREDIT_*`, `_SPIKE_*`, `_PASS_*`). They have not been moved into a config
+object yet.
+
+### Results (synthetic only)
+
+On 200 synthetic companies of 9 months each (generator seeds 2000 to 2199), the old
+rules against the new ones:
+
+| Planted tamper | Old rule | New rule |
+|---|---|---|
+| `sudden_large_deposit` caught by `FL_SUDDEN_DEPOSIT` | 55/200 (it cannot fire at all without a declared baseline) | 200/200 |
+| `shell_counterparty` also caught by `FL_SUDDEN_DEPOSIT` | 2/200 | 173/200 |
+| `rapid_pass_through` caught by `FL_RAPID_PASS_THROUGH` | 0/200 | 198/200 |
+| Genuine statements flagged by these two rules | 0/200 | 0/200 |
+
+### Honest limits
+
+- **Circular.** The tamper generator and these rules were written by the same team.
+  The 3-day window and the "almost the same amount" band follow how the generator plants
+  pass-through, so the 99% says the rules find what the generator plants, not that they
+  find real fraud.
+- **Split payments are missed.** The pass-through check allows one outgoing payment. Allowing
+  two flagged 3.5% of genuine synthetic statements with no measured gain, because the
+  generator never splits. This is `_PASS_MAX_PAYMENTS`; revisit it on real data.
+- **Genuine businesses can look like this.** Refunds, agency and trading flows pay out
+  what comes in. That is why the finding is MEDIUM and asks for documents.
+- **Thin history.** An approval covers the whole case, not the gap or deposit flag
+  specifically, and only a few cases are approved in practice, so most statements will use
+  option 2 or 3.
+- **Unsigned audit chain.** Without `AUDIT_SIGNING_KEY_PATH`, the chain check catches
+  partial edits but not a full rewrite. The chain also records decisions, not
+  transactions, so edited transaction rows in `cases.json` would not be noticed.
+- **No peer benchmarking.** Comparing against similar businesses needs data no one
+  publishes. A bank would supply it.
+- **Not tested on real statements or through the web apps end to end.**
+
 ## Company registry lookup (UEN cross-check)
 
 Node 3 checks the UEN that Node 1 read against a company registry
@@ -629,7 +720,7 @@ lookup off.
 | `structuring` | Behaviour | 3 to 5 credits of 9,500 to 9,999.99 within 14 days |
 | `sudden_large_deposit` | Behaviour | One credit far above the average monthly credit |
 | `shell_counterparty` | Behaviour | One credit of 50,000+ from a name like UNKNOWN TRADING LLC |
-| `rapid_pass_through` | Behaviour | Money in, almost the same out within 1 to 3 days (expected blind spot) |
+| `rapid_pass_through` | Behaviour | Money in, almost the same out within 1 to 3 days (caught by `FL_RAPID_PASS_THROUGH`) |
 | `dormant_reactivation` | Behaviour | Months of only bank charges, then large activity (expected blind spot) |
 | `period_gap` | Behaviour | One middle month removed |
 | `uen_mismatch` | Behaviour | Printed holder name differs from the registered name |
@@ -638,7 +729,7 @@ lookup off.
 
 Results are indicative only: small samples, our own tamper designs, and a
 generator and detectors written by the same team (possible circularity). Some
-tampers are not caught by any rule (for example `rapid_pass_through`). Document
+tampers are not caught by any rule (for example `dormant_reactivation`). Document
 level only; row-level accuracy is not measured. See
 [`evaluation-results.md`](.kiro/specs/synthetic-corpus-generator/evaluation-results.md)
 for the measured numbers and the full list.
@@ -675,11 +766,15 @@ This is a **prototype** with deterministic, rule-based detectors — not product
    OCR is stubbed by digital-PDF text extraction; **real scanned images are not
    OCR'd** here.
 2. **Synthetic-tuned thresholds.** Weights and thresholds (structuring window,
-   deposit multiples, gap days) are illustrative and would need calibration on real,
-   labelled data — with false-positive/false-negative analysis.
-3. **Toy reference data.** ACRA registry, known-vendor list and cash-flow baselines
-   are small in-memory fixtures, not live sources; no cross-application reuse
-   detection across a real corpus.
+   spike and pass-through settings, gap floor and cap) are illustrative and would
+   need calibration on real, labelled data — with false-positive/false-negative
+   analysis.
+3. **Toy reference data.** ACRA registry and known-vendor list are small in-memory
+   fixtures, not live sources; no cross-application reuse detection across a real
+   corpus. Learned baselines exist only for companies with approved earlier cases,
+   and the declared per-UEN cash-flow figures are a small fixture kept as a last
+   resort. There is no peer-group benchmarking: no open data on company transaction
+   records was found, so a bank would need to supply it.
 4. **Synthetic-layout parser.** The transaction/header parser reads six layouts
    (our generator plus five dataset layouts), all synthetic. Real statements vary
    widely by bank and each real bank would need its own profile (see
