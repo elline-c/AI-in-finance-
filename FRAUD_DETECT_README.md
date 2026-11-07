@@ -952,14 +952,19 @@ The exit code of every command is one of these: 0 success; 1 other failure; 2 in
 
 ### Results
 
-The table below is a template, not a measurement. This end-to-end demonstration reports every score on synthetic data and is not real-world accuracy; the cells say "not yet run" until the user runs the pipeline by hand. Sources `generator_corpus`, `forgery_dataset` and `awkward_set` are synthetic data; `real_style` has two files and is indicative only.
-| Node | Source | Result (recall / precision) | Switch_Rule outcome |
-|---|---|---|---|
-| Node 6b | generator_corpus (synthetic data) | not yet run | not yet run |
-| Node 6b | forgery_dataset (synthetic data) | not yet run | not yet run |
-| Node 6b | awkward_set (synthetic data) | not yet run | not yet run |
-| Node 6b | real_style (statement_E, statement_F) | not yet run | not yet run |
-| Node 6a | generator_corpus (synthetic data) | not yet run | not yet run |
+Measured in run `5cfdabba015843e5` (5 training Master_Seeds, 80 genuine and 80 tampered slots per layout, Balanced_Styling corpora, held-out layout `two_col_ddmmyy_cr`, held-out seed 20260899). This end-to-end demonstration reports every score on synthetic data and is not real-world accuracy. Candidate values are the mean over the 5 seeds; catch and false-alarm rates are at the medium cutoff chosen on validation. Cutoff targets were medium 5.0% and high 2.5%: the high target deviates from the planned 1.0% because the top genuine validation scores tie, and 1.0% was not reachable at this validation size (run `bb7741a2ee1c984c` stopped there on both nodes). The Real_Style and Forgery_Dataset files were not read, so those sources are "not run".
+| Node | Source and split | Candidate (AUC / catch / false alarm) | Current (AUC / catch / false alarm) | Switch_Rule outcome |
+|---|---|---|---|---|
+| Node 6a | generator_corpus test (synthetic data) | 0.65 / 27.8% / 4.3% | 0.49 / 7.2% / 6.0% | keep |
+| Node 6a | generator_corpus held-out layout (synthetic data) | 0.66 / 27.2% / 6.0% | 0.48 / 6.3% / 9.5% | pass, not decisive alone |
+| Node 6a | generator_corpus held-out seed (synthetic data) | 0.66 / 27.4% / 5.5% | 0.53 / 9.0% / 7.1% | pass, not decisive alone |
+| Node 6b | generator_corpus test (synthetic data) | 0.61 / 12.4% / 4.0% | baseline failed (see below) | keep |
+| Node 6b | generator_corpus held-out layout (synthetic data) | 0.65 / 14.4% / 3.6% | baseline failed | not decisive |
+| Node 6b | generator_corpus held-out seed (synthetic data) | 0.63 / 16.1% / 3.9% | baseline failed | not decisive |
+| Node 6b | awkward_set (synthetic data, 13 per class) | 0.47 / 6.7% / 5.3% | not run | no effect (not reviewed) |
+| Both | forgery_dataset, real_style | not run | not run | not decisive |
+
+Notes on these synthetic data results (not real-world accuracy). The Node 6b Current model loads and scores, but no cutoff on its validation scores reaches 5% false alarms (closest 7.9%), so the pipeline reports it as "baseline failed"; at its deployed cutoff of 0.7 it flags about 34.5% of genuine documents. The Node 6b Candidate mainly catches `font_mismatch` and some balance-break tampers; it misses most content and behavioural tampers, and it scores `metadata_inconsistency` as more genuine than genuine documents because legitimate re-saves also carry a later ModDate. Both Candidates beat the Current models on this generated data, but every score is judged on the generator's output.
 
 ### Status after Stage B
 
