@@ -4,6 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Loan Approval{% endblock %} · Green Link Digital Bank</title>
+  <script>
+    /* No-flash (anti-FOUC) theme bootstrap. Runs before <style> and first paint
+       so a saved/preferred dark theme never flashes light. Shared across all
+       three Green Link Digital Bank portals: same localStorage key and the same
+       resolution logic as the end-of-body toggle script. */
+    (function () {
+      try {
+        var saved = localStorage.getItem("gldb-theme");
+        var dark = saved === "dark" ||
+          (saved !== "light" &&
+           window.matchMedia &&
+           window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) { document.documentElement.setAttribute("data-theme", "dark"); }
+        else { document.documentElement.removeAttribute("data-theme"); }
+      } catch (e) {}
+    })();
+  </script>
   <style>
     /* Green Link Digital Bank brand palette (shared with the customer portal):
        corporate blue + orange accent. Light theme by default. */
@@ -122,8 +139,8 @@
       </span>
       <a href="/">Approval queue</a>
       <span class="role">Loan officer</span>
-      <button type="button" class="theme-toggle" id="themeToggle"
-              aria-label="Toggle light or dark mode" title="Toggle light / dark mode">
+      <button type="button" class="theme-toggle" id="themeToggle" aria-pressed="false"
+              aria-label="Switch to dark mode" title="Toggle light / dark mode">
         <span id="themeIcon">🌙</span><span id="themeLabel">Dark</span>
       </button>
     </div>
@@ -135,22 +152,33 @@
     applications and cannot override a fraud decision.
   </footer>
   <script>
-    /* Light/dark theme toggle shared across all Green Link Digital Bank portals. */
+    /* Light/dark theme toggle shared across all Green Link Digital Bank portals.
+       Uses the same resolution as the no-flash <head> script: an explicit saved
+       choice wins, otherwise prefers-color-scheme decides the initial default. */
     (function () {
       var KEY = "gldb-theme";
       var root = document.documentElement;
+      var btn = document.getElementById("themeToggle");
       function apply(mode) {
-        if (mode === "dark") { root.setAttribute("data-theme", "dark"); }
+        var dark = mode === "dark";
+        if (dark) { root.setAttribute("data-theme", "dark"); }
         else { root.removeAttribute("data-theme"); }
         var icon = document.getElementById("themeIcon");
         var label = document.getElementById("themeLabel");
-        if (icon) { icon.textContent = mode === "dark" ? "☀️" : "🌙"; }
-        if (label) { label.textContent = mode === "dark" ? "Light" : "Dark"; }
+        if (icon) { icon.textContent = dark ? "☀️" : "🌙"; }
+        if (label) { label.textContent = dark ? "Light" : "Dark"; }
+        if (btn) {
+          btn.setAttribute("aria-pressed", dark ? "true" : "false");
+          btn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+        }
       }
       var saved = null;
       try { saved = localStorage.getItem(KEY); } catch (e) {}
-      apply(saved === "dark" ? "dark" : "light");
-      var btn = document.getElementById("themeToggle");
+      var dark = saved === "dark" ||
+        (saved !== "light" &&
+         window.matchMedia &&
+         window.matchMedia("(prefers-color-scheme: dark)").matches);
+      apply(dark ? "dark" : "light");
       if (btn) {
         btn.addEventListener("click", function () {
           var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
