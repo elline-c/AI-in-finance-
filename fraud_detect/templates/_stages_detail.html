@@ -1,0 +1,49 @@
+{# Shared per-stage pipeline detail (ITEM 1 + ITEM 2).
+   Renders every pipeline stage in order: its head, a confidence band, the
+   blurb, and the findings table (clear stages included).
+   Expects `stages` (list of (title, blurb, [findings]) tuples).
+   Optionally uses `stage_confidence` (a {title: (band, rationale)} dict). The
+   standalone /stages route does not pass it, so every use is guarded with
+   {% if stage_confidence is defined %}. #}
+{% for title, blurb, items in stages %}
+<div class="panel">
+  <div class="stage-head">
+    <h3 style="margin:0">{{ title }}</h3>
+    {% if items %}
+      <span class="count hit">{{ items|length }} finding{{ "s" if items|length != 1 }}</span>
+    {% else %}
+      <span class="count ok">clear</span>
+    {% endif %}
+    {% if stage_confidence is defined and title in stage_confidence %}
+      {% set band = stage_confidence[title][0] %}
+      {% set rationale = stage_confidence[title][1] %}
+      <span class="pill"
+            style="background:{% if band == 'High' %}#2e7d32{% elif band == 'Low' %}#c62828{% elif band == 'Medium' %}#f9a825{% else %}#546e7a{% endif %}"
+            title="{{ rationale }}">Confidence: {{ band }}</span>
+      {% if band == 'Low' %}<span class="sev-HIGH" style="font-size:12px">verify manually</span>{% endif %}
+    {% endif %}
+  </div>
+  <p class="muted" style="margin:6px 0 0">{{ blurb }}</p>
+  {% if stage_confidence is defined and title in stage_confidence %}
+  <p class="muted" style="margin:4px 0 0; font-size:12px">Why this band: {{ stage_confidence[title][1] }}</p>
+  {% endif %}
+
+  {% if items %}
+  <table style="margin-top:12px">
+    <thead><tr><th>Severity</th><th>Reason code</th><th>Issue &amp; evidence</th><th>Page / row</th></tr></thead>
+    <tbody>
+      {% for f in items %}
+      <tr>
+        <td class="sev-{{ f.severity.value }}">{{ f.severity.value }}</td>
+        <td><code>{{ f.code }}</code></td>
+        <td><b>{{ f.title }}</b><div class="evidence">{{ f.evidence }}</div></td>
+        <td class="muted">{% if f.page %}p.{{ f.page }}{% endif %}{% if f.field %}<br>{{ f.field }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted" style="margin-top:8px">No findings at this stage.</p>
+  {% endif %}
+</div>
+{% endfor %}
