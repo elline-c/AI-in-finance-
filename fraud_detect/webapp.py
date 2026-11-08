@@ -13,50 +13,30 @@ The machine never rejects on its own — only a human can reject here.
 from __future__ import annotations
 
 import re
-import secrets
-import shutil
 from pathlib import Path
 
-from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .ml.gnn import gnn_lookup
 from .nodes import ml_statement, ml_transaction
+from .nodes.checklist import CHECKLIST_SIDE_NOTE, build_checklist, stage_confidence_map
 from .models import ReviewDecision
-from .pipeline import run_pipeline
 from .registry import live_lookup_lifespan
-from .store import CaseStore
+from .reviewers import (
+    is_valid_reviewer,
+    is_valid_senior,
+    reviewer_choices,
+    senior_choices,
+)
+from .store import CaseStore, revert_window_remaining, REVERT_WINDOW_MINUTES
 
 BASE = Path(__file__).resolve().parent
+# UPLOAD_DIR is still required by GET /pdf/{id} to confirm a stored statement
+# PDF lives inside the uploads directory before serving it.
 UPLOAD_DIR = (BASE.parent / "data" / "uploads").resolve()
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-# --------------------------------------------------------------------------- #
-# Anti-hack upload constraints
-# --------------------------------------------------------------------------- #
-MAX_UPLOAD_BYTES = 25 * 1024 * 1024          # 25 MB ceiling (DoS guard)
-_PDF_MAGIC = b"%PDF-"                         # a real PDF starts with this
-_SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]")  # everything else is stripped
-
-
-def _safe_upload_destination(filename: str | None) -> Path:
-    """Produce a destination path that cannot escape UPLOAD_DIR.
-
-    Defeats path-traversal (``../``), absolute paths, and NUL-byte tricks by
-    taking only the final path component, stripping it to a safe charset, and
-    prefixing a random token so uploads can never collide or overwrite.
-    """
-    raw = (filename or "statement.pdf").replace("\x00", "")
-    base = Path(raw).name                      # drop any directory part
-    base = _SAFE_NAME_RE.sub("_", base) or "statement.pdf"
-    if not base.lower().endswith(".pdf"):
-        base += ".pdf"
-    dest = (UPLOAD_DIR / f"{secrets.token_hex(8)}_{base}").resolve()
-    # Belt-and-braces: confirm the resolved path is still inside UPLOAD_DIR.
-    if UPLOAD_DIR not in dest.parents:
-        raise HTTPException(status_code=400, detail="Invalid upload filename")
-    return dest
 
 app = FastAPI(title="Bank Statement Tampering Screening", lifespan=live_lookup_lifespan)
 templates = Jinja2Templates(directory=str(BASE / "templates"))
@@ -88,61 +68,12 @@ def dashboard(request: Request):
     })
 
 
-@app.post("/upload")
-async def upload(file: UploadFile):
-    # 1. Sanitize the destination (path-traversal / overwrite guard).
-    dest = _safe_upload_destination(file.filename)
-
-    # 2. Stream to disk with a hard size cap (DoS guard) and verify the PDF
-    #    magic bytes on the first chunk (content-type spoofing guard).
-    written = 0
-    first_chunk = True
-    with dest.open("wb") as fh:
-        while chunk := await file.read(1024 * 1024):
-            if first_chunk:
-                if not chunk.startswith(_PDF_MAGIC):
-                    fh.close()
-                    dest.unlink(missing_ok=True)
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Uploaded file is not a valid PDF",
-                    )
-                first_chunk = False
-            written += len(chunk)
-            if written > MAX_UPLOAD_BYTES:
-                fh.close()
-                dest.unlink(missing_ok=True)
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"File exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB limit",
-                )
-            fh.write(chunk)
-
-    if first_chunk:  # empty upload
-        dest.unlink(missing_ok=True)
-        raise HTTPException(status_code=400, detail="Empty upload")
-
-    report = run_pipeline(str(dest), txn_model=TXN_MODEL, statement_model=STATEMENT_MODEL, gnn_scores=GNN_SCORES)
-    store.upsert_report(report)
-    return RedirectResponse(url=f"/case/{report.case_id}", status_code=303)
-
-
-@app.post("/screen-sample")
-def screen_sample(name: str = Form(...)):
-    """Screen one of the bundled sample PDFs *by name only*.
-
-    The previous version accepted an arbitrary filesystem path, allowing a
-    client to read/serve any file on the host. We now accept only a bare
-    filename and resolve it strictly inside the samples directory.
-    """
-    safe = Path(_SAFE_NAME_RE.sub("_", Path(name).name))
-    samples_dir = (BASE.parent / "samples").resolve()
-    target = (samples_dir / safe).resolve()
-    if samples_dir not in target.parents or not target.is_file():
-        raise HTTPException(status_code=404, detail="Sample not found")
-    report = run_pipeline(str(target), txn_model=TXN_MODEL, statement_model=STATEMENT_MODEL, gnn_scores=GNN_SCORES)
-    store.upsert_report(report)
-    return RedirectResponse(url=f"/case/{report.case_id}", status_code=303)
+# ITEM 7: the analyst console no longer screens statements on its own. The
+# POST /upload and POST /screen-sample handlers were removed as an internal
+# control - a fraud analyst only reviews cases that reach them through the
+# customer portal, never ad-hoc statements of their own choosing. Hitting those
+# paths now returns 404/405 naturally because the routes are gone. GET /pdf and
+# UPLOAD_DIR remain because the PDF viewer still needs them.
 
 
 # --------------------------------------------------------------------------- #
@@ -208,10 +139,42 @@ def case_detail(request: Request, case_id: str):
     case = store.get(case_id)
     if not case:
         return HTMLResponse("Case not found", status_code=404)
+
+    # Group findings by pipeline stage once; the per-stage confidence map is
+    # keyed by the SAME stage titles so the template can show a confidence band
+    # next to each inlined stage (ITEM 2).
+    stages = _group_by_stage(case.report.findings)
+    stage_confidence = stage_confidence_map(stages, case.report)
+
+    # Human-decision checklist (ITEM 2): the key data points the screening
+    # looks for, each with a tick/cross and an explainable confidence band, plus
+    # the recommended side-note (single source of truth imported from the
+    # checklist module).
+    checklist = build_checklist(case.report)
+
+    # ITEM 1 (server gate): the number of pipeline stages the officer must
+    # acknowledge having reviewed before deciding. Passed to the template so the
+    # acknowledgement control can reference "all N pipeline stages" and so the
+    # client echoes the same count the server enforces.
+    stage_count = len(stages)
+
+    # ITEM 4: whether the case can still be reverted (final decision within the
+    # 30-minute window) so the template shows/hides the revert control.
+    revert_allowed, revert_seconds_remaining = revert_window_remaining(case)
+
     return templates.TemplateResponse("case.html", {
         "request": request, "case": case, "r": case.report,
         "band_color": _BAND_COLOR, "ReviewDecision": ReviewDecision,
-        "stages": _group_by_stage(case.report.findings),
+        "stages": stages,
+        "stage_confidence": stage_confidence,
+        "checklist": checklist,
+        "checklist_side_note": CHECKLIST_SIDE_NOTE,
+        "stage_count": stage_count,
+        "reviewer_choices": reviewer_choices(),
+        "senior_choices": senior_choices(),
+        "revert_allowed": revert_allowed,
+        "revert_seconds_remaining": revert_seconds_remaining,
+        "revert_window_minutes": REVERT_WINDOW_MINUTES,
     })
 
 
@@ -248,6 +211,11 @@ def request_info(case_id: str, reviewer: str = Form(...),
     reviewer = _scrub(reviewer, _MAX_REVIEWER)
     message = _scrub(message, _MAX_REASON)
     internal_note = _scrub(internal_note, _MAX_FEEDBACK)
+    # ITEM 5: the reviewer must be a known officer from the roster. _scrub HTML-
+    # escapes the submitted string, and reviewer_choices()/is_valid_reviewer()
+    # operate on the same escaped display strings, so an exact match holds.
+    if not is_valid_reviewer(reviewer):
+        raise HTTPException(status_code=400, detail="Unknown reviewer")
     if not store.get(case_id):
         raise HTTPException(status_code=404, detail="Case not found")
     store.request_info(case_id, reviewer=reviewer,
@@ -277,7 +245,8 @@ _MAX_FEEDBACK = 4_000
 
 @app.post("/case/{case_id}/decide")
 def decide(case_id: str, decision: str = Form(...), reviewer: str = Form(...),
-           reason: str = Form(...), feedback: str = Form("")):
+           reason: str = Form(...), feedback: str = Form(""),
+           stages_reviewed: str = Form("")):
     # Sanitize free-text from the review form: cap length, strip control chars,
     # HTML-escape. These values end up in the JSON case store and potentially
     # in reports / templates — we neutralize injection at the boundary.
@@ -289,9 +258,86 @@ def decide(case_id: str, decision: str = Form(...), reviewer: str = Form(...),
     if decision not in ("reject", "approve"):
         raise HTTPException(status_code=400, detail="Invalid decision value")
 
+    # ITEM 5: the reviewer signing off must be a known roster officer.
+    if not is_valid_reviewer(reviewer):
+        raise HTTPException(status_code=400, detail="Unknown reviewer")
+
+    # The case must exist before we can gate on its pipeline stages / decide.
+    case = store.get(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # ITEM 1 (server gate): the officer MUST confirm they have reviewed every
+    # pipeline stage before any decision is recorded. The checkbox only POSTs a
+    # value when ticked, so an absent/falsy `stages_reviewed` means the officer
+    # did not acknowledge the review. This is a REAL server-side control: the
+    # gate runs BEFORE store.record_decision, independent of the client. The
+    # stage count is computed server-side from the actual findings grouping.
+    stage_count = len(_group_by_stage(case.report.findings))
+    if not stages_reviewed.strip():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "You must confirm you have reviewed all "
+                f"{stage_count} pipeline stages before deciding"
+            ),
+        )
+
     dec = ReviewDecision.REJECTED if decision == "reject" else ReviewDecision.APPROVED
     store.record_decision(case_id, dec, reviewer=reviewer, reason=reason,
                           feedback_for_training=feedback or None)
+    return RedirectResponse(url=f"/case/{case_id}", status_code=303)
+
+
+@app.post("/case/{case_id}/revert")
+def revert(case_id: str, reviewer: str = Form(...), note: str = Form(...)):
+    """ITEM 4: undo an APPROVED/REJECTED decision within the 30-minute window.
+
+    The officer made a mistake (e.g. rejected an application that should have
+    been approved). Reverting re-opens the case to PENDING and appends a NEW
+    audit event; prior decision history is preserved (append-only). The store
+    raises ValueError when the case is not in a final state or the 30-minute
+    window has elapsed, which we surface to the client as HTTP 400.
+    """
+    reviewer = _scrub(reviewer, _MAX_REVIEWER)
+    note = _scrub(note, _MAX_FEEDBACK)
+    if not is_valid_reviewer(reviewer):
+        raise HTTPException(status_code=400, detail="Unknown reviewer")
+    if not store.get(case_id):
+        raise HTTPException(status_code=404, detail="Case not found")
+    try:
+        store.revert_decision(case_id, reviewer=reviewer, note=note)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return RedirectResponse(url=f"/case/{case_id}", status_code=303)
+
+
+@app.post("/case/{case_id}/escalate")
+def escalate(case_id: str, reviewer: str = Form(...),
+             senior_officer: str = Form(...), note: str = Form(...)):
+    """ITEM 6: route a complex case up to a senior officer.
+
+    A junior officer who lacks the right experience reroutes the case to a
+    senior officer and MUST justify the reroute with an internal note. Both the
+    junior reviewer and the chosen senior officer are validated against their
+    rosters; a blank note is rejected.
+    """
+    reviewer = _scrub(reviewer, _MAX_REVIEWER)
+    senior_officer = _scrub(senior_officer, _MAX_REVIEWER)
+    note = _scrub(note, _MAX_FEEDBACK)
+    if not is_valid_reviewer(reviewer):
+        raise HTTPException(status_code=400, detail="Unknown reviewer")
+    if not is_valid_senior(senior_officer):
+        raise HTTPException(status_code=400, detail="Unknown senior officer")
+    if not note.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="An internal note is required when escalating to a senior officer",
+        )
+    if not store.get(case_id):
+        raise HTTPException(status_code=404, detail="Case not found")
+    store.escalate_to_senior(case_id, reviewer=reviewer,
+                             senior_officer=senior_officer, note=note)
     return RedirectResponse(url=f"/case/{case_id}", status_code=303)
 
 
