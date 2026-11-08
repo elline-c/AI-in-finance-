@@ -63,6 +63,31 @@
       </div>
     </div>
 
+    {# Optional free-text explanation that pairs with the reason dropdown.
+       It is NEVER required (submitting without it still works). It defaults to
+       VISIBLE so that with JavaScript disabled no field is ever hidden and no
+       typed text can be lost. The small inline script below only *enhances*
+       the experience: it hides the box until a reason is chosen and nudges the
+       hint when "Other" is selected. #}
+    <div class="row" id="loan_reason_detail_wrap">
+      <div>
+        <label for="loan_reason_detail">Tell us a bit more about what the loan
+          is for <span class="hint">(optional, but recommended)</span></label>
+        <textarea id="loan_reason_detail" name="loan_reason_detail" rows="3"
+                  maxlength="500"
+                  style="width:100%; padding:11px 13px; font-size:15px;
+                         color:var(--ink); background:#fff;
+                         border:1px solid var(--line); border-radius:9px;
+                         font-family:inherit; resize:vertical"
+                  aria-describedby="loan_reason_detail_hint"
+                  placeholder="e.g. We plan to open a second outlet in Q3 and need working capital for fit-out and initial stock."></textarea>
+        <div id="loan_reason_detail_hint" class="hint" style="margin-top:6px">
+          A short explanation in your own words helps our team understand your
+          application. This is optional.
+        </div>
+      </div>
+    </div>
+
     <label for="file">Bank statement (PDF)
       <span class="hint">— a recent corporate account statement, up to 25&nbsp;MB</span>
     </label>
@@ -101,4 +126,34 @@
         your reference number.</li>
   </ul>
 </div>
+
+<script>
+  // Progressive enhancement for the "Reason for loan" free-text box.
+  // Without JS the textarea stays visible (its default), so nothing is ever
+  // hidden and no typed input can be lost. With JS we reveal it only once a
+  // reason is picked, and tailor the hint when "Other" is chosen.
+  (function () {
+    var select = document.getElementById("loan_reason");
+    var wrap = document.getElementById("loan_reason_detail_wrap");
+    var hint = document.getElementById("loan_reason_detail_hint");
+    var textarea = document.getElementById("loan_reason_detail");
+    if (!select || !wrap || !hint || !textarea) return;
+
+    var baseHint = hint.textContent;
+    var otherHint = "Please describe what the loan is for in your own words so " +
+      "our team can understand your request. This is optional.";
+
+    function sync() {
+      var value = select.value;
+      // Keep the box visible if the applicant has already typed something,
+      // even if they clear the dropdown — never discard their words.
+      var show = value !== "" || textarea.value.trim() !== "";
+      wrap.style.display = show ? "" : "none";
+      hint.textContent = value === "Other" ? otherHint : baseHint;
+    }
+
+    select.addEventListener("change", sync);
+    sync(); // set initial state on load
+  })();
+</script>
 {% endblock %}

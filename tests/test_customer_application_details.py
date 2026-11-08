@@ -54,6 +54,7 @@ def test_application_details_persist_typed_values(tmp_path):
         contact_email="ops@abc.example",
         loan_amount="SGD 500,000",
         loan_reason="Business expansion / new premises",
+        loan_reason_detail="Opening a second outlet in Q3; need fit-out capital.",
     )
     store.set_application_details("CASE-TEST01", details)
 
@@ -65,6 +66,9 @@ def test_application_details_persist_typed_values(tmp_path):
     assert case.application.company_name != case.report.account_holder
     assert case.application.loan_reason == "Business expansion / new premises"
     assert case.application.loan_amount == "SGD 500,000"
+    # The optional free-text explanation is persisted alongside the dropdown value.
+    assert (case.application.loan_reason_detail
+            == "Opening a second outlet in Q3; need fit-out capital.")
 
 
 def test_set_application_details_unknown_case_returns_none(tmp_path):
@@ -93,6 +97,8 @@ def test_application_details_defaults_are_optional():
     assert details.contact_email is None
     assert details.loan_amount is None
     assert details.loan_reason is None
+    # Optional-with-default so old stored cases (without this field) still load.
+    assert details.loan_reason_detail is None
 
 
 def test_format_sgt_adds_eight_hours_and_labels_sgt():

@@ -58,6 +58,7 @@ _MAX_EMAIL = 160
 _MAX_UEN = 40
 _MAX_AMOUNT = 40
 _MAX_REASON = 80
+_MAX_REASON_DETAIL = 500  # free-text explanation — longer than the fixed reason
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 # Singapore has a fixed UTC+8 offset with no daylight saving, so a dependency-free
@@ -194,6 +195,7 @@ async def apply(
     contact_email: str = Form(...),
     loan_amount: str = Form(""),
     loan_reason: str = Form(""),
+    loan_reason_detail: str = Form(""),
     file: UploadFile | None = None,
 ):
     """Accept the application + statement, screen it, and confirm to the customer."""
@@ -202,6 +204,7 @@ async def apply(
     contact_email = _scrub(contact_email, _MAX_EMAIL)
     loan_amount = _scrub(loan_amount, _MAX_AMOUNT)
     loan_reason = _scrub(loan_reason, _MAX_REASON)
+    loan_reason_detail = _scrub(loan_reason_detail, _MAX_REASON_DETAIL)
 
     if file is None or not file.filename:
         raise HTTPException(status_code=400, detail="A bank statement PDF is required")
@@ -247,6 +250,7 @@ async def apply(
         contact_email=contact_email or None,
         loan_amount=loan_amount or None,
         loan_reason=loan_reason or None,
+        loan_reason_detail=loan_reason_detail or None,
     ))
 
     # The case_id doubles as the customer's application reference number.
