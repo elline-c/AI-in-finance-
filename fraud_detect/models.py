@@ -278,16 +278,22 @@ class ReviewRecord(BaseModel):
     info_requested_at: Optional[datetime] = None
 
 
-class CreditRecord(BaseModel):
-    """The banker / loan officer's final lending decision on a fraud-cleared case."""
-    case_id: str
-    decision: CreditDecision = CreditDecision.PENDING
-    officer: Optional[str] = None
-    rationale: Optional[str] = None
-    # Optional credit inputs the officer may capture for the file.
-    approved_amount: Optional[float] = None     # amount actually approved (may differ from requested)
-    conditions: Optional[str] = None            # covenants / conditions attached to an approval
-    decided_at: Optional[datetime] = None
+class ApplicationDetails(BaseModel):
+    """The details the applicant TYPED into the customer portal form.
+
+    Distinct from the statement-derived fields on ``RiskReport`` (which come from
+    parsing the uploaded PDF). This captures what the applicant actually entered,
+    so the confirmation / status pages can reflect their input verbatim rather
+    than the name parsed from the bank statement.
+
+    All fields are Optional-with-default so older stored cases (persisted before
+    this model existed) still validate and render without error.
+    """
+    company_name: Optional[str] = None
+    uen: Optional[str] = None
+    contact_email: Optional[str] = None
+    loan_amount: Optional[str] = None
+    loan_reason: Optional[str] = None
 
 
 class Case(BaseModel):
@@ -299,11 +305,6 @@ class Case(BaseModel):
     # (persisted before this field existed) still validate.
     credit: CreditRecord = Field(default_factory=lambda: CreditRecord(case_id=""))
     audit_log: list[dict] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def _sync_credit_case_id(self) -> "Case":
-        # Backfill the credit record's case_id (for cases created before the
-        # credit stage existed, or when the default factory was used).
-        if self.credit and not self.credit.case_id:
-            self.credit.case_id = self.case_id
-        return self
+    # The applicant's typed form values. Optional-with-default so cases stored
+    # before this field existed still load and render (backward compatible).
+    application: Optional[ApplicationDetails] = None

@@ -22,13 +22,25 @@
 
 <div class="card">
   <h2>What we received</h2>
+  {# Prefer the values the APPLICANT TYPED (case.application); fall back to the
+     statement-parsed fields only for older cases stored without them. #}
+  {% set app = case.application %}
   <ul class="plain">
-    <li><strong>Company:</strong> {{ case.report.account_holder or "—" }}</li>
-    <li><strong>UEN:</strong> {{ case.report.uen or "—" }}</li>
+    <li><strong>Company:</strong> {{ (app.company_name if app and app.company_name) or case.report.account_holder or "—" }}</li>
+    <li><strong>UEN:</strong> {{ (app.uen if app and app.uen) or case.report.uen or "—" }}</li>
+    {% if app and app.contact_email %}
+    <li><strong>Contact email:</strong> {{ app.contact_email }}</li>
+    {% endif %}
+    {% if app and app.loan_amount %}
+    <li><strong>Estimated loan amount:</strong> {{ app.loan_amount }}</li>
+    {% endif %}
+    {% if app and app.loan_reason %}
+    <li><strong>Reason for loan:</strong> {{ app.loan_reason }}</li>
+    {% endif %}
     {% if case.report.statement_period %}
     <li><strong>Statement period:</strong> {{ case.report.statement_period }}</li>
     {% endif %}
-    <li><strong>Submitted:</strong> {{ case.report.created_at.strftime("%d %b %Y, %H:%M UTC") }}</li>
+    <li><strong>Submitted:</strong> {{ submitted_at }}</li>
   </ul>
   <div class="note" style="margin-top:14px">
     We will email <strong>any updates</strong> to the address you provided. A

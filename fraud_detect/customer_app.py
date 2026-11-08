@@ -13,8 +13,11 @@ Privacy / FEAT stance (important — this is NOT the analyst view):
       routing label. Exposing those would tip off bad actors and would
       misrepresent an internal screening signal as a decision.
     * The machine never approves or rejects the customer. The customer only ever
-      sees neutral, human-centred statuses: *Received*, *Being verified*,
-      *Verified*, *More information needed*, or *A specialist will contact you*.
+      sees neutral, human-centred statuses: *Received*, *Being reviewed*,
+      *More information needed*, or *Verified* — where *Verified* is only ever
+      shown after a **human specialist** approves, never as an automatic result.
+      An automatically auto-cleared case still shows *Being reviewed*, identical
+      to a human-review case, because no person has decided yet.
     * A ``HUMAN_REVIEW`` routing is surfaced simply as "being reviewed by a
       specialist" — never as "suspected tampering".
 
@@ -26,6 +29,7 @@ from __future__ import annotations
 import re
 import secrets
 import shutil
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
@@ -33,7 +37,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .ml.gnn import gnn_lookup
-from .models import Case, ReviewDecision, Routing
+from .models import ApplicationDetails, Case, ReviewDecision
 from .pipeline import run_pipeline
 from .registry import live_lookup_lifespan
 from .store import CaseStore
@@ -54,7 +58,20 @@ _MAX_NAME = 160
 _MAX_EMAIL = 160
 _MAX_UEN = 40
 _MAX_AMOUNT = 40
+_MAX_REASON = 80
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+# Singapore has a fixed UTC+8 offset with no daylight saving, so a dependency-free
+# fixed-offset timezone is safe and deterministic (never relies on the host's
+# local timezone). created_at is stored in UTC; we present it in SGT.
+_SGT = timezone(timedelta(hours=8))
+
+
+def _format_sgt(dt: datetime) -> str:
+    """Render a UTC datetime as a Singapore-time string labelled 'SGT'."""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_SGT).strftime("%d %b %Y, %H:%M SGT")
 
 
 def _scrub(text: str, max_len: int) -> str:
@@ -102,7 +119,6 @@ def customer_status(case: Case) -> dict:
     the 1-3 index into the progress tracker and ``tone`` drives colour only.
     """
     decision = case.review.decision
-    routing = case.report.routing
 
     # A human has made the final call — surface it neutrally.
     if decision == ReviewDecision.APPROVED:
@@ -143,20 +159,14 @@ def customer_status(case: Case) -> dict:
             "step": 2,
         }
 
-    # No human decision yet — base the message on the automated routing, but
-    # never reveal scores or that anything was "flagged".
-    if routing == Routing.AUTO_CLEAR:
-        return {
-            "key": "verified",
-            "label": "Verified",
-            "tone": "ok",
-            "headline": "Your bank statement has been verified",
-            "detail": ("Your document passed our automated verification checks "
-                       "and your application is moving forward. We will be in "
-                       "touch about the next steps of your loan assessment."),
-            "step": 3,
-        }
-    # HUMAN_REVIEW — surfaced simply as a specialist review, no alarm language.
+    # No human decision yet. A fraud analyst must ALWAYS be in the loop before
+    # any decision, so even an automatic AUTO_CLEAR is NOT presented as a
+    # completed check or a final "verified" result — doing so would wrongly imply
+    # a decision no human has made. Both AUTO_CLEAR and HUMAN_REVIEW therefore
+    # surface the SAME neutral "being reviewed" status (tone=info, step=2), so the
+    # customer cannot tell the two routings apart and nothing looks approved
+    # automatically. We never reveal scores, evidence, or that anything was
+    # "flagged".
     return {
         "key": "in_review",
         "label": "Being reviewed",
@@ -184,6 +194,7 @@ async def apply(
     uen: str = Form(...),
     contact_email: str = Form(...),
     loan_amount: str = Form(""),
+    loan_reason: str = Form(""),
     file: UploadFile | None = None,
 ):
     """Accept the application + statement, screen it, and confirm to the customer."""
@@ -191,6 +202,7 @@ async def apply(
     uen = _scrub(uen, _MAX_UEN)
     contact_email = _scrub(contact_email, _MAX_EMAIL)
     loan_amount = _scrub(loan_amount, _MAX_AMOUNT)
+    loan_reason = _scrub(loan_reason, _MAX_REASON)
 
     if file is None or not file.filename:
         raise HTTPException(status_code=400, detail="A bank statement PDF is required")
@@ -228,6 +240,16 @@ async def apply(
     report = run_pipeline(str(dest), store=store, gnn_scores=GNN_SCORES)
     store.upsert_report(report)
 
+    # Persist what the APPLICANT TYPED (distinct from the statement-parsed name),
+    # so the confirmation / status pages reflect their input verbatim.
+    store.set_application_details(report.case_id, ApplicationDetails(
+        company_name=company_name or None,
+        uen=uen or None,
+        contact_email=contact_email or None,
+        loan_amount=loan_amount or None,
+        loan_reason=loan_reason or None,
+    ))
+
     # The case_id doubles as the customer's application reference number.
     return RedirectResponse(url=f"/submitted/{report.case_id}", status_code=303)
 
@@ -240,6 +262,7 @@ def submitted(request: Request, case_id: str):
         return HTMLResponse("Application not found", status_code=404)
     return templates.TemplateResponse("submitted.html", {
         "request": request, "case": case, "status": customer_status(case),
+        "submitted_at": _format_sgt(case.report.created_at),
     })
 
 
@@ -253,4 +276,5 @@ def status_form(request: Request, ref: str | None = None):
         "case": case,
         "not_found": bool(ref) and case is None,
         "status": customer_status(case) if case else None,
+        "submitted_at": _format_sgt(case.report.created_at) if case else None,
     })
