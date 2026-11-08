@@ -26,6 +26,7 @@ from __future__ import annotations
 import re
 import secrets
 import shutil
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
@@ -33,7 +34,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .ml.gnn import gnn_lookup
-from .models import Case, ReviewDecision, Routing
+from .models import ApplicationDetails, Case, ReviewDecision, Routing
 from .pipeline import run_pipeline
 from .store import CaseStore
 
@@ -53,7 +54,20 @@ _MAX_NAME = 160
 _MAX_EMAIL = 160
 _MAX_UEN = 40
 _MAX_AMOUNT = 40
+_MAX_REASON = 80
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+# Singapore has a fixed UTC+8 offset with no daylight saving, so a dependency-free
+# fixed-offset timezone is safe and deterministic (never relies on the host's
+# local timezone). created_at is stored in UTC; we present it in SGT.
+_SGT = timezone(timedelta(hours=8))
+
+
+def _format_sgt(dt: datetime) -> str:
+    """Render a UTC datetime as a Singapore-time string labelled 'SGT'."""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_SGT).strftime("%d %b %Y, %H:%M SGT")
 
 
 def _scrub(text: str, max_len: int) -> str:
@@ -183,6 +197,7 @@ async def apply(
     uen: str = Form(...),
     contact_email: str = Form(...),
     loan_amount: str = Form(""),
+    loan_reason: str = Form(""),
     file: UploadFile | None = None,
 ):
     """Accept the application + statement, screen it, and confirm to the customer."""
@@ -190,6 +205,7 @@ async def apply(
     uen = _scrub(uen, _MAX_UEN)
     contact_email = _scrub(contact_email, _MAX_EMAIL)
     loan_amount = _scrub(loan_amount, _MAX_AMOUNT)
+    loan_reason = _scrub(loan_reason, _MAX_REASON)
 
     if file is None or not file.filename:
         raise HTTPException(status_code=400, detail="A bank statement PDF is required")
@@ -227,6 +243,16 @@ async def apply(
     report = run_pipeline(str(dest), store=store, gnn_scores=GNN_SCORES)
     store.upsert_report(report)
 
+    # Persist what the APPLICANT TYPED (distinct from the statement-parsed name),
+    # so the confirmation / status pages reflect their input verbatim.
+    store.set_application_details(report.case_id, ApplicationDetails(
+        company_name=company_name or None,
+        uen=uen or None,
+        contact_email=contact_email or None,
+        loan_amount=loan_amount or None,
+        loan_reason=loan_reason or None,
+    ))
+
     # The case_id doubles as the customer's application reference number.
     return RedirectResponse(url=f"/submitted/{report.case_id}", status_code=303)
 
@@ -239,6 +265,7 @@ def submitted(request: Request, case_id: str):
         return HTMLResponse("Application not found", status_code=404)
     return templates.TemplateResponse("submitted.html", {
         "request": request, "case": case, "status": customer_status(case),
+        "submitted_at": _format_sgt(case.report.created_at),
     })
 
 
@@ -252,4 +279,5 @@ def status_form(request: Request, ref: str | None = None):
         "case": case,
         "not_found": bool(ref) and case is None,
         "status": customer_status(case) if case else None,
+        "submitted_at": _format_sgt(case.report.created_at) if case else None,
     })

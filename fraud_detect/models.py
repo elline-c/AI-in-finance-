@@ -212,9 +212,30 @@ class ReviewRecord(BaseModel):
     info_requested_at: Optional[datetime] = None
 
 
+class ApplicationDetails(BaseModel):
+    """The details the applicant TYPED into the customer portal form.
+
+    Distinct from the statement-derived fields on ``RiskReport`` (which come from
+    parsing the uploaded PDF). This captures what the applicant actually entered,
+    so the confirmation / status pages can reflect their input verbatim rather
+    than the name parsed from the bank statement.
+
+    All fields are Optional-with-default so older stored cases (persisted before
+    this model existed) still validate and render without error.
+    """
+    company_name: Optional[str] = None
+    uen: Optional[str] = None
+    contact_email: Optional[str] = None
+    loan_amount: Optional[str] = None
+    loan_reason: Optional[str] = None
+
+
 class Case(BaseModel):
     """Everything persisted about one submitted statement."""
     case_id: str
     report: RiskReport
     review: ReviewRecord
     audit_log: list[dict] = Field(default_factory=list)
+    # The applicant's typed form values. Optional-with-default so cases stored
+    # before this field existed still load and render (backward compatible).
+    application: Optional[ApplicationDetails] = None

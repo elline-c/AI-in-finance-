@@ -13,7 +13,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from .models import Case, ReviewDecision, ReviewRecord, RiskReport, TxnFingerprint
+from .models import (
+    ApplicationDetails,
+    Case,
+    ReviewDecision,
+    ReviewRecord,
+    RiskReport,
+    TxnFingerprint,
+)
 
 _LOCK = threading.Lock()
 
@@ -124,6 +131,27 @@ class CaseStore:
         data = self._read()
         raw = data.get(case_id)
         return Case.model_validate(raw) if raw else None
+
+    def set_application_details(
+        self, case_id: str, details: ApplicationDetails
+    ) -> Optional[Case]:
+        """Attach the applicant's typed form values to an existing case.
+
+        Called by the customer portal right after screening, so the confirmation
+        and status pages can reflect what the applicant actually entered rather
+        than the name parsed from the uploaded statement. Leaves the analyst-side
+        report/review untouched.
+        """
+        with _LOCK:
+            data = self._read()
+            raw = data.get(case_id)
+            if not raw:
+                return None
+            case = Case.model_validate(raw)
+            case.application = details
+            data[case_id] = json.loads(case.model_dump_json())
+            self._write(data)
+            return case
 
     def recall_prior_fingerprints(
         self, exclude_case_id: Optional[str] = None,

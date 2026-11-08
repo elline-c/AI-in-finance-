@@ -32,10 +32,31 @@
 <div class="card">
   <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px">
     <h2 style="margin:0">Application {{ case.case_id }}</h2>
-    <span class="hint">{{ case.report.account_holder or "" }}</span>
+    {% set app = case.application %}
+    <span class="hint">{{ (app.company_name if app and app.company_name) or case.report.account_holder or "" }}</span>
   </div>
 
   {% include "_status_block.html" %}
+
+  <h2 style="margin-top:24px">What we received</h2>
+  {# Prefer the applicant's typed values; fall back to statement-parsed fields. #}
+  <ul class="plain">
+    <li><strong>Company:</strong> {{ (app.company_name if app and app.company_name) or case.report.account_holder or "—" }}</li>
+    <li><strong>UEN:</strong> {{ (app.uen if app and app.uen) or case.report.uen or "—" }}</li>
+    {% if app and app.contact_email %}
+    <li><strong>Contact email:</strong> {{ app.contact_email }}</li>
+    {% endif %}
+    {% if app and app.loan_amount %}
+    <li><strong>Estimated loan amount:</strong> {{ app.loan_amount }}</li>
+    {% endif %}
+    {% if app and app.loan_reason %}
+    <li><strong>Reason for loan:</strong> {{ app.loan_reason }}</li>
+    {% endif %}
+    {% if case.report.statement_period %}
+    <li><strong>Statement period:</strong> {{ case.report.statement_period }}</li>
+    {% endif %}
+    <li><strong>Submitted:</strong> {{ submitted_at }}</li>
+  </ul>
 
   <div class="note" style="margin-top:20px">
     Questions about your application? Reply to your confirmation email or contact
