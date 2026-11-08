@@ -276,6 +276,15 @@ class ReviewRecord(BaseModel):
     # portal can show it. Never contains internal scores/evidence.
     info_request: Optional[str] = None
     info_requested_at: Optional[datetime] = None
+    # ITEM 6 - senior-officer escalation. A junior reviewer can route a complex
+    # case to a named senior officer with a required internal note. 'Escalated'
+    # is NOT a new ReviewDecision value (so older stored cases keep validating);
+    # it is represented by these Optional-with-default fields plus an append-only
+    # ESCALATED_TO_SENIOR audit event. All four default to None.
+    assigned_senior_officer: Optional[str] = None
+    escalation_note: Optional[str] = None
+    escalated_by: Optional[str] = None
+    escalated_at: Optional[datetime] = None
 
 
 class ApplicationDetails(BaseModel):
@@ -296,6 +305,18 @@ class ApplicationDetails(BaseModel):
     loan_reason: Optional[str] = None
 
 
+class CreditRecord(BaseModel):
+    """The banker / loan officer's final lending decision on a fraud-cleared case."""
+    case_id: str
+    decision: CreditDecision = CreditDecision.PENDING
+    officer: Optional[str] = None
+    rationale: Optional[str] = None
+    # Optional credit inputs the officer may capture for the file.
+    approved_amount: Optional[float] = None     # amount actually approved (may differ from requested)
+    conditions: Optional[str] = None            # covenants / conditions attached to an approval
+    decided_at: Optional[datetime] = None
+
+
 class Case(BaseModel):
     """Everything persisted about one submitted statement."""
     case_id: str
@@ -308,3 +329,11 @@ class Case(BaseModel):
     # The applicant's typed form values. Optional-with-default so cases stored
     # before this field existed still load and render (backward compatible).
     application: Optional[ApplicationDetails] = None
+
+    @model_validator(mode="after")
+    def _sync_credit_case_id(self) -> "Case":
+        # Backfill the credit record's case_id (for cases created before the
+        # credit stage existed, or when the default factory was used).
+        if self.credit and not self.credit.case_id:
+            self.credit.case_id = self.case_id
+        return self
