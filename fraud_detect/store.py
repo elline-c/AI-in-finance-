@@ -10,16 +10,23 @@ from __future__ import annotations
 import json
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
+from .audit import AuditChain, build_signer_from_env
+from .audit.verify import VerificationStatus
+from .history import TrailingHistory, counterparty_key, credit_sizes, monthly_credit_totals
+from .registry import names_match
 from .models import (
     ApplicationDetails,
     Case,
+    CreditDecision,
+    CreditRecord,
     ReviewDecision,
     ReviewRecord,
     RiskReport,
+    Routing,
     TxnFingerprint,
 )
 
@@ -28,6 +35,12 @@ _LOCK = threading.Lock()
 # Trailing-history settings (Node 3 gap learning).
 _ENV_REQUIRE_CHAIN = "TRAILING_HISTORY_REQUIRE_CHAIN"   # "0" switches the chain check off
 _MAX_TRAILING_STATEMENTS = 6                             # moving window: most recent N
+
+# ITEM 4 - revert window. A human reviewer may undo an APPROVED / REJECTED
+# decision, but ONLY within this many minutes of the decision. Kept as a single
+# named constant so the server guard and the UI (which shows/hides the revert
+# control) agree on exactly one threshold.
+REVERT_WINDOW_MINUTES = 30
 
 
 # --------------------------------------------------------------------------- #
@@ -87,6 +100,39 @@ def fingerprint(counterparty: Optional[str], amount: Optional[float],
         direction=direction,
         pattern_tag=pattern_tag,
     )
+
+
+# --------------------------------------------------------------------------- #
+# ITEM 4: revert-window helper (shared by the server guard and the UI)
+# --------------------------------------------------------------------------- #
+def revert_window_remaining(
+    case: Case, *, now: Optional[datetime] = None
+) -> tuple[bool, int]:
+    """Whether ``case`` can still be reverted, and the seconds left if so.
+
+    Returns ``(allowed, seconds_remaining)``:
+      * ``allowed`` is True only when the case holds a final decision
+        (APPROVED / REJECTED), has a recorded ``reviewed_at``, and the
+        REVERT_WINDOW_MINUTES window has not yet elapsed.
+      * ``seconds_remaining`` is the whole seconds left in the window (0 when
+        not allowed). The webapp/template use this to show or hide the revert
+        control and, optionally, a countdown.
+
+    ``now`` is injectable so both tests and the request handler can pass a fixed
+    clock; it defaults to datetime.utcnow().
+    """
+    if case.review.decision not in (ReviewDecision.APPROVED,
+                                     ReviewDecision.REJECTED):
+        return (False, 0)
+    reviewed_at = case.review.reviewed_at
+    if reviewed_at is None:
+        return (False, 0)
+    now = now or datetime.utcnow()
+    deadline = reviewed_at + timedelta(minutes=REVERT_WINDOW_MINUTES)
+    remaining = (deadline - now).total_seconds()
+    if remaining <= 0:
+        return (False, 0)
+    return (True, int(remaining))
 
 
 class CaseStore:
@@ -397,6 +443,141 @@ class CaseStore:
             data[case_id] = json.loads(case.model_dump_json())
             self._write(data)
             return case
+
+    # ---- ITEM 4: revert a final decision (30-minute window) ------------ #
+    def revert_decision(self, case_id: str, reviewer: str, note: str, *,
+                        now: Optional[datetime] = None) -> Optional[Case]:
+        """Undo an APPROVED / REJECTED decision, re-opening the case to PENDING.
+
+        This exists so a reviewer who mis-clicked (e.g. rejected an application
+        that should have been approved) can correct the mistake, but ONLY within
+        REVERT_WINDOW_MINUTES of the original decision. Outside that window the
+        decision stands and this raises ValueError (the route maps that to an
+        HTTP 4xx).
+
+        The revert is modelled as a NEW append-only audit event HUMAN_REVERTED
+        written to BOTH the embedded case.audit_log mirror AND the hash-chained
+        self._audit. The prior HUMAN_APPROVED / HUMAN_REJECTED entries are left
+        completely untouched -- the audit trail is tamper-evident and append-only,
+        so history is never deleted or rewritten. The machine never auto-rejects;
+        a revert only ever re-opens the case for a human to decide again.
+
+        ``now`` is injectable so tests can exercise the 30-minute boundary
+        deterministically; it defaults to datetime.utcnow().
+        """
+        with _LOCK:
+            data = self._read()
+            raw = data.get(case_id)
+            if not raw:
+                return None
+            case = Case.model_validate(raw)
+
+            prior_decision = case.review.decision
+            if prior_decision not in (ReviewDecision.APPROVED,
+                                      ReviewDecision.REJECTED):
+                raise ValueError(
+                    "Only an APPROVED or REJECTED case can be reverted; this "
+                    f"case is {prior_decision.value}."
+                )
+            reviewed_at = case.review.reviewed_at
+            if reviewed_at is None:
+                raise ValueError(
+                    "Cannot revert: the case has no recorded decision time."
+                )
+
+            now = now or datetime.utcnow()
+            # Window has passed once >= REVERT_WINDOW_MINUTES have elapsed. Using
+            # >= (not >) means a revert AT exactly the 30-minute mark is already
+            # too late, and keeps this guard in lockstep with
+            # revert_window_remaining() below (which returns remaining <= 0 as
+            # "not allowed"), so the UI and the server never disagree.
+            if now - reviewed_at >= timedelta(minutes=REVERT_WINDOW_MINUTES):
+                raise ValueError(
+                    f"The {REVERT_WINDOW_MINUTES}-minute revert window has "
+                    "passed; this decision can no longer be undone."
+                )
+
+            ts = now.isoformat()
+            detail = (f"reviewer={reviewer}; note={note}; "
+                      f"reverted={prior_decision.value}")
+            case.audit_log.append({
+                "ts": ts,
+                "event": "HUMAN_REVERTED",
+                "detail": detail,
+            })
+            self._audit.append(
+                case_id=case_id, event="HUMAN_REVERTED", detail=detail, ts=ts,
+            )
+            # Re-open to PENDING, preserving any training feedback already
+            # captured. The prior decision's audit entries remain in the chain.
+            case.review = ReviewRecord(
+                case_id=case_id,
+                decision=ReviewDecision.PENDING,
+                feedback_for_training=case.review.feedback_for_training,
+            )
+            data[case_id] = json.loads(case.model_dump_json())
+            self._write(data)
+            return case
+
+    # ---- ITEM 6: escalate a case to a senior officer ------------------- #
+    def escalate_to_senior(self, case_id: str, reviewer: str,
+                          senior_officer: str, note: str, *,
+                          now: Optional[datetime] = None) -> Optional[Case]:
+        """Route a complex case to a named senior officer with a required note.
+
+        A junior reviewer who feels a case is outside their experience can hand
+        it to a senior officer. The assignment, the junior reviewer's name and
+        the mandatory internal note are stored on the ReviewRecord, and a NEW
+        append-only ESCALATED_TO_SENIOR audit event is written to BOTH the
+        embedded mirror and the hash-chain.
+
+        If the case is still open (PENDING / NEEDS_INFO) the decision stays
+        PENDING so the senior officer picks it up. If the case already holds a
+        final decision, that decision is left intact (a senior may re-open/re-
+        decide via the normal decision path); escalation never rewrites history
+        and never itself decides the case.
+
+        ``now`` is injectable for deterministic tests; defaults to utcnow().
+        """
+        with _LOCK:
+            data = self._read()
+            raw = data.get(case_id)
+            if not raw:
+                return None
+            case = Case.model_validate(raw)
+
+            now = now or datetime.utcnow()
+            ts = now.isoformat()
+            case.review.assigned_senior_officer = senior_officer
+            case.review.escalation_note = note
+            case.review.escalated_by = reviewer
+            case.review.escalated_at = now
+
+            detail = f"by={reviewer}; to={senior_officer}; note={note}"
+            case.audit_log.append({
+                "ts": ts,
+                "event": "ESCALATED_TO_SENIOR",
+                "detail": detail,
+            })
+            self._audit.append(
+                case_id=case_id, event="ESCALATED_TO_SENIOR", detail=detail,
+                ts=ts,
+            )
+            data[case_id] = json.loads(case.model_dump_json())
+            self._write(data)
+            return case
+
+    @staticmethod
+    def revert_window_remaining(
+        case: Case, *, now: Optional[datetime] = None
+    ) -> tuple[bool, int]:
+        """Instance-friendly alias for the module-level revert_window_remaining.
+
+        Lets callers that already hold a CaseStore ask ``store.revert_window_
+        remaining(case)`` without importing the free function. Both share the
+        single REVERT_WINDOW_MINUTES threshold so the UI and server never drift.
+        """
+        return revert_window_remaining(case, now=now)
 
     # ---- banker / loan-officer stage ----------------------------------- #
     @staticmethod
