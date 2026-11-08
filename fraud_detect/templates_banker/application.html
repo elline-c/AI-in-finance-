@@ -184,6 +184,79 @@
   <div class="kv"><span class="hint">Liquidity signal — inflow volatility</span><span><b>{{ metrics.volatility_band }}</b></span></div>
 </div>
 
+<!-- Indicative loan capacity (screening aid — not a credit decision / offer) -->
+<div class="card">
+  <h2 style="margin-top:0">Indicative loan capacity
+    <span class="hint">screening aid — not a credit decision or an offer</span></h2>
+  <div class="note" style="margin-bottom:14px">
+    <strong>Indicative only.</strong> An estimate of the maximum loan the surplus cash flow and
+    balance sheet could support, derived from the figures above plus an <b>assumed</b> rate and
+    tenor (<b>not a quoted rate</b>). Use it to see whether the applicant's request fits — it is
+    <b>not an offer or a credit decision</b>.
+  </div>
+
+  {% if capacity.insufficient_inputs %}
+    <div class="kv"><span class="hint">{{ capacity.message }}</span></div>
+  {% else %}
+    <div class="metrics">
+      <div class="metric"><div class="k">Indicative maximum</div>
+        <div class="v pos">{{ capacity.currency }} {{ "{:,.0f}".format(capacity.indicative_max) }}</div></div>
+      <div class="metric"><div class="k">Affordable monthly payment</div>
+        <div class="v">{{ "{:,.0f}".format(capacity.affordable_monthly_payment) }}</div></div>
+      <div class="metric"><div class="k">Affordable annual payment</div>
+        <div class="v">{{ "{:,.0f}".format(capacity.affordable_annual_payment) }}</div></div>
+      <div class="metric"><div class="k">Binding constraint</div>
+        <div class="v" style="font-size:15px">{{ capacity.binding_constraint }}</div></div>
+    </div>
+
+    <!-- Fit vs requested verdict -->
+    <div class="kv" style="margin-top:14px"><span class="hint">Requested by applicant</span>
+      <span>{% if requested_amount_raw %}{{ requested_amount_raw }}{% else %}<span class="hint">— not captured</span>{% endif %}</span></div>
+    <div class="kv"><span class="hint">Fit vs indicative capacity</span>
+      <span><span class="pill {{ capacity.verdict_tone }}">{{ capacity.verdict }}</span></span></div>
+    <div class="note" style="margin-top:6px">{{ capacity.verdict_line }}</div>
+
+    <!-- Cap sub-figures (lowest binds) -->
+    <div class="mini-h" style="margin-top:18px">Caps considered (the lowest binds)</div>
+    <table>
+      <thead><tr><th>Cap</th><th class="num">Value</th><th>Basis</th></tr></thead>
+      <tbody>
+        {% for c in capacity.caps %}
+        <tr>
+          <td><b>{{ c.label }}</b>{% if c.binding %}<span class="flag-tag">binding</span>{% endif %}</td>
+          <td class="num">{{ capacity.currency }} {{ "{:,.0f}".format(c.value) }}</td>
+          <td class="hint">{{ c.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="note" style="margin-top:12px">{{ capacity.explanation }}</div>
+    <div class="hint" style="margin-top:6px"><b>Formula:</b> {{ capacity.formula }}</div>
+    <div class="hint"><b>Caveat:</b> {{ capacity.caveat }}</div>
+  {% endif %}
+
+  <!-- Officer-adjustable assumptions (GET — idempotent, shareable, not saved) -->
+  <div class="mini-h" style="margin-top:18px">Assumptions <span class="hint" style="text-transform:none; letter-spacing:0">adjust and re-run — not saved</span></div>
+  <form action="/application/{{ case.case_id }}" method="get">
+    <div class="row">
+      <div><label>Annual interest rate (% p.a.)</label>
+        <input name="rate" placeholder="e.g. 8" value="{{ "{:g}".format(capacity.assumptions.annual_rate_pct) }}"></div>
+      <div><label>Tenor (years)</label>
+        <input name="tenor" placeholder="e.g. 5" value="{{ capacity.assumptions.tenor_years }}"></div>
+    </div>
+    <div class="row">
+      <div><label>DSCR sizing cushion</label>
+        <input name="cushion" placeholder="e.g. 1.25" value="{{ "{:g}".format(capacity.assumptions.dscr_cushion) }}"></div>
+      <div style="display:flex; align-items:flex-end">
+        <button class="btn" type="submit">Re-run with these assumptions</button></div>
+    </div>
+    <p class="hint" style="margin-top:8px">Defaults: 8% p.a., 5 years, 1.25 cushion. Rate clamped 0–100%,
+    tenor 1–30 years, cushion 1.0–3.0. The reporting DSCR flag (1.2) is separate and more lenient than this
+    sizing cushion (1.25).</p>
+  </form>
+</div>
+
 <!-- Credit memo (OFFICER-ENTERED — not parsed from the statement) -->
 <div class="card">
   <h2 style="margin-top:0">Credit memo <span class="hint">officer-entered</span></h2>
