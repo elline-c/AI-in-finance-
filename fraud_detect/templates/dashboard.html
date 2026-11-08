@@ -16,7 +16,7 @@
       {% set r = c.report %}
       <tr>
         <td><code>{{ c.case_id }}</code></td>
-        <td>{{ r.account_holder or "—" }}<br><span class="muted">{{ r.uen or "" }}</span></td>
+        <td>{{ company_names.get(c.case_id) or r.account_holder or "—" }}<br><span class="muted">{{ r.uen or "" }}</span></td>
         <td><span class="pill" style="background:{{ band_color[r.risk_band.value] }}">{{ r.risk_score }} · {{ r.risk_band.value }}</span></td>
         <td>{{ r.confidence_score }} · {{ r.confidence_band.value }}</td>
         <td>{% if r.routing.value == "AUTO_CLEAR" %}<span class="sev-LOW">Auto-clear</span>{% else %}<span class="sev-HIGH">Human review</span>{% endif %}</td>

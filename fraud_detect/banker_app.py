@@ -28,7 +28,14 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from .models import Case, CreditDecision, CreditMemo, ReviewDecision, Routing
+from .models import (
+    Case,
+    CreditDecision,
+    CreditMemo,
+    ReviewDecision,
+    Routing,
+    display_company_name,
+)
 from .nodes.cashflow import cashflow_highlights, cashflow_metrics
 from .nodes.loan_sizing import (
     CUSHION_MAX,
@@ -169,8 +176,12 @@ def queue(request: Request):
     cases = store.list_credit_queue()
     pending = [c for c in cases if c.credit.decision == CreditDecision.PENDING]
     decided = [c for c in cases if c.credit.decision != CreditDecision.PENDING]
+    # Applicant-typed company name preferred over the statement-parsed holder,
+    # keyed by case_id for both the pending and decided queue tables.
+    company_names = {c.case_id: display_company_name(c) for c in cases}
     return templates.TemplateResponse("queue.html", {
         "request": request, "pending": pending, "decided": decided,
+        "company_names": company_names,
         "CreditDecision": CreditDecision,
     })
 
@@ -224,6 +235,7 @@ def application(request: Request, case_id: str, rate: str | None = None,
 
     return templates.TemplateResponse("application.html", {
         "request": request, "case": case, "r": case.report,
+        "company_name": display_company_name(case),
         "summary": credit_summary(case), "CreditDecision": CreditDecision,
         "highlights": highlights, "metrics": metrics, "memo": memo,
         "ratios": ratios, "capacity": capacity,

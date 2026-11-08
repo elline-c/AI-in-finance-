@@ -3,13 +3,16 @@
 {% block body %}
 
 <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
-  <h1 style="margin:0">{{ r.account_holder or "Application" }}</h1>
+  <h1 style="margin:0">{{ company_name or "Application" }}</h1>
   <span class="badge b-{{ case.credit.decision.value }}">{{ case.credit.decision.value }}</span>
   <span style="flex:1"></span>
   <a class="btn ghost" href="/">← Back to queue</a>
 </div>
 <p class="lede" style="margin-top:6px"><code>{{ case.case_id }}</code>
-  &nbsp;·&nbsp; UEN {{ r.uen or "—" }} &nbsp;·&nbsp; Period {{ r.statement_period or "—" }}</p>
+  &nbsp;·&nbsp; UEN {{ r.uen or "—" }} &nbsp;·&nbsp; Period {{ r.statement_period or "—" }}
+  {% if company_name and r.account_holder and company_name != r.account_holder %}
+  &nbsp;·&nbsp; <span class="pill warn" title="The applicant-entered company name differs from the name parsed from the statement.">⚠ statement name: {{ r.account_holder }}</span>
+  {% endif %}</p>
 
 <!-- Trust signal (from fraud screening — shown, not decided here) -->
 <div class="card" style="display:flex; align-items:center; gap:14px">

@@ -376,3 +376,27 @@ class Case(BaseModel):
         if self.credit and not self.credit.case_id:
             self.credit.case_id = self.case_id
         return self
+
+
+# --------------------------------------------------------------------------- #
+# Display helpers
+# --------------------------------------------------------------------------- #
+def display_company_name(case: "Case") -> Optional[str]:
+    """The company / account-holder name to SHOW on the analyst & banker consoles.
+
+    Prefers the name the APPLICANT TYPED into the customer portal
+    (``case.application.company_name``) over the name PARSED from the uploaded
+    bank statement (``case.report.account_holder``). The typed name is what the
+    business actually is (e.g. "ABC Trading"); the parsed name can differ (e.g.
+    "Meridian") because it is lifted from whatever the statement PDF prints, and
+    a divergence between the two is itself a useful cross-check for the analyst.
+
+    Backward compatible: older cases stored before the customer portal captured
+    an application have ``case.application is None`` (or no company_name), so we
+    fall back to the statement-parsed ``account_holder``. Returns ``None`` only
+    when neither is available, so callers can render a dash.
+    """
+    app = case.application
+    if app is not None and app.company_name:
+        return app.company_name
+    return case.report.account_holder

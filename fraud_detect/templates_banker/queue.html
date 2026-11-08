@@ -19,7 +19,7 @@ not appear here.</p>
       {% set r = c.report %}
       <tr>
         <td><code>{{ c.case_id }}</code></td>
-        <td>{{ r.account_holder or "—" }}<br><span class="hint">{{ r.uen or "" }}</span></td>
+        <td>{{ company_names.get(c.case_id) or r.account_holder or "—" }}<br><span class="hint">{{ r.uen or "" }}</span></td>
         <td><span class="pill ok">Cleared</span></td>
         <td class="num">{{ r.confidence_score }} · {{ r.confidence_band.value }}</td>
         <td class="num">{% if r.closing_balance is not none %}{{ "{:,.2f}".format(r.closing_balance) }}{% else %}—{% endif %}</td>
@@ -42,7 +42,7 @@ not appear here.</p>
       {% for c in decided %}
       <tr>
         <td><code>{{ c.case_id }}</code> <a href="/application/{{ c.case_id }}" class="hint">open</a></td>
-        <td>{{ c.report.account_holder or "—" }}</td>
+        <td>{{ company_names.get(c.case_id) or c.report.account_holder or "—" }}</td>
         <td><span class="badge b-{{ c.credit.decision.value }}">{{ c.credit.decision.value }}</span></td>
         <td>{{ c.credit.officer or "—" }}</td>
         <td class="num">{% if c.credit.approved_amount is not none %}{{ "{:,.2f}".format(c.credit.approved_amount) }}{% else %}—{% endif %}</td>
