@@ -246,6 +246,14 @@ class RiskReport(BaseModel):
     closing_balance: Optional[float] = None
     declared_currency: Optional[str] = None
 
+    # Header fields the analyst-console checklist (FEAT-002) surfaces that were
+    # previously only on the IngestionResult. Populated by risk_synthesis.synthesize()
+    # from the IngestionResult. Optional-with-default so older stored reports in
+    # data/cases.json still validate (pydantic v2).
+    account_number: Optional[str] = None
+    statement_period_start: Optional[date_type] = None
+    statement_period_end: Optional[date_type] = None
+
     # Per-segment coverage summary (period + page range for each statement
     # section found in the source PDF). A single-period statement yields exactly
     # one segment; a combined multi-month PDF yields several. Optional (defaults
