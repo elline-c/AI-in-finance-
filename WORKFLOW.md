@@ -158,3 +158,7 @@ conditional step left is Node 5, which runs only when a case store is supplied.
   - **HUMAN_REVIEW** — any meaningful finding, low confidence, or high risk → a human looks at it.
 - The ceiling is always "send to a human." The machine never rejects a customer.
 - A human's eventual decision is recorded and feeds Node 5's memory for future cases.
+- Right after Node 4, a **score breakdown** is attached to every report ("Why this score": risk and
+  confidence lines that add up to the scores, and what actually caused the routing). An optional
+  **LLM reviewer** (off by default, local model) can add cited plain-language notes on top. Neither
+  changes a score or a routing. See [Explaining the scores](FRAUD_DETECT_README.md#explaining-the-scores-breakdown-reviewer-notes-optional-local-llm).

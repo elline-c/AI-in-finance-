@@ -20,12 +20,15 @@ from pathlib import Path
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 
 from .ml.gnn import gnn_lookup
 from .nodes import ml_statement, ml_transaction
 from .models import ReviewDecision
 from .pipeline import run_pipeline
 from .registry import live_lookup_lifespan
+from .reviewer import breakdown
+from .reviewer import explainer as reviewer_explainer
 from .store import CaseStore
 
 BASE = Path(__file__).resolve().parent
@@ -60,6 +63,7 @@ def _safe_upload_destination(filename: str | None) -> Path:
 
 app = FastAPI(title="Bank Statement Tampering Screening", lifespan=live_lookup_lifespan)
 templates = Jinja2Templates(directory=str(BASE / "templates"))
+templates.env.globals["ALSO_LABELS"] = breakdown.ALSO_LABELS
 store = CaseStore(str(BASE.parent / "data" / "cases.json"))
 
 # Load the precomputed GNN graph-fraud scores once at startup (fail-safe: returns
@@ -73,6 +77,11 @@ GNN_SCORES = gnn_lookup.load_scores()
 # Off by default: see ml_transaction.ENABLE_ENV. GNN_SCORES above still feed Node 6a.
 TXN_MODEL = ml_transaction.load_live_model()
 STATEMENT_MODEL = ml_statement.load_model()
+
+# Optional LLM reviewer: explains the finished scores in plain language, using a model
+# hosted on this machine. None (off) unless FRAUD_ENABLE_LLM_REVIEWER=1; it can never
+# change a score or a routing. See fraud_detect/reviewer/explainer.py.
+EXPLAINER = reviewer_explainer.load_live_explainer()
 
 _BAND_COLOR = {
     "LOW": "#2e7d32", "MEDIUM": "#f9a825",
@@ -122,7 +131,11 @@ async def upload(file: UploadFile):
         dest.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail="Empty upload")
 
-    report = run_pipeline(str(dest), txn_model=TXN_MODEL, statement_model=STATEMENT_MODEL, gnn_scores=GNN_SCORES)
+    # Run in a worker thread: with the LLM reviewer on, screening can take tens of seconds and
+    # must not stall every other request (the sample route below already runs in the pool).
+    report = await run_in_threadpool(
+        run_pipeline, str(dest), txn_model=TXN_MODEL, statement_model=STATEMENT_MODEL,
+        gnn_scores=GNN_SCORES, explainer=EXPLAINER, explainer_store=store)
     store.upsert_report(report)
     return RedirectResponse(url=f"/case/{report.case_id}", status_code=303)
 
@@ -140,7 +153,8 @@ def screen_sample(name: str = Form(...)):
     target = (samples_dir / safe).resolve()
     if samples_dir not in target.parents or not target.is_file():
         raise HTTPException(status_code=404, detail="Sample not found")
-    report = run_pipeline(str(target), txn_model=TXN_MODEL, statement_model=STATEMENT_MODEL, gnn_scores=GNN_SCORES)
+    report = run_pipeline(str(target), txn_model=TXN_MODEL, statement_model=STATEMENT_MODEL,
+                          gnn_scores=GNN_SCORES, explainer=EXPLAINER, explainer_store=store)
     store.upsert_report(report)
     return RedirectResponse(url=f"/case/{report.case_id}", status_code=303)
 

@@ -75,6 +75,94 @@ Conditional decisions (per the design):
 
 ---
 
+## Explaining the scores (breakdown, reviewer notes, optional local LLM)
+
+Package: `fraud_detect/reviewer/`. It runs **after** Node 4 and never changes a score, a
+finding or a routing. It sits outside `fraud_detect/nodes/` on purpose: that folder is
+fingerprinted and hash-pinned by the ML-retraining work, so Node 4 stays byte-identical and
+the explanation is built from Node 4's own output and checked against it.
+
+### 1. Score breakdown (always on, free)
+
+Every report carries `report.explanation`, shown as **Why this score** on the case page:
+
+- **Risk lines** that add up to the risk score exactly: one per finding, plus the
+  corroboration bonus, rounding, the 1–100 limit and the MEDIUM-band floor when they apply.
+- **Confidence lines** (`A1` is the starting point) that add up to the confidence score, each
+  with a plain-language reading. They are read from Node 4's own `_compute_confidence`, not
+  re-implemented.
+- **Routing cause**: which of "a MEDIUM+ finding", "confidence below the auto-clear minimum" or
+  "risk above the auto-clear limit" actually sent the case to a human, and what else was true.
+- `reconciled` is **False** (and the page shows a warning) if the lines do not add up to the
+  scores or the derived routing differs, so any drift in Node 4 is visible, never silent.
+  Reports stored before this existed show a notice instead.
+
+### 2. Reviewer notes (optional, off by default)
+
+Set `FRAUD_ENABLE_LLM_REVIEWER=1` to add a plain-language narrative to each case. The model
+runs on this machine (Ollama); the default is `qwen3.5:9b-q4_K_M` (6.6 GB, fits a 16 GB Mac). Use this GGUF tag, not plain
+`qwen3.5:9b`: that tag runs on Ollama's MLX engine, which in the Homebrew build we tested has no
+JSON-schema support, so every call fails with "structured output is unavailable".
+
+```bash
+ollama pull qwen3.5:9b-q4_K_M
+FRAUD_ENABLE_LLM_REVIEWER=1 uvicorn fraud_detect.webapp:app --port 8000
+```
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `FRAUD_ENABLE_LLM_REVIEWER` | off | switch for the whole layer |
+| `REVIEWER_LLM_MODEL` | `qwen3.5:9b-q4_K_M` | any Ollama model that supports JSON-schema output |
+| `REVIEWER_LLM_URL` | `http://127.0.0.1:11434` | must be loopback; `REVIEWER_LLM_ALLOW_REMOTE=1` overrides on purpose |
+| `REVIEWER_LLM_TIMEOUT_S` | `120` | per case; on timeout the template is used |
+
+How a case is handled:
+
+1. **Sources.** Findings (`F1…`), confidence adjustments (`A1…`), `BONUS`/`FLOOR`, the routing
+   decision (`ROUTE`), retrieved knowledge (`K1…`) and past decided cases (`P1…`) get ids.
+2. **Template.** A deterministic narrative is always built from the breakdown. It is the
+   fallback and the yardstick.
+3. **Model.** The model receives the already-decided result as JSON, with identifiers masked
+   and document text defanged, and must fill a fixed schema whose citation ids are limited to
+   this case. Layout is done by the page template, not by the model.
+4. **Validation.** Each claim must cite real sources that fit its role; codes, pages, rows,
+   figures and quotations must be in the cited sources; scores, bands and routing must match
+   the report; no verdicts (only a person approves or rejects); nothing instruction-like and
+   nothing copied from an embedded document instruction; the heaviest finding must be covered.
+5. **Fallback.** Any failure (server down, bad JSON, failed validation, an exception) keeps the
+   template and stores why. The page labels the source: *AI-generated · advisory* or *Template
+   text · no AI used*. An `EXPLAINER` event in the audit chain records the source, model, prompt
+   version, knowledge version and the documents and past cases retrieved.
+
+**Retrieval (RAG).** `knowledge_data/finding_codes.json` (one entry per finding code: meaning,
+why it matters, how to confirm, common false alarms) is looked up by exact code.
+`knowledge_data/policy.md` passages are chosen by routing cause plus a small TF-IDF match; their
+numbers are filled in from the code constants. Past cases come from
+`CaseStore.recall_decided_cases` and follow Node 5's rule: only `APPROVED`/`REJECTED`, never
+pending or needs-info, and only when the audit chain confirms the decision. The reviewer's
+reason is unescaped, masked and defanged before it is used. A test fails if a detector emits a
+finding code that has no catalogue entry.
+
+**Not changed:** giving the explainer the case store does not switch on Node 5 or Node 3's learned
+baselines (`run_pipeline(..., explainer_store=store)` is separate from `store=`).
+
+### 3. Evaluation
+
+```bash
+python -m fraud_detect.reviewer.evaluation            # offline self-test, no model needed
+python -m fraud_detect.reviewer.evaluation --live     # measure the local model
+```
+
+Pass criteria (constants at the top of `evaluation.py`, fixed before any model is judged): the
+template passes every check on every document; no planted instruction reaches the prompt or the
+output; scores and routing are identical with the reviewer on; planted instructions leave the
+evidence shown for other findings unchanged and are themselves surfaced; every defective narrative
+in the red-team set is rejected. With `--live`: at least 95% of answers parse, at least 90% pass
+validation, and p95 time per case is at most 90 s. The offline self-test uses synthetic
+statements only. Numbers from it say nothing about how well a given model writes.
+
+---
+
 ## Human-in-the-loop review UI
 
 FastAPI app (`fraud_detect/webapp.py`) where a credit analyst works through each
@@ -84,6 +172,8 @@ stage of a case:
   cases (awaiting a human, or awaiting the customer) sort to the top, highest risk
   first. A status badge shows `PENDING` / `NEEDS INFO` / `APPROVED` / `REJECTED`.
 - **Case overview** (`/case/{id}`) — risk score, confidence score, a
+  **Why this score** breakdown (and, when the optional LLM reviewer is on, labelled
+  **Reviewer notes**; see "Explaining the scores"), a
   **findings-by-pipeline-stage** summary, and the decision panel.
 - **Flagged transactions** (`/case/{id}/transactions`) — every parsed row joined
   with the findings that cite it; flagged rows highlighted and listed first, each

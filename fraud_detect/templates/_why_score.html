@@ -1,0 +1,75 @@
+{# "Why this score": deterministic breakdown of risk, confidence and routing.
+   Expects `r` (the RiskReport). Renders nothing for reports stored before it existed. #}
+{% set ex = r.explanation %}
+<div class="panel" id="why-score">
+  <h3 style="margin-top:0">Why this score</h3>
+  {% if not ex %}
+    <p class="muted" style="margin:0">No breakdown was stored for this case because it was screened
+    before the breakdown existed. Re-screen the statement to see one.</p>
+  {% else %}
+    {% if not ex.reconciled %}
+    <div class="warn" role="alert">
+      <b>This breakdown does not match the scores.</b> Treat it as unreliable and rely on the
+      findings below. {{ ex.notes | join("; ") }}
+    </div>
+    {% endif %}
+
+    <div class="why-routing">
+      <span class="muted">Routing decision</span>
+      <div>
+        {% if r.routing.value == "AUTO_CLEAR" %}<b>Auto-clear.</b>{% else %}<b>Human review.</b>{% endif %}
+        {{ ex.routing.statement }}
+      </div>
+      {% if ex.routing.also_applies %}
+      <div class="muted" style="font-size:13px; margin-top:4px">
+        Also true: {% for a in ex.routing.also_applies %}{{ ALSO_LABELS.get(a, a) }}{{ ", " if not loop.last }}{% endfor %}.
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="grid" style="align-items:start; margin-top:14px">
+      <div>
+        <h4 style="margin:0 0 6px">Risk score: how {{ r.risk_score }} was reached</h4>
+        <table class="why-table" aria-label="Risk score breakdown">
+          <thead><tr><th>Points</th><th>Reason</th></tr></thead>
+          <tbody>
+            {% for l in ex.risk_lines %}
+            <tr title="{{ l.reading }}">
+              <td class="num">{{ "%+g"|format(l.points) }}</td>
+              <td>
+                {% if l.severity %}<span class="sev-{{ l.severity.value }}">{{ l.severity.value }}</span> {% endif %}
+                {{ l.label }}
+                {% if l.finding_code %}<code>{{ l.finding_code }}</code>{% endif %}
+                {% if l.page or l.field %}<span class="muted">· {% if l.page %}p.{{ l.page }}{% endif %}{% if l.field %} {{ l.field }}{% endif %}</span>{% endif %}
+                {% if not l.finding_code %}<div class="muted" style="font-size:12px">{{ l.reading }}</div>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot><tr><td class="num"><b>{{ "%g"|format(ex.risk_total) }}</b></td><td><b>Risk score</b></td></tr></tfoot>
+        </table>
+      </div>
+
+      <div>
+        <h4 style="margin:0 0 6px">Confidence: how {{ r.confidence_score }} was reached</h4>
+        <table class="why-table" aria-label="Confidence score breakdown">
+          <thead><tr><th>Points</th><th>What it means</th></tr></thead>
+          <tbody>
+            {% for l in ex.confidence_lines %}
+            <tr>
+              <td class="num">{{ "%+g"|format(l.points) }}</td>
+              <td>{{ l.reading }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot><tr><td class="num"><b>{{ "%g"|format(ex.confidence_total) }}</b></td><td><b>Confidence score</b></td></tr></tfoot>
+        </table>
+        <p class="muted" style="font-size:12px; margin:8px 0 0">
+          {% if ex.confidence_meaning %}{{ ex.confidence_meaning }}{% else %}Confidence is how sure the
+          system is of its risk call. It is not a probability of fraud. Below the auto-clear minimum it
+          always sends the case to a human.{% endif %}
+        </p>
+      </div>
+    </div>
+  {% endif %}
+</div>

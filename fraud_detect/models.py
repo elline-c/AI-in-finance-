@@ -218,6 +218,98 @@ class TxnFingerprint(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# Node 4 companion — deterministic explanation of the two scores
+# --------------------------------------------------------------------------- #
+class RiskLine(BaseModel):
+    """One line of the risk-score breakdown. The ``points`` of all lines add up to the
+    final risk score exactly (see ``fraud_detect.reviewer.breakdown``)."""
+    id: str                          # "F3" (finding), "BONUS", "ROUND", "LIMIT" or "FLOOR"
+    kind: str                        # FINDING | CORROBORATION_BONUS | ROUNDING | RANGE_LIMIT | MEDIUM_FLOOR
+    points: float
+    label: str                       # short name, e.g. the finding title
+    reading: str                     # plain-language reading for a reviewer
+    finding_code: Optional[str] = None
+    severity: Optional[Severity] = None
+    page: Optional[int] = None
+    field: Optional[str] = None
+
+
+class ConfidenceLine(BaseModel):
+    """One line of the confidence-score breakdown (``A1`` is the starting point)."""
+    id: str                          # "A1", "A2", ...
+    code: str                        # CONF_BASE | CONF_DATA_QUALITY | ... | CONF_LIMIT
+    points: int
+    label: str                       # Node 4's own wording of the adjustment
+    reading: str                     # plain-language reading for a reviewer
+
+
+class RoutingCause(BaseModel):
+    """What actually caused the routing decision."""
+    primary: str                     # MATERIAL_FINDING | LOW_CONFIDENCE | RISK_THRESHOLD | AUTO_CLEAR
+    statement: str
+    also_applies: list[str] = Field(default_factory=list)   # other independent human-review triggers
+    finding_ids: list[str] = Field(default_factory=list)    # F-ids of MEDIUM+ findings, when relevant
+
+
+class ScoreExplanation(BaseModel):
+    """Deterministic, free-to-compute explanation of risk, confidence and routing.
+
+    Built by ``fraud_detect.reviewer.breakdown`` from Node 4's own output and checked
+    against it: ``reconciled`` is False when the lines do not add up to the scores or
+    the derived routing differs, which means this explanation must not be trusted.
+    """
+    risk_lines: list[RiskLine] = Field(default_factory=list)
+    risk_total: float = 0.0
+    confidence_lines: list[ConfidenceLine] = Field(default_factory=list)
+    confidence_total: float = 0.0
+    routing: RoutingCause
+    # What the confidence score means for the analyst, derived from the score and the routing
+    # (policy, not prose a model writes). Empty on explanations stored before it existed.
+    confidence_meaning: str = ""
+    reconciled: bool = True
+    notes: list[str] = Field(default_factory=list)          # why it did not reconcile
+
+
+# --------------------------------------------------------------------------- #
+# Optional LLM reviewer — advisory narrative (never changes a score or a routing)
+# --------------------------------------------------------------------------- #
+class Claim(BaseModel):
+    """One statement of the narrative plus the evidence it rests on.
+
+    ``cites`` holds citation ids that must exist for this case: ``F<n>`` findings,
+    ``A<n>`` confidence adjustments, ``BONUS`` / ``FLOOR`` score components, ``ROUTE``
+    (the routing cause), ``K<n>`` curated knowledge and ``P<n>`` past decided cases.
+    """
+    text: str
+    cites: list[str] = Field(default_factory=list)
+
+
+class ReviewerNarrative(BaseModel):
+    """Fixed layout of the reviewer notes. The model fills the text; code does the layout."""
+    headline: Claim
+    risk_drivers: list[Claim] = Field(default_factory=list)
+    confidence_reading: Claim
+    routing_explanation: Claim
+    suggested_checks: list[Claim] = Field(default_factory=list)
+    similar_cases: list[Claim] = Field(default_factory=list)
+
+
+class ReviewerNotes(BaseModel):
+    """The narrative as stored with the case, with what an auditor needs to replay it."""
+    source: str                                  # "LLM" | "BASELINE"
+    narrative: ReviewerNarrative
+    model: Optional[str] = None
+    prompt_version: str = ""
+    knowledge_version: Optional[str] = None
+    knowledge_ids: list[str] = Field(default_factory=list)   # curated documents retrieved
+    case_ids: list[str] = Field(default_factory=list)        # past decided cases retrieved
+    citations: dict[str, str] = Field(default_factory=dict)  # citation id -> readable label
+    fallback_reason: Optional[str] = None        # why the template was used instead of the LLM
+    seconds: Optional[float] = None
+    generated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# --------------------------------------------------------------------------- #
 # Node 4 — synthesis
 # --------------------------------------------------------------------------- #
 class RiskReport(BaseModel):
@@ -257,6 +349,13 @@ class RiskReport(BaseModel):
     # that future screenings can detect recurrence of the same entity/amount.
     transaction_fingerprints: list[TxnFingerprint] = Field(default_factory=list)
 
+    # Plain-language breakdown of the two scores and the routing (deterministic, built
+    # right after Node 4). Optional so reports stored before it existed still validate.
+    explanation: Optional[ScoreExplanation] = None
+    # Advisory narrative from the optional LLM reviewer (off by default). It explains the
+    # scores above; it never sets or changes them.
+    reviewer_notes: Optional[ReviewerNotes] = None
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -288,6 +387,24 @@ class CreditRecord(BaseModel):
     approved_amount: Optional[float] = None     # amount actually approved (may differ from requested)
     conditions: Optional[str] = None            # covenants / conditions attached to an approval
     decided_at: Optional[datetime] = None
+
+
+class DecidedCase(BaseModel):
+    """A past case a human reviewer finally decided, with the reviewer's own reasoning.
+
+    Read-only view built by ``CaseStore.recall_decided_cases`` for retrieval. Only
+    APPROVED and REJECTED cases appear here; pending and needs-info cases never do.
+    """
+    case_id: str
+    decision: str                                   # "APPROVED" | "REJECTED"
+    account_holder: Optional[str] = None
+    uen: Optional[str] = None
+    risk_score: int = 0
+    finding_codes: list[str] = Field(default_factory=list)
+    fingerprint_keys: list[str] = Field(default_factory=list)
+    reason: Optional[str] = None                    # as typed by the reviewer (HTML-escaped on entry)
+    feedback: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
 
 
 class Case(BaseModel):

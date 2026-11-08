@@ -35,6 +35,7 @@ from .nodes import (
     security,
     visual_forensics,
 )
+from .reviewer import breakdown
 from .store import CaseStore
 
 _log = logging.getLogger(__name__)
@@ -47,6 +48,8 @@ def run_pipeline(
     txn_model=None,
     statement_model=None,
     gnn_scores=None,
+    explainer=None,
+    explainer_store: Optional[CaseStore] = None,
 ) -> RiskReport:
     """Run one statement through the full pipeline and return the risk report.
 
@@ -66,6 +69,14 @@ def run_pipeline(
     for an elevated account. Like every other node it only ADDS evidence and never
     auto-rejects. When ``None`` (e.g. the store file is absent), the pipeline
     behaves exactly as today.
+
+    ``explainer`` is the optional LLM reviewer (``fraud_detect.reviewer.explainer``). When
+    supplied it runs AFTER the scores and routing are final and only attaches an advisory
+    narrative to ``report.reviewer_notes``; it can never change a score or a routing, and
+    any failure leaves the report as it would have been without it. ``explainer_store`` is
+    where it looks up past human-decided cases (defaults to ``store``). It is separate from
+    ``store`` on purpose: giving the explainer a store must not switch on Node 5 or the
+    learned baselines of Node 3.
     """
     # Node 1 — ingestion: extract the (untrusted) document text, metadata, etc.
     ing = ingestion.ingest(pdf_path)
@@ -115,12 +126,24 @@ def run_pipeline(
     # Node 4 — risk synthesis
     report = risk_synthesis.synthesize(ing, reports)
 
+    # Plain-language breakdown of the two scores and the routing. Deterministic, costs
+    # nothing, checked against Node 4's own numbers, and never able to fail a screening.
+    report.explanation = breakdown.safe_explain_scores(ing, report)
+
     # Always attach fingerprints of this statement's suspicious transactions so
     # the report can be persisted and recalled by future screenings, whether or
     # not a store was passed to this run.
     report.transaction_fingerprints = memory.build_fingerprints(
         ing, detection_findings
     )
+
+    # Optional LLM reviewer (off unless an explainer is passed). Advisory text only.
+    if explainer is not None:
+        try:
+            report.reviewer_notes = explainer.explain(
+                report, store=explainer_store if explainer_store is not None else store)
+        except Exception:  # noqa: BLE001 - the notes are an optional extra
+            _log.warning("reviewer notes unavailable", exc_info=True)
 
     return report
 

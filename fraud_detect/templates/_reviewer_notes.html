@@ -1,0 +1,69 @@
+{# Advisory notes explaining the scores. Expects `r` (the RiskReport). Renders nothing when
+   the optional LLM reviewer is off. All text is auto-escaped. #}
+{% set rn = r.reviewer_notes %}
+{% if rn %}
+{% macro claim(c) -%}
+  {{ c.text }}
+  {%- set seen = namespace(labels=[]) -%}
+  {%- for cid in c.cites -%}
+    {%- set label = rn.citations.get(cid, cid) -%}
+    {%- if label not in seen.labels -%}
+      {%- set seen.labels = seen.labels + [label] %} <span class="chip" title="{{ cid }}">{{ label }}</span>
+    {%- endif -%}
+  {%- endfor -%}
+{%- endmacro %}
+<div class="panel" id="reviewer-notes">
+  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+    <h3 style="margin:0">Reviewer notes</h3>
+    {% if rn.source == "LLM" %}
+      <span class="pill tag-ai">AI-generated · advisory</span>
+    {% else %}
+      <span class="pill tag-tpl">Template text · no AI used</span>
+    {% endif %}
+  </div>
+  <p class="muted" style="margin:6px 0 12px; font-size:13px">
+    These notes explain the scores above. They never change a score or a routing and they do not
+    decide the case. Each statement lists the evidence it rests on.
+    {% if rn.source != "LLM" and rn.fallback_reason %}<br>AI text not used: {{ rn.fallback_reason }}.{% endif %}
+  </p>
+
+  <p style="margin:0 0 10px"><b>{{ claim(rn.narrative.headline) }}</b></p>
+
+  {% if rn.narrative.risk_drivers %}
+  <h4 style="margin:12px 0 4px">What drives the risk score</h4>
+  <ul style="margin:0; padding-left:20px">
+    {% for c in rn.narrative.risk_drivers %}<li style="margin:3px 0">{{ claim(c) }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <h4 style="margin:12px 0 4px">Confidence</h4>
+  <p style="margin:0">{{ claim(rn.narrative.confidence_reading) }}</p>
+  {% if r.explanation and r.explanation.confidence_meaning %}
+  <p style="margin:6px 0 0"><b>What it means:</b> {{ r.explanation.confidence_meaning }}</p>
+  {% endif %}
+
+  <h4 style="margin:12px 0 4px">Routing</h4>
+  <p style="margin:0">{{ claim(rn.narrative.routing_explanation) }}</p>
+
+  {% if rn.narrative.suggested_checks %}
+  <h4 style="margin:12px 0 4px">Suggested checks</h4>
+  <ul style="margin:0; padding-left:20px">
+    {% for c in rn.narrative.suggested_checks %}<li style="margin:3px 0">{{ claim(c) }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if rn.narrative.similar_cases %}
+  <h4 style="margin:12px 0 4px">Similar past cases decided by a person</h4>
+  <ul style="margin:0; padding-left:20px">
+    {% for c in rn.narrative.similar_cases %}<li style="margin:3px 0">{{ claim(c) }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <p class="muted" style="margin:14px 0 0; font-size:11px">
+    Source: {{ rn.source }}{% if rn.model %} · model {{ rn.model }}{% endif %} · prompt {{ rn.prompt_version }}
+    {% if rn.knowledge_version %} · knowledge {{ rn.knowledge_version }}{% endif %}
+    {% if rn.knowledge_ids %} · documents: {{ rn.knowledge_ids | join(", ") }}{% endif %}
+    {% if rn.case_ids %} · past cases: {{ rn.case_ids | join(", ") }}{% endif %}
+  </p>
+</div>
+{% endif %}

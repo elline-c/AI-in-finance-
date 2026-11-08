@@ -1,0 +1,260 @@
+{
+  "DQ_DIRECTION_UNCERTAIN": {
+    "title": "Credit or debit direction uncertain",
+    "meaning": "The parser could not tell, for a row, whether the amount is a credit or a debit.",
+    "why": "A wrong direction distorts the balance and deposit checks, so the system trusts its reading less.",
+    "confirm": "Open the page and compare the row with the money in and money out columns and with the running balance.",
+    "false_alarms": "Statements that print amounts without a column or a sign."
+  },
+  "DQ_LAYOUT_UNRECOGNISED": {
+    "title": "Statement layout not recognised",
+    "meaning": "The page layout did not match a known statement layout, or reading the page failed.",
+    "why": "Rows may be missing or misread, which weakens every later check.",
+    "confirm": "Open the PDF and check whether the page is an ordinary bank statement table. If it is a scan or photo, ask for the bank's original digital statement.",
+    "false_alarms": "A new bank layout the parser has not seen before."
+  },
+  "DQ_MISSING_HOLDER": {
+    "title": "Account holder missing",
+    "meaning": "The statement header did not yield the account holder name.",
+    "why": "The name cannot be compared with the company registry.",
+    "confirm": "Look for the account holder on the first page of the PDF. If it is truly absent, ask for a complete statement."
+  },
+  "DQ_MISSING_OPENING": {
+    "title": "Opening balance missing",
+    "meaning": "The statement header did not yield an opening balance.",
+    "why": "The running balance cannot be reconciled from the start.",
+    "confirm": "Look for the opening balance on the first page, or compare with the previous month's closing balance."
+  },
+  "DQ_MISSING_PERIOD": {
+    "title": "Statement period missing",
+    "meaning": "The statement header did not yield a statement period.",
+    "why": "Coverage and gap checks cannot run without dates.",
+    "confirm": "Look for the statement period on the first page of the PDF, or ask for a complete statement."
+  },
+  "DQ_MISSING_UEN": {
+    "title": "UEN missing",
+    "meaning": "The statement header did not yield a company UEN.",
+    "why": "The company registry check cannot run.",
+    "confirm": "Look for the UEN on the first page of the PDF and check it on the official registry by hand."
+  },
+  "DQ_NO_TEXT": {
+    "title": "No extractable text",
+    "meaning": "No text could be taken from the PDF. It may be an image or an empty file.",
+    "why": "Nothing can be checked, so every other result is weak.",
+    "confirm": "Open the PDF. If it is a scan or photo, ask for the bank's original digital statement."
+  },
+  "DQ_NO_TXNS": {
+    "title": "No transactions parsed",
+    "meaning": "No transaction rows could be read from the statement.",
+    "why": "There is little to base any judgement on, so confidence drops sharply.",
+    "confirm": "Check whether the PDF contains a transaction table and ask for the full statement if it does not."
+  },
+  "DQ_PARSE_INCONSISTENT": {
+    "title": "Printed total differs from parsed rows",
+    "meaning": "Every running balance reconciles row by row, but a printed section total differs from the sum of the parsed rows.",
+    "why": "This points to a reading mistake by the system more than to document fraud, so it lowers confidence only a little.",
+    "confirm": "Compare the printed totals with the rows on the same page."
+  },
+  "DQ_REGISTRY_UNAVAILABLE": {
+    "title": "Company registry could not be checked",
+    "meaning": "The company registry could not be reached or did not answer, for example because of a network problem.",
+    "why": "This says nothing about the company. The registry check was skipped.",
+    "confirm": "Screen the statement again later, or check the UEN on the official registry by hand."
+  },
+  "DQ_RULE_SKIPPED": {
+    "title": "A fabrication check was skipped",
+    "meaning": "One of the invoice or turnover checks could not run, for example because the data it needs is missing.",
+    "why": "That area was not checked by the system.",
+    "confirm": "Review the invoice references and the turnover pattern by hand."
+  },
+  "DQ_UNREADABLE_ROW": {
+    "title": "Unreadable transaction row",
+    "meaning": "A transaction row could not be read.",
+    "why": "The row is missing from the checks, which can hide a problem.",
+    "confirm": "Open the page, read the row, and check that the running balance still adds up around it."
+  },
+  "FL_BALANCE_BREAK": {
+    "title": "Running balance does not reconcile",
+    "meaning": "The printed running balance is not the previous balance plus the row amount.",
+    "why": "This is a classic sign that an amount or a balance was edited.",
+    "confirm": "Recalculate the balance around the row, compare with the bank's own copy of the statement, and look at the font of the figures on that row.",
+    "false_alarms": "A row the parser read in the wrong direction (see DQ_DIRECTION_UNCERTAIN)."
+  },
+  "FL_CLOSING_MISMATCH": {
+    "title": "Closing balance disagrees with last row",
+    "meaning": "The printed closing balance differs from the balance on the last transaction row.",
+    "why": "Rows may have been added or removed after the balance was printed.",
+    "confirm": "Compare the closing balance with the last row and with the next month's opening balance."
+  },
+  "FL_DUP_INVOICE_REF": {
+    "title": "Invoice reference paid more than once",
+    "meaning": "The same invoice reference appears in more than one incoming payment.",
+    "why": "Repeated or invented credits can inflate turnover.",
+    "confirm": "Ask for the invoice and the payment advice, and check whether the payments are genuine instalments.",
+    "false_alarms": "Instalments of one invoice, or a payer who quotes one reference on several invoices."
+  },
+  "FL_INVOICE_SEQUENCE_BREAK": {
+    "title": "Invoice numbers out of date order",
+    "meaning": "Invoice numbers in the payments do not rise with the dates.",
+    "why": "Numbers may have been invented. This is a weak signal.",
+    "confirm": "Ask for the applicant's invoice register and compare the numbers.",
+    "false_alarms": "Customers who pay older invoices late."
+  },
+  "FL_MONTH_DUPLICATE": {
+    "title": "Duplicate or overlapping month",
+    "meaning": "A month appears more than once, or two statement sections overlap.",
+    "why": "The same month may have been submitted twice or relabelled to cover a missing month.",
+    "confirm": "Compare the month headers and page ranges of each section and check the balances at the joins."
+  },
+  "FL_MONTH_MISSING": {
+    "title": "Missing month",
+    "meaning": "A month inside the covered range has no statement.",
+    "why": "The missing month may hide activity.",
+    "confirm": "Ask the applicant for the missing month, ideally straight from the bank."
+  },
+  "FL_MONTH_OUT_OF_ORDER": {
+    "title": "Months out of order",
+    "meaning": "Statement months are not in chronological order.",
+    "why": "Pages may have been reordered or stitched together from different documents.",
+    "confirm": "Check the page order and the balances where one month meets the next."
+  },
+  "FL_PERIOD_GAP": {
+    "title": "Unexplained gap in the statement period",
+    "meaning": "A stretch with no transactions is longer than this company's normal pace.",
+    "why": "Pages or activity may have been removed.",
+    "confirm": "Check the page numbers and balances on either side of the gap and ask the applicant to explain the quiet period.",
+    "false_alarms": "Seasonal businesses."
+  },
+  "FL_PERIOD_LENGTH": {
+    "title": "Statement period outside the 6 to 12 month window",
+    "meaning": "The statements do not cover between 6 and 12 months, which is the requirement for a corporate loan.",
+    "why": "The application does not meet the document requirement as submitted.",
+    "confirm": "Check the first and last dates of the statement and ask for the right number of months."
+  },
+  "FL_RAPID_PASS_THROUGH": {
+    "title": "Large credits leave the account again within days",
+    "meaning": "Large incoming amounts are followed by similar outgoing amounts within days.",
+    "why": "Money that only passes through an account can point to circular funds or to turnover that is not real.",
+    "confirm": "Trace the counterparties on both sides and ask for the contract or invoice behind the transfers.",
+    "false_alarms": "Trading businesses that pay suppliers as soon as customers pay them."
+  },
+  "FL_STRUCTURING": {
+    "title": "Possible structuring below the reporting threshold",
+    "meaning": "Several deposits sit just under the reporting threshold.",
+    "why": "Splitting cash to stay below a threshold is a known way to avoid reporting.",
+    "confirm": "Ask who made the deposits and why they were split, and compare with the company's usual way of being paid.",
+    "false_alarms": "Regular takings that happen to be small."
+  },
+  "FL_SUDDEN_DEPOSIT": {
+    "title": "Deposit unusually large for this company",
+    "meaning": "A single credit is far larger than this company's normal credits.",
+    "why": "It may be an invented or borrowed amount that makes the account look stronger.",
+    "confirm": "Ask for the invoice or contract behind it and check who the payer is.",
+    "false_alarms": "A genuine large contract payment."
+  },
+  "FL_TURNOVER_COST_MISMATCH": {
+    "title": "Turnover jumps while fixed costs stay flat",
+    "meaning": "Monthly credits rise sharply while payroll and rent-type costs stay the same.",
+    "why": "Turnover may be inflated.",
+    "confirm": "Compare the turnover with other records such as invoices and tax filings."
+  },
+  "FL_UEN_NAME_MISMATCH": {
+    "title": "Account holder does not match the registry",
+    "meaning": "The account holder printed on the statement differs from the registered name for the UEN.",
+    "why": "The statement may belong to a different company.",
+    "confirm": "Compare the printed name and UEN with the official registry entry and ask the applicant to explain any name change.",
+    "false_alarms": "Trading names and recent name changes."
+  },
+  "FL_UEN_NOT_FOUND": {
+    "title": "UEN not found in the registry",
+    "meaning": "The UEN is not in the registry that was checked.",
+    "why": "The company may not exist under that number, or the number may be mistyped.",
+    "confirm": "Check the UEN on the official registry by hand."
+  },
+  "FL_UNVERIFIED_COUNTERPARTY": {
+    "title": "Large inflow from a payer not seen before",
+    "meaning": "A large credit came from a payer that does not appear in the company's usual counterparties.",
+    "why": "Funds from unknown or shell-like payers can make an account look busier than it is.",
+    "confirm": "Identify the payer and the reason for the payment, and check whether payer and applicant are related."
+  },
+  "MEM_HIGH_FREQUENCY_PATTERN": {
+    "title": "Counterparty and amount recur across many prior cases",
+    "meaning": "The same counterparty and amount band appear in many earlier cases that people decided.",
+    "why": "A party that keeps appearing across applications is worth a closer look.",
+    "confirm": "Read the cited earlier cases and see whether the same party keeps appearing."
+  },
+  "MEM_RECURRING_KNOWN_BAD": {
+    "title": "Transaction matches one in a rejected case",
+    "meaning": "A suspicious transaction matches one from an earlier case that a human reviewer rejected.",
+    "why": "It is a repeat of a pattern already judged bad.",
+    "confirm": "Read the cited earlier case and the reviewer's reason before deciding."
+  },
+  "MEM_SIMILAR_PASSED_BEFORE": {
+    "title": "Similar transaction passed in an earlier case",
+    "meaning": "A similar transaction was cleared by a human reviewer in an earlier case.",
+    "why": "A route that passed once may be reused on purpose.",
+    "confirm": "Read the cited earlier case and check what was explained or different then."
+  },
+  "ML_STATEMENT_FORGERY_LIKELIHOOD": {
+    "title": "Model flags elevated statement-forgery likelihood",
+    "meaning": "A trained model scores the whole document as more likely to be tampered, from file-level features such as fonts, editor traces and balance reconciliation.",
+    "why": "It is a second opinion on the document as a whole.",
+    "confirm": "Compare with the rule-based findings for the same document. The model is a prompt to look, not proof.",
+    "false_alarms": "Unusual but genuine documents."
+  },
+  "ML_TXN_FRAUD_LIKELIHOOD": {
+    "title": "Model flags elevated transaction-fraud likelihood",
+    "meaning": "A trained model scores a transaction as more likely to be fraudulent.",
+    "why": "It may catch patterns the rules do not, but it can also mistake ordinary business amounts for fraud.",
+    "confirm": "Look at the flagged row and its counterparty. The score is a prompt to look, not proof."
+  },
+  "ML_TXN_GNN_RISK": {
+    "title": "Graph model flags elevated account-level risk",
+    "meaning": "A graph model marks the account as risky from patterns across accounts, such as round-tripping or many-to-one and one-to-many flows.",
+    "why": "It sees relationships that a single row cannot show.",
+    "confirm": "Review the account's main counterparties and money flows."
+  },
+  "SEC_EMBEDDED_INSTRUCTION": {
+    "title": "Embedded instruction detected in document text",
+    "meaning": "Text inside the document tries to give orders to the screening system. It is never obeyed.",
+    "why": "A genuine bank statement does not contain such text, so the attempt itself is strong evidence of tampering.",
+    "confirm": "Open the page named in the finding, look at the text and at how it was hidden, and treat the whole document as suspect."
+  },
+  "VF_CREATION_BEFORE_PERIOD": {
+    "title": "Document created before the statement period",
+    "meaning": "The file's creation date is earlier than the period the statement covers.",
+    "why": "A genuine statement cannot exist before the period it reports has happened.",
+    "confirm": "Compare the creation date in the document properties with the statement period and ask the bank for the original."
+  },
+  "VF_CURRENCY_MIX": {
+    "title": "Inconsistent currency notation",
+    "meaning": "The amounts use more than one currency notation.",
+    "why": "Rows may have been spliced in from another document.",
+    "confirm": "Look down the amounts column for different symbols or formats."
+  },
+  "VF_DATE_FORMAT_MIX": {
+    "title": "Inconsistent date formats",
+    "meaning": "More than one date format is used inside one statement.",
+    "why": "Rows may have been edited or spliced in.",
+    "confirm": "Look down the date column for rows that are written differently from the rest."
+  },
+  "VF_EDIT_SOFTWARE": {
+    "title": "Editing software trace in metadata",
+    "meaning": "The document properties name image or PDF editing software.",
+    "why": "Banks produce statements with their own systems, not with editing tools.",
+    "confirm": "Check the producer and creator in the document properties and ask for the original from the bank.",
+    "false_alarms": "A scan or print step done by the applicant."
+  },
+  "VF_FONT_MISMATCH": {
+    "title": "Localised font inconsistency",
+    "meaning": "A small patch of text uses a different font from the rest of the page.",
+    "why": "This is a classic sign of overwritten numbers.",
+    "confirm": "Zoom in on the page and compare the font of the flagged figures with the figures around them."
+  },
+  "VF_MODIFIED_AFTER_CREATION": {
+    "title": "File changed after it was created",
+    "meaning": "The file was modified after creation by something other than a print or export tool.",
+    "why": "A statement downloaded from a bank is normally not edited afterwards.",
+    "confirm": "Compare the creation and modification dates and check which tool made the last change."
+  }
+}

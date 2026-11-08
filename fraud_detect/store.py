@@ -22,6 +22,7 @@ from .models import (
     Case,
     CreditDecision,
     CreditRecord,
+    DecidedCase,
     ReviewDecision,
     ReviewRecord,
     RiskReport,
@@ -154,6 +155,18 @@ class CaseStore:
             self._audit.append(
                 case_id=case.case_id, event="SCREENED", detail=detail, ts=ts,
             )
+            notes = report.reviewer_notes
+            if notes is not None:
+                # What produced the explanation shown to the reviewer, so it can be replayed.
+                x_detail = (
+                    f"source={notes.source}; model={notes.model or '-'}; "
+                    f"prompt={notes.prompt_version}; "
+                    f"knowledge={notes.knowledge_version or '-'}:{','.join(notes.knowledge_ids) or '-'}; "
+                    f"cases={','.join(notes.case_ids) or '-'}"
+                    + (f"; fallback={notes.fallback_reason}" if notes.fallback_reason else ""))
+                case.audit_log.append({"ts": ts, "event": "EXPLAINER", "detail": x_detail})
+                self._audit.append(case_id=case.case_id, event="EXPLAINER",
+                                   detail=x_detail, ts=ts)
             data[case.case_id] = json.loads(case.model_dump_json())
             self._write(data)
             return case
@@ -203,6 +216,48 @@ class CaseStore:
                     "fingerprint": fp,
                 })
         return memory
+
+    def recall_decided_cases(
+        self, exclude_case_id: Optional[str] = None, *,
+        require_chain: Optional[bool] = None,
+    ) -> list[DecidedCase]:
+        """Cases a human reviewer finally decided, with the reviewer's reason and feedback.
+
+        For retrieval by the reviewer layer. A case counts only when:
+          * its decision is APPROVED or REJECTED (PENDING and NEEDS_INFO never count, so
+            an unverified AI suspicion or an open question cannot become a "precedent");
+          * (``require_chain``, on by default, same switch as ``trailing_history``) the
+            audit chain is sound and its LAST human event for the case matches that
+            decision, so editing cases.json alone cannot plant a precedent or a reason.
+
+        The reason is returned as stored. The review form HTML-escapes it on entry, so
+        callers that feed it to anything but HTML should unescape it first.
+        """
+        if require_chain is None:
+            require_chain = os.environ.get(_ENV_REQUIRE_CHAIN, "1") != "0"
+        if require_chain and not self._chain_is_sound():
+            return []
+        out: list[DecidedCase] = []
+        for case in self.list_cases():
+            if exclude_case_id and case.case_id == exclude_case_id:
+                continue
+            decision = case.review.decision
+            if decision not in (ReviewDecision.APPROVED, ReviewDecision.REJECTED):
+                continue
+            if require_chain:
+                human = [e.event for e in self._audit.events_for(case.case_id)
+                         if e.event.startswith("HUMAN_")]
+                if not human or human[-1] != f"HUMAN_{decision.value}":
+                    continue
+            rep = case.report
+            out.append(DecidedCase(
+                case_id=case.case_id, decision=decision.value,
+                account_holder=rep.account_holder, uen=rep.uen, risk_score=rep.risk_score,
+                finding_codes=sorted({f.code for f in rep.findings}),
+                fingerprint_keys=sorted({fp.key() for fp in rep.transaction_fingerprints}),
+                reason=case.review.reason, feedback=case.review.feedback_for_training,
+                reviewed_at=case.review.reviewed_at))
+        return out
 
     # ---- trailing history (Node 3 gap learning) ------------------------ #
     def _chain_is_sound(self) -> bool:
