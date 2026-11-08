@@ -36,6 +36,218 @@
   <div class="kv"><span class="hint">Transactions on statement</span><span>{{ summary.txn_count }}</span></div>
 </div>
 
+<!-- Cash-flow metrics (derived from the parsed statement, not officer-entered) -->
+<div class="card">
+  <h2 style="margin-top:0">Cash-flow metrics <span class="hint">derived from the statement{% if metrics.month_count %} · {{ metrics.month_count }} month(s){% endif %}</span></h2>
+  <div class="metrics">
+    <div class="metric"><div class="k">Avg monthly inflow</div>
+      <div class="v pos">{% if metrics.avg_monthly_inflow is not none %}{{ "{:,.0f}".format(metrics.avg_monthly_inflow) }}{% else %}—{% endif %}</div></div>
+    <div class="metric"><div class="k">Avg monthly outflow</div>
+      <div class="v neg">{% if metrics.avg_monthly_outflow is not none %}{{ "{:,.0f}".format(metrics.avg_monthly_outflow) }}{% else %}—{% endif %}</div></div>
+    <div class="metric"><div class="k">Net monthly cash flow</div>
+      <div class="v {% if metrics.net_monthly_cashflow is not none and metrics.net_monthly_cashflow < 0 %}neg{% elif metrics.net_monthly_cashflow is not none %}pos{% endif %}">{% if metrics.net_monthly_cashflow is not none %}{{ "{:+,.0f}".format(metrics.net_monthly_cashflow) }}{% else %}—{% endif %}</div></div>
+    <div class="metric"><div class="k">Lowest balance</div>
+      <div class="v {% if metrics.lowest_balance is not none and metrics.lowest_balance < 0 %}neg{% endif %}">{% if metrics.lowest_balance is not none %}{{ "{:,.0f}".format(metrics.lowest_balance) }}{% else %}—{% endif %}</div></div>
+  </div>
+  <div class="kv" style="margin-top:14px"><span class="hint">Liquidity stress (balance went negative)</span>
+    <span>{% if metrics.went_negative %}<span class="pill warn">Yes — balance dipped below zero</span>{% else %}<span class="pill ok">No</span>{% endif %}</span></div>
+  <div class="kv"><span class="hint">Inflow volatility</span>
+    <span><b>{{ metrics.volatility_band }}</b></span></div>
+  <div class="note" style="margin-top:6px">{{ metrics.volatility_rationale }}</div>
+  <div class="kv" style="margin-top:10px"><span class="hint">Large transactions (≥ {{ "{:,.0f}".format(metrics.large_txn_threshold) }})</span>
+    <span>{{ metrics.large_txn_count }}</span></div>
+</div>
+
+<!-- Notable transactions / cash-flow highlights -->
+<style>
+  tr.flag td { background:var(--warn-bg); }
+  .flag-tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px;
+              background:var(--warn-bg); color:var(--warn); margin-left:6px; }
+  .mini-h { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase;
+            letter-spacing:.04em; margin:18px 0 6px; }
+  .mini-h:first-of-type { margin-top:0; }
+</style>
+<div class="card">
+  <h2 style="margin-top:0">Notable transactions &amp; cash-flow highlights</h2>
+  <p class="hint" style="margin-top:0">The material movements an officer eyeballs before lending.
+  Rows the fraud screening flagged are marked so the risk context sits beside the lending picture.</p>
+
+  <div class="mini-h">Largest inflows</div>
+  <table>
+    <thead><tr><th>Date</th><th>Counterparty</th><th class="num">Amount</th><th>Why</th></tr></thead>
+    <tbody>
+      {% for h in highlights.largest_inflows %}
+      <tr>
+        <td class="hint">{{ h.date or "—" }}</td>
+        <td>{{ h.counterparty }}</td>
+        <td class="num pos">{% if h.amount is not none %}{{ "{:+,.2f}".format(h.amount) }}{% else %}—{% endif %}</td>
+        <td class="hint">{{ h.why }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="hint">—</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="mini-h">Largest outflows</div>
+  <table>
+    <thead><tr><th>Date</th><th>Counterparty</th><th class="num">Amount</th><th>Why</th></tr></thead>
+    <tbody>
+      {% for h in highlights.largest_outflows %}
+      <tr>
+        <td class="hint">{{ h.date or "—" }}</td>
+        <td>{{ h.counterparty }}</td>
+        <td class="num neg">{% if h.amount is not none %}{{ "{:+,.2f}".format(h.amount) }}{% else %}—{% endif %}</td>
+        <td class="hint">{{ h.why }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="hint">—</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="mini-h">Recurring counterparties</div>
+  <table>
+    <thead><tr><th>Counterparty</th><th class="num">Times seen</th><th class="num">Net amount</th><th>Why</th></tr></thead>
+    <tbody>
+      {% for h in highlights.recurring_counterparties %}
+      <tr>
+        <td>{{ h.counterparty }}</td>
+        <td class="num">{{ h.count }}</td>
+        <td class="num">{% if h.total_amount is not none %}{{ "{:+,.2f}".format(h.total_amount) }}{% else %}—{% endif %}</td>
+        <td class="hint">{{ h.why }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="hint">—</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="mini-h">Notable / unusual items</div>
+  <table>
+    <thead><tr><th>Date</th><th>Counterparty</th><th class="num">Amount</th><th>Why</th></tr></thead>
+    <tbody>
+      {% for h in highlights.notable_items %}
+      <tr{% if h.flagged %} class="flag"{% endif %}>
+        <td class="hint">{{ h.date or "—" }}</td>
+        <td>{{ h.counterparty }}{% if h.flagged %}<span class="flag-tag">⚠ screening flag</span>{% endif %}</td>
+        <td class="num">{% if h.amount is not none %}{{ "{:+,.2f}".format(h.amount) }}{% else %}—{% endif %}</td>
+        <td class="hint">{{ h.why }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="hint">— no items above the account's own baseline or round-number / flag thresholds.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Key lending ratios (indicative; blend officer memo + statement cash flow) -->
+<div class="card">
+  <h2 style="margin-top:0">Key lending ratios</h2>
+  <div class="note" style="margin-bottom:14px">
+    <strong>Indicative only.</strong> These ratios are approximations computed from the bank
+    statement plus the officer-entered credit memo below — <b>not audited financial statements</b>.
+    Each shows its formula and caveat; figures the memo does not yet carry read as “— enter X to compute”.
+  </div>
+  {% set ratio_labels = {
+      "current_ratio": "Current ratio",
+      "quick_ratio": "Quick (acid-test) ratio",
+      "debt_to_equity": "Debt-to-equity (gearing)",
+      "dscr": "DSCR (debt-service coverage)",
+      "debt_to_revenue": "Debt-to-revenue",
+      "debt_to_assets": "Debt-to-assets",
+      "net_profit_margin": "Net profit margin",
+      "debt_service_burden": "Debt-service burden"
+  } %}
+  <table>
+    <thead><tr><th>Ratio</th><th class="num">Value</th><th>Reading</th></tr></thead>
+    <tbody>
+      {% for key, label in ratio_labels.items() %}
+      {% set rr = ratios.get(key) %}
+      {% if rr %}
+      <tr>
+        <td><b>{{ label }}</b></td>
+        <td class="num">{% if rr.value is not none %}{{ "{:.2f}".format(rr.value) }}{% else %}<span class="hint">— enter inputs</span>{% endif %}</td>
+        <td>
+          {{ rr.interpretation }}
+          {% if key == "dscr" and rr.concern %}<br><span class="pill warn">⚠ {{ rr.concern_note }}</span>{% endif %}
+          <div class="hint" style="margin-top:4px"><b>Formula:</b> {{ rr.formula }}</div>
+          <div class="hint"><b>Caveat:</b> {{ rr.caveat }}</div>
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="kv" style="margin-top:12px"><span class="hint">Liquidity signal — balance went negative</span>
+    <span>{% if metrics.went_negative %}<span class="pill warn">Yes</span>{% else %}<span class="pill ok">No</span>{% endif %}</span></div>
+  <div class="kv"><span class="hint">Liquidity signal — inflow volatility</span><span><b>{{ metrics.volatility_band }}</b></span></div>
+</div>
+
+<!-- Credit memo (OFFICER-ENTERED — not parsed from the statement) -->
+<div class="card">
+  <h2 style="margin-top:0">Credit memo <span class="hint">officer-entered</span></h2>
+  <div class="note" style="margin-bottom:14px">
+    <strong>Officer-entered — not parsed from the statement.</strong> The statement gives cash flow;
+    these balance-sheet / P&amp;L figures are reported by the applicant and typed by you to drive the
+    lending ratios above. Save to recompute. You can update them at any time.
+  </div>
+  {% if memo and memo.updated_by %}
+  <div class="kv"><span class="hint">Last updated by</span><span>{{ memo.updated_by }}</span></div>
+  {% endif %}
+  {% if memo and memo.updated_at %}
+  <div class="kv"><span class="hint">Last updated at (UTC)</span><span>{{ memo.updated_at }}</span></div>
+  {% endif %}
+  <form action="/application/{{ case.case_id }}/memo" method="post">
+    <label>Loan officer <span class="hint">(recorded on the memo)</span></label>
+    <input name="officer" placeholder="e.g. Daniel Lim, Commercial Lending"
+           value="{{ memo.updated_by if memo and memo.updated_by else '' }}">
+    <div class="row">
+      <div><label>Accounts receivable</label>
+        <input name="accounts_receivable" placeholder="e.g. 120000"
+               value="{{ memo.accounts_receivable if memo and memo.accounts_receivable is not none else '' }}"></div>
+      <div><label>Accounts payable</label>
+        <input name="accounts_payable" placeholder="e.g. 80000"
+               value="{{ memo.accounts_payable if memo and memo.accounts_payable is not none else '' }}"></div>
+    </div>
+    <div class="row">
+      <div><label>Inventory</label>
+        <input name="inventory" placeholder="e.g. 50000"
+               value="{{ memo.inventory if memo and memo.inventory is not none else '' }}"></div>
+      <div><label>Total debt</label>
+        <input name="total_debt" placeholder="e.g. 300000"
+               value="{{ memo.total_debt if memo and memo.total_debt is not none else '' }}"></div>
+    </div>
+    <div class="row">
+      <div><label>Monthly debt repayments</label>
+        <input name="monthly_debt_repayments" placeholder="e.g. 9000"
+               value="{{ memo.monthly_debt_repayments if memo and memo.monthly_debt_repayments is not none else '' }}"></div>
+      <div><label>Reported annual revenue</label>
+        <input name="reported_annual_revenue" placeholder="e.g. 1200000"
+               value="{{ memo.reported_annual_revenue if memo and memo.reported_annual_revenue is not none else '' }}"></div>
+    </div>
+    <div class="row">
+      <div><label>Reported net profit</label>
+        <input name="reported_net_profit" placeholder="e.g. 150000"
+               value="{{ memo.reported_net_profit if memo and memo.reported_net_profit is not none else '' }}"></div>
+      <div><label>Equity</label>
+        <input name="equity" placeholder="e.g. 400000"
+               value="{{ memo.equity if memo and memo.equity is not none else '' }}"></div>
+    </div>
+    <div class="row">
+      <div><label>Collateral value</label>
+        <input name="collateral_value" placeholder="e.g. 250000"
+               value="{{ memo.collateral_value if memo and memo.collateral_value is not none else '' }}"></div>
+      <div><label>Collateral description</label>
+        <input name="collateral_description" placeholder="e.g. Commercial unit, 123 Example Rd"
+               value="{{ memo.collateral_description if memo and memo.collateral_description else '' }}"></div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:10px">
+      <button class="btn" type="submit">Save credit memo</button>
+    </div>
+  </form>
+</div>
+
 {% if case.credit.decision.value == "PENDING" %}
 <!-- Lending decision form -->
 <div class="card">

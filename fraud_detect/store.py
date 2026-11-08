@@ -22,6 +22,7 @@ from .models import (
     ApplicationDetails,
     Case,
     CreditDecision,
+    CreditMemo,
     CreditRecord,
     ReviewDecision,
     ReviewRecord,
@@ -651,6 +652,55 @@ class CaseStore:
                            + (f"; approved_amount={approved_amount}"
                               if approved_amount is not None else "")),
             })
+            data[case_id] = json.loads(case.model_dump_json())
+            self._write(data)
+            return case
+
+    def save_credit_memo(
+        self, case_id: str, memo: CreditMemo, officer: Optional[str] = None,
+    ) -> Optional[Case]:
+        """Persist the officer-entered credit memo (financials for ratios).
+
+        Mirrors record_credit_decision: acquire the lock, read + validate, GUARD
+        with fraud_is_cleared (a non-cleared case cannot receive memo inputs any
+        more than it can receive a lending decision — separation of duties), then
+        stamp ``updated_by`` / ``updated_at`` on the memo, attach it to the
+        case's credit record, and append ONE shared CREDIT_MEMO_SAVED event to
+        BOTH the embedded audit_log mirror AND the hash-chained self._audit. The
+        memo figures are officer-entered, never parsed from the statement.
+
+        Returns None if the case does not exist; raises ValueError if the case's
+        fraud concern is not cleared.
+        """
+        with _LOCK:
+            data = self._read()
+            raw = data.get(case_id)
+            if not raw:
+                return None
+            case = Case.model_validate(raw)
+            if not self.fraud_is_cleared(case):
+                raise ValueError(
+                    "Fraud concern is not cleared; this case cannot receive a "
+                    "credit memo until screening approves it."
+                )
+            now = datetime.utcnow()
+            memo.updated_by = officer
+            memo.updated_at = now
+            if case.credit is None:
+                case.credit = CreditRecord(case_id=case_id)
+            case.credit.memo = memo
+
+            ts = now.isoformat()
+            detail = (f"officer={officer}"
+                      if officer else "officer=(unspecified)")
+            case.audit_log.append({
+                "ts": ts,
+                "event": "CREDIT_MEMO_SAVED",
+                "detail": detail,
+            })
+            self._audit.append(
+                case_id=case_id, event="CREDIT_MEMO_SAVED", detail=detail, ts=ts,
+            )
             data[case_id] = json.loads(case.model_dump_json())
             self._write(data)
             return case
