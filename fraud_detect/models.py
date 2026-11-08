@@ -313,6 +313,34 @@ class ApplicationDetails(BaseModel):
     loan_reason: Optional[str] = None
 
 
+class CreditMemo(BaseModel):
+    """OFFICER-ENTERED credit figures captured for the lending file.
+
+    IMPORTANT: every field here is typed by the loan officer, NOT parsed from the
+    bank statement. The statement gives cash-flow (what actually moved through the
+    account); a loan officer additionally needs balance-sheet / P&L figures the
+    applicant reports (receivables, payables, debt, revenue, equity, collateral)
+    to compute lending ratios. Keeping these on a separate, clearly-labelled model
+    stops them being confused with statement-derived numbers.
+
+    ALL fields are Optional-with-default so (a) old stored cases that never had a
+    memo still validate, and (b) an officer can save a partial memo and the ratio
+    engine simply reports 'need X' for the inputs still missing.
+    """
+    accounts_receivable: Optional[float] = None
+    accounts_payable: Optional[float] = None
+    inventory: Optional[float] = None
+    total_debt: Optional[float] = None
+    monthly_debt_repayments: Optional[float] = None
+    reported_annual_revenue: Optional[float] = None
+    reported_net_profit: Optional[float] = None
+    equity: Optional[float] = None
+    collateral_description: Optional[str] = None
+    collateral_value: Optional[float] = None
+    updated_by: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+
 class CreditRecord(BaseModel):
     """The banker / loan officer's final lending decision on a fraud-cleared case."""
     case_id: str
@@ -323,6 +351,9 @@ class CreditRecord(BaseModel):
     approved_amount: Optional[float] = None     # amount actually approved (may differ from requested)
     conditions: Optional[str] = None            # covenants / conditions attached to an approval
     decided_at: Optional[datetime] = None
+    # Officer-entered financials used for lending ratios (NOT statement-parsed).
+    # Optional-with-default so older stored cases still validate (pydantic v2).
+    memo: Optional[CreditMemo] = None
 
 
 class Case(BaseModel):
