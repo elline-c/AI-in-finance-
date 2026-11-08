@@ -27,13 +27,14 @@ flowchart TD
     N2 --> N5
     N3 --> N5
     STORE[("🗄️ Case store<br/>prior verified cases")] -.optional: store supplied.-> N5["<b>Node 5 — Cross-Case Memory</b><br/>match suspicious rows against<br/>prior human-decided cases"]
+    STORE -.human-approved history.-> N3
 
     %% Everyone's findings flow into synthesis
     SEC --> N4
     N2 --> N4
     N3 --> N4
     N6A --> N4
-    N6B --> N4
+    N6B -->|"scored only if no MEDIUM+<br/>rule finding (else shown in summary)"| N4
     N5 --> N4
 
     N4["<b>Node 4 — Risk Synthesis</b><br/>combine all findings →<br/>risk score + confidence +<br/>routing decision"]
@@ -53,11 +54,23 @@ flowchart TD
     class AUTO,HUMAN outcome;
 ```
 
-**Reading the diagram:** solid arrows are the always-on flow. Nodes 6a/6b are
-wired in (models loaded at startup) and run on every screening, except 6a's
-transaction scoring, which is off by default (`FRAUD_ENABLE_TXN_MODEL=1` turns it
-on). Both stay fail-safe, producing no findings if a model file is missing. The one dotted,
-conditional step left is Node 5, which runs only when a case store is supplied.
+**Reading the diagram:** solid arrows are the always-on flow. Dotted arrows run only
+when `run_pipeline` is given a case store: Node 5 memory and Node 3's learned company
+history. Nodes 6a/6b run when their model files load. 6a's transaction scoring is off by
+default (`FRAUD_ENABLE_TXN_MODEL=1` turns it on). Every optional node is fail-safe: a
+missing model or store means no findings, never a failed screening.
+
+### Which entry point runs which node
+
+| Entry point | Nodes 1–4, Security | Node 3 learned history | Node 5 memory | Node 6a GNN | Node 6a GBM | Node 6b | LLM reviewer |
+|---|---|---|---|---|---|---|---|
+| Analyst app (`webapp.py`) | yes | yes | yes | yes | if `FRAUD_ENABLE_TXN_MODEL=1` | yes | if `FRAUD_ENABLE_LLM_REVIEWER=1` |
+| Customer portal (`customer_app.py`) | yes | yes | yes | yes | if `FRAUD_ENABLE_TXN_MODEL=1` | yes | no |
+| `demo.py` | yes | yes | yes | yes | if `FRAUD_ENABLE_TXN_MODEL=1` | yes | no |
+| `run_pipeline(path)` with no extras (tests, evaluation tools) | yes | no | no | no | no | no | no |
+
+"yes" for the ML columns assumes the model file is present under `models/`. The banker
+app (`banker_app.py`) does not screen; it reads cases the apps above already screened.
 
 ## What each node does (in plain terms)
 
@@ -125,7 +138,9 @@ conditional step left is Node 5, which runs only when a case store is supplied.
   `FRAUD_ENABLE_TXN_MODEL=1` to switch it back on, e.g. after retraining on
   representative statements.
 - **The GNN lookup stays on:** its precomputed scores are loaded at startup (in
-  `webapp.py` / `demo.py`) and checked on every screening.
+  `webapp.py`, `customer_app.py` and `demo.py`) and checked on every screening. The
+  lookup key is the statement's UEN, so it only fires for a UEN present in the
+  precomputed score table.
 - Adds a graph-based signal (GNN) that catches relational money-laundering patterns a
   single row can't reveal — round-tripping, dormant reactivation, mule fan-in/out —
   via a fast lookup of scores precomputed offline.
@@ -145,6 +160,17 @@ conditional step left is Node 5, which runs only when a case store is supplied.
   that (e.g. a long 12-month statement) it abstains rather than guess, and the
   rule-based checks decide. Severity cutoffs (MEDIUM from 0.7, HIGH from 0.9) are
   stored with the model and were set on validation data.
+- **It is not counted twice.** Most of its inputs (balance breaks, editor metadata,
+  modified-after-creation, mixed currency) are the same signals Nodes 2 and 3 test
+  directly. So when any other agent (Security, Nodes 1, 2, 3, 5, 6a) has already raised a
+  MEDIUM or HIGH finding, 6b's finding is held out of scoring: no weight and no
+  corroboration bonus for risk or confidence. The reviewer still sees it, as a "shown but
+  not scored" note in the report summary. When 6b is the only one flagging, it is scored
+  as before, so it can still catch what the rules miss. Routing cannot get weaker: a
+  MEDIUM+ finding elsewhere already sends the case to a human. This happens in
+  `pipeline._split_dependent_ml`, before Node 4, so the hash-pinned Node 4 is unchanged.
+  Example: one balance break scores risk 26 / confidence 63. With 6b echoing it the score
+  used to be 60 / 83; it is now 26 / 63.
 - Still fail-safe: a missing or unreadable model yields no findings.
 - Adds evidence only; never auto-rejects.
 

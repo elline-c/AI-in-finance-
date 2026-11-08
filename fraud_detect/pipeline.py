@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from .models import AgentReport, RiskReport
+from .models import AgentReport, Finding, RiskReport, Severity
 from .nodes import (
     financial_logic,
     ingestion,
@@ -39,6 +39,43 @@ from .reviewer import breakdown
 from .store import CaseStore
 
 _log = logging.getLogger(__name__)
+
+# Node 6b scores features (balance breaks, editor metadata, mixed currency) that Nodes 2
+# and 3 already test directly, so a 6b finding on top of a rule finding is largely the same
+# evidence twice. Node 4 would count it again: its weight, the "two agents agree" risk
+# bonus and the "independent agents corroborate" confidence bonus.
+_ML_STATEMENT_PREFIX = "Node6b"
+_MATERIAL = (Severity.MEDIUM, Severity.HIGH)
+
+
+def _split_dependent_ml(reports: list[AgentReport]) -> tuple[list[AgentReport], list[Finding]]:
+    """Hold Node 6b's findings out of scoring when a rule-based agent already raised a
+    MEDIUM+ finding.
+
+    Returns ``(reports_to_score, held_out_findings)``. When no rule-based agent raised a
+    MEDIUM+ finding, 6b is the only voice and is scored exactly as before. Routing is
+    unaffected: a MEDIUM+ rule finding already sends the case to a human.
+    """
+    ml = [r for r in reports if r.agent.startswith(_ML_STATEMENT_PREFIX)]
+    held = [f for r in ml for f in r.findings]
+    if not held:
+        return reports, []
+    rules_material = any(
+        f.severity in _MATERIAL
+        for r in reports if not r.agent.startswith(_ML_STATEMENT_PREFIX)
+        for f in r.findings
+    )
+    if not rules_material:
+        return reports, []
+    return [r for r in reports if r not in ml], held
+
+
+def _held_out_note(held: list[Finding]) -> str:
+    """Summary line telling the reviewer what Node 6b said and why it was not scored."""
+    parts = "; ".join(f"{f.title} ({f.severity.value}): {f.evidence}" for f in held)
+    return (f" Statement-forgery model (Node 6b), shown but not scored because the "
+            f"rule-based agents already flagged this case and the model reads the same "
+            f"signals: {parts}")
 
 
 def run_pipeline(
@@ -123,8 +160,13 @@ def run_pipeline(
         )
         reports.append(memory_report)
 
+    # Node 6b overlaps with Nodes 2/3; keep it from being counted twice (see helper).
+    reports, shown_only = _split_dependent_ml(reports)
+
     # Node 4 — risk synthesis
     report = risk_synthesis.synthesize(ing, reports)
+    if shown_only:
+        report.summary += _held_out_note(shown_only)
 
     # Plain-language breakdown of the two scores and the routing. Deterministic, costs
     # nothing, checked against Node 4's own numbers, and never able to fail a screening.
