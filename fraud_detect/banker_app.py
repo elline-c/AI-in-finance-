@@ -30,6 +30,18 @@ from fastapi.templating import Jinja2Templates
 
 from .models import Case, CreditDecision, CreditMemo, ReviewDecision, Routing
 from .nodes.cashflow import cashflow_highlights, cashflow_metrics
+from .nodes.loan_sizing import (
+    CUSHION_MAX,
+    CUSHION_MIN,
+    DEFAULT_ANNUAL_RATE,
+    DEFAULT_SIZING_DSCR,
+    DEFAULT_TENOR_YEARS,
+    RATE_MAX,
+    RATE_MIN,
+    TENOR_MAX_YEARS,
+    TENOR_MIN_YEARS,
+    indicative_loan_capacity,
+)
 from .nodes.ratios import lending_ratios
 from .store import CaseStore
 
@@ -73,6 +85,45 @@ def _parse_amount(raw: str) -> float | None:
         return float(cleaned)
     except ValueError:
         return None
+
+
+def _clamp(value: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, value))
+
+
+def _sizing_rate(raw: str | None) -> float:
+    """Parse the officer-supplied annual rate (as a %), clamp to a sane range.
+
+    The form submits a percentage (e.g. "8" for 8% p.a.); we store/compute the
+    rate as a fraction. Bad input falls back to the default. Clamped to
+    RATE_MIN..RATE_MAX (0%..100%).
+    """
+    if raw is None or raw.strip() == "":
+        return DEFAULT_ANNUAL_RATE
+    val = _parse_amount(raw)
+    if val is None:
+        return DEFAULT_ANNUAL_RATE
+    return _clamp(val / 100.0, RATE_MIN, RATE_MAX)
+
+
+def _sizing_tenor(raw: str | None) -> int:
+    """Parse the officer-supplied tenor in years, clamp, fall back to default."""
+    if raw is None or raw.strip() == "":
+        return DEFAULT_TENOR_YEARS
+    val = _parse_amount(raw)
+    if val is None:
+        return DEFAULT_TENOR_YEARS
+    return int(_clamp(round(val), TENOR_MIN_YEARS, TENOR_MAX_YEARS))
+
+
+def _sizing_cushion(raw: str | None) -> float:
+    """Parse the officer-supplied DSCR sizing cushion, clamp, fall back."""
+    if raw is None or raw.strip() == "":
+        return DEFAULT_SIZING_DSCR
+    val = _parse_amount(raw)
+    if val is None:
+        return DEFAULT_SIZING_DSCR
+    return _clamp(val, CUSHION_MIN, CUSHION_MAX)
 
 
 # --------------------------------------------------------------------------- #
@@ -125,8 +176,16 @@ def queue(request: Request):
 
 
 @app.get("/application/{case_id}", response_class=HTMLResponse)
-def application(request: Request, case_id: str):
-    """The full credit view of one application + the decision form."""
+def application(request: Request, case_id: str, rate: str | None = None,
+                tenor: str | None = None, cushion: str | None = None):
+    """The full credit view of one application + the decision form.
+
+    ``rate`` / ``tenor`` / ``cushion`` are OPTIONAL query params that let the
+    officer re-run the indicative loan-capacity sizing with different assumptions
+    (kept GET so it is idempotent and shareable). They are parsed defensively and
+    clamped to sane ranges; bad input falls back to the documented defaults. The
+    assumptions are NOT persisted to the store.
+    """
     case = store.get(case_id)
     if not case:
         return HTMLResponse("Application not found", status_code=404)
@@ -146,11 +205,29 @@ def application(request: Request, case_id: str):
     memo = case.credit.memo if case.credit else None
     ratios = lending_ratios(memo, metrics)
 
+    # Indicative loan capacity (screening aid — not a decision or an offer).
+    # Officer-adjustable assumptions come from optional query params, parsed
+    # defensively and clamped; the requested amount is read from the applicant's
+    # typed application (reusing _parse_amount).
+    sizing_rate = _sizing_rate(rate)
+    sizing_tenor = _sizing_tenor(tenor)
+    sizing_cushion = _sizing_cushion(cushion)
+    requested_raw = case.application.loan_amount if case.application else None
+    requested_amount = _parse_amount(requested_raw) if requested_raw else None
+    capacity = indicative_loan_capacity(
+        memo, metrics,
+        annual_rate=sizing_rate, tenor_years=sizing_tenor,
+        dscr_cushion=sizing_cushion,
+        requested_amount=requested_amount,
+        currency=case.report.declared_currency or "",
+    )
+
     return templates.TemplateResponse("application.html", {
         "request": request, "case": case, "r": case.report,
         "summary": credit_summary(case), "CreditDecision": CreditDecision,
         "highlights": highlights, "metrics": metrics, "memo": memo,
-        "ratios": ratios,
+        "ratios": ratios, "capacity": capacity,
+        "requested_amount_raw": requested_raw,
     })
 
 
