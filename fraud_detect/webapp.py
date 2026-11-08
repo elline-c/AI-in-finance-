@@ -22,7 +22,7 @@ from fastapi.templating import Jinja2Templates
 from .ml.gnn import gnn_lookup
 from .nodes import ml_statement, ml_transaction
 from .nodes.checklist import CHECKLIST_SIDE_NOTE, build_checklist, stage_confidence_map
-from .models import ReviewDecision
+from .models import ReviewDecision, display_company_name
 from .registry import live_lookup_lifespan
 from .reviewers import (
     is_valid_reviewer,
@@ -63,8 +63,13 @@ _BAND_COLOR = {
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
     cases = store.list_cases()
+    # Resolve the display company name per case (applicant-typed name preferred
+    # over the statement-parsed account_holder), keyed by case_id so the queue
+    # template can look it up without re-deriving the preference inline.
+    company_names = {c.case_id: display_company_name(c) for c in cases}
     return templates.TemplateResponse("dashboard.html", {
         "request": request, "cases": cases, "band_color": _BAND_COLOR,
+        "company_names": company_names,
     })
 
 
@@ -164,6 +169,7 @@ def case_detail(request: Request, case_id: str):
 
     return templates.TemplateResponse("case.html", {
         "request": request, "case": case, "r": case.report,
+        "company_name": display_company_name(case),
         "band_color": _BAND_COLOR, "ReviewDecision": ReviewDecision,
         "stages": stages,
         "stage_confidence": stage_confidence,

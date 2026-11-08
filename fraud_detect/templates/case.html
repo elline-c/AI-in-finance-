@@ -38,7 +38,10 @@
   case, clean or tampered, so nothing is hidden by routing or decision. Unavailable fields show a dash.</p>
   <div class="grid">
     <div>
-      <div class="kv"><span class="muted">Account holder</span><span>{{ r.account_holder or "-" }}</span></div>
+      <div class="kv"><span class="muted">Company (as applied)</span><span>{{ company_name or "-" }}</span></div>
+      <div class="kv"><span class="muted">Account holder (statement)</span>
+        <span>{{ r.account_holder or "-" }}{% if company_name and r.account_holder and company_name != r.account_holder %}
+          <span class="pill" style="background:#f9a825; margin-left:6px" title="The name the applicant typed differs from the name parsed from the statement — worth checking.">&#9888; differs</span>{% endif %}</span></div>
       <div class="kv"><span class="muted">UEN</span><span>{{ r.uen or "-" }}</span></div>
       <div class="kv"><span class="muted">Account number</span><span>{{ r.account_number or "-" }}</span></div>
       <div class="kv"><span class="muted">Statement period</span><span>{{ r.statement_period or "-" }}</span></div>
