@@ -16,6 +16,28 @@
       --ok:#1a7f4b; --ok-bg:#e8f6ee; --warn:#9a6700; --warn-bg:#fdf3e0;
       --info:#1a56db; --info-bg:#e9f0fe; --shadow:0 1px 3px rgba(16,24,40,.08);
     }
+    /* Dark mode: redefine the SAME variables so every component re-skins without
+       touching its own rules. Toggled via data-theme on <html> (persisted in
+       localStorage). The Green Link Digital Bank brand blue/orange is kept. */
+    :root[data-theme="dark"] {
+      --bg:#0f1720; --card:#182430; --ink:#e7edf3; --muted:#9fb0bd;
+      --line:#2a3a47; --brand:#5b8def; --brand-dark:#3b6fd6;
+      --accent:#f6a550; --accent-dark:#e08f32;
+      --ok:#5bd68f; --ok-bg:#163226; --warn:#f0c674; --warn-bg:#3a2f17;
+      --info:#5b8def; --info-bg:#16233a; --shadow:0 1px 3px rgba(0,0,0,.5);
+    }
+    /* A few customer components use hardcoded light fills; re-point them to the
+       themed surfaces in dark mode so the whole portal re-skins coherently. */
+    :root[data-theme="dark"] input,
+    :root[data-theme="dark"] select { background:var(--card); }
+    :root[data-theme="dark"] .file { background:var(--bg); }
+    :root[data-theme="dark"] .note { background:var(--bg); }
+    :root[data-theme="dark"] .ref { background:var(--bg); }
+    :root[data-theme="dark"] .btn.secondary { background:var(--line); color:var(--ink); }
+    :root[data-theme="dark"] .btn.secondary:hover { background:var(--muted); }
+    :root[data-theme="dark"] .step .dot { background:var(--line); color:var(--muted); }
+    :root[data-theme="dark"] .step::before,
+    :root[data-theme="dark"] .step .dot { border-color:var(--line); }
     * { box-sizing:border-box; }
     body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
            background:var(--bg); color:var(--ink); line-height:1.5; }
@@ -29,7 +51,11 @@
     /* Original SVG recreation of the Green Link Digital Bank brand mark. Scales
        crisply in the ~34px-tall header logo area without breaking the .bar row. */
     .logo svg { height:34px; width:auto; display:block; }
-    .bar nav { margin-left:auto; display:flex; gap:20px; font-size:14px; }
+    .bar nav { margin-left:auto; display:flex; gap:20px; align-items:center; font-size:14px; }
+    .theme-toggle { cursor:pointer; border:1px solid var(--line); background:var(--card);
+            color:var(--ink); border-radius:999px; padding:6px 13px; font-size:13px;
+            font-weight:600; display:inline-flex; align-items:center; gap:6px; }
+    .theme-toggle:hover { border-color:var(--brand); }
 
     main { max-width:900px; margin:0 auto; padding:32px 24px 56px; }
     .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
@@ -148,6 +174,10 @@
       <nav>
         <a href="/">New application</a>
         <a href="/status">Track application</a>
+        <button type="button" class="theme-toggle" id="themeToggle"
+                aria-label="Toggle light or dark mode" title="Toggle light / dark mode">
+          <span id="themeIcon">🌙</span><span id="themeLabel">Dark</span>
+        </button>
       </nav>
     </div>
   </header>
@@ -156,5 +186,33 @@
     Your documents are handled securely and used only to assess this application.
     All verification decisions are made by our team — never automatically.
   </footer>
+  <script>
+    /* Light/dark theme toggle shared across all Green Link Digital Bank portals.
+       Preference persists in localStorage under one key so the choice is
+       remembered. Applied to <html> as data-theme so CSS variables re-skin. */
+    (function () {
+      var KEY = "gldb-theme";
+      var root = document.documentElement;
+      function apply(mode) {
+        if (mode === "dark") { root.setAttribute("data-theme", "dark"); }
+        else { root.removeAttribute("data-theme"); }
+        var icon = document.getElementById("themeIcon");
+        var label = document.getElementById("themeLabel");
+        if (icon) { icon.textContent = mode === "dark" ? "☀️" : "🌙"; }
+        if (label) { label.textContent = mode === "dark" ? "Light" : "Dark"; }
+      }
+      var saved = null;
+      try { saved = localStorage.getItem(KEY); } catch (e) {}
+      apply(saved === "dark" ? "dark" : "light");
+      var btn = document.getElementById("themeToggle");
+      if (btn) {
+        btn.addEventListener("click", function () {
+          var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+          apply(next);
+          try { localStorage.setItem(KEY, next); } catch (e) {}
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

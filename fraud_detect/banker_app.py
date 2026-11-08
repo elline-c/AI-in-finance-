@@ -28,7 +28,9 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from .models import Case, CreditDecision, ReviewDecision, Routing
+from .models import Case, CreditDecision, CreditMemo, ReviewDecision, Routing
+from .nodes.cashflow import cashflow_highlights, cashflow_metrics
+from .nodes.ratios import lending_ratios
 from .store import CaseStore
 
 BASE = Path(__file__).resolve().parent
@@ -44,6 +46,7 @@ store = CaseStore(str(BASE.parent / "data" / "cases.json"))
 _MAX_OFFICER = 120
 _MAX_RATIONALE = 2_000
 _MAX_CONDITIONS = 2_000
+_MAX_COLLATERAL = 2_000
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -132,9 +135,22 @@ def application(request: Request, case_id: str):
         return templates.TemplateResponse("blocked.html", {
             "request": request, "case": case,
         }, status_code=403)
+
+    # Cash-flow lens (derived from the parsed statement) + the officer-entered
+    # memo + the indicative lending ratios that blend the two. Compute metrics
+    # once; the ratio engine needs the closing balance, so pass it through on
+    # the metrics dict rather than recomputing it.
+    metrics = cashflow_metrics(case.report)
+    metrics["closing_balance"] = case.report.closing_balance
+    highlights = cashflow_highlights(case.report)
+    memo = case.credit.memo if case.credit else None
+    ratios = lending_ratios(memo, metrics)
+
     return templates.TemplateResponse("application.html", {
         "request": request, "case": case, "r": case.report,
         "summary": credit_summary(case), "CreditDecision": CreditDecision,
+        "highlights": highlights, "metrics": metrics, "memo": memo,
+        "ratios": ratios,
     })
 
 
@@ -160,6 +176,53 @@ def decide(case_id: str, decision: str = Form(...), officer: str = Form(...),
             case_id, mapping[decision], officer=officer, rationale=rationale,
             approved_amount=amount, conditions=conditions or None,
         )
+    except ValueError as exc:
+        # Fraud not cleared -> refuse (keeps separation of duties intact).
+        raise HTTPException(status_code=409, detail=str(exc))
+    if case is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return RedirectResponse(url=f"/application/{case_id}", status_code=303)
+
+
+@app.post("/application/{case_id}/memo")
+def save_memo(
+    case_id: str,
+    officer: str = Form(""),
+    accounts_receivable: str = Form(""),
+    accounts_payable: str = Form(""),
+    inventory: str = Form(""),
+    total_debt: str = Form(""),
+    monthly_debt_repayments: str = Form(""),
+    reported_annual_revenue: str = Form(""),
+    reported_net_profit: str = Form(""),
+    equity: str = Form(""),
+    collateral_description: str = Form(""),
+    collateral_value: str = Form(""),
+):
+    """Capture the OFFICER-ENTERED credit memo (figures the statement lacks).
+
+    Mirrors ``/decide``: scrub free text, best-effort parse the numeric fields,
+    build a CreditMemo, and persist via ``store.save_credit_memo`` — which is
+    itself guarded by ``fraud_is_cleared``. A non-cleared case raises ValueError
+    in the store, which we map to 409 so separation of duties holds. On success
+    redirect (303) back to the application so the ratios refresh.
+    """
+    memo = CreditMemo(
+        accounts_receivable=_parse_amount(accounts_receivable),
+        accounts_payable=_parse_amount(accounts_payable),
+        inventory=_parse_amount(inventory),
+        total_debt=_parse_amount(total_debt),
+        monthly_debt_repayments=_parse_amount(monthly_debt_repayments),
+        reported_annual_revenue=_parse_amount(reported_annual_revenue),
+        reported_net_profit=_parse_amount(reported_net_profit),
+        equity=_parse_amount(equity),
+        collateral_description=(
+            _scrub(collateral_description, _MAX_COLLATERAL) or None),
+        collateral_value=_parse_amount(collateral_value),
+    )
+    officer = _scrub(officer, _MAX_OFFICER) or None
+    try:
+        case = store.save_credit_memo(case_id, memo, officer=officer)
     except ValueError as exc:
         # Fraud not cleared -> refuse (keeps separation of duties intact).
         raise HTTPException(status_code=409, detail=str(exc))

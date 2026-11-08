@@ -7,9 +7,12 @@ of ratios a loan officer reads when sizing a facility:
 
   * current ratio          — short-term liquidity
   * quick (acid-test)      — liquidity excluding inventory
-  * debt-to-equity         — leverage
+  * debt-to-equity         — leverage (gearing)
   * DSCR                   — can operating cash cover debt service? (flag < 1.2)
   * debt-to-revenue        — leverage against turnover
+  * debt-to-assets         — how much of the asset base is debt-funded
+  * net-profit-margin      — reported profitability on turnover
+  * debt-service-burden    — annual debt service as a share of revenue
 
 Every ratio is returned as a dict entry with:
   * ``value``          float, or None when a needed input is missing/zero;
@@ -215,5 +218,68 @@ def lending_ratios(memo: Optional[CreditMemo], metrics: dict) -> dict:
             debt_to_revenue, dr_formula,
             f"Debt-to-revenue {debt_to_revenue:.2f}: total debt is "
             f"{debt_to_revenue:.2f}x reported annual revenue.")
+
+    # ---- debt-to-assets (gearing against the asset base) --------------- #
+    # total_assets is approximated the same way current_assets is, since the
+    # memo does not carry fixed assets separately: AR + inventory + closing
+    # cash balance. Named explicitly so the officer sees the approximation.
+    da_formula = ("debt_to_assets = total_debt / total_assets, where "
+                  "total_assets ≈ accounts_receivable + inventory + closing "
+                  "cash balance (the memo carries no fixed-asset figure)")
+    da_caveat = (_CAVEAT + " total_assets omits fixed assets the memo does not "
+                 "capture, so this reads conservatively high.")
+    total_assets = current_assets  # same approximation as current_assets
+    debt_to_assets = _safe_div(total_debt, total_assets)
+    if debt_to_assets is None:
+        ratios["debt_to_assets"] = _entry(
+            None, da_formula,
+            "Need total_debt and at least one of accounts_receivable, "
+            "inventory or a closing balance (and total_assets must be "
+            "non-zero).", da_caveat)
+    else:
+        reading = ("high — most of the (approximated) asset base is debt-funded"
+                   if debt_to_assets > 0.6
+                   else "moderate — debt is a manageable share of the asset "
+                        "base")
+        ratios["debt_to_assets"] = _entry(
+            debt_to_assets, da_formula,
+            f"Debt-to-assets {debt_to_assets:.2f}: {reading}.", da_caveat)
+
+    # ---- net profit margin (reported profitability) -------------------- #
+    npm_formula = ("net_profit_margin = reported_net_profit / "
+                   "reported_annual_revenue")
+    net_profit = memo.reported_net_profit
+    net_profit_margin = _safe_div(net_profit, annual_revenue)
+    if net_profit_margin is None:
+        ratios["net_profit_margin"] = _entry(
+            None, npm_formula,
+            "Need reported_net_profit and a non-zero reported_annual_revenue.")
+    else:
+        pct = net_profit_margin * 100
+        reading = ("positive — the business reports a profit on turnover"
+                   if net_profit_margin > 0
+                   else "negative — reported costs exceed reported revenue")
+        ratios["net_profit_margin"] = _entry(
+            net_profit_margin, npm_formula,
+            f"Net profit margin {pct:.1f}%: {reading}.")
+
+    # ---- debt-service burden (repayment load on turnover) -------------- #
+    dsb_formula = ("debt_service_burden = (monthly_debt_repayments * 12) / "
+                   "reported_annual_revenue")
+    debt_service_burden = _safe_div(annual_debt_service, annual_revenue)
+    if debt_service_burden is None:
+        ratios["debt_service_burden"] = _entry(
+            None, dsb_formula,
+            "Need monthly_debt_repayments and a non-zero "
+            "reported_annual_revenue.")
+    else:
+        pct = debt_service_burden * 100
+        reading = ("heavy — debt service consumes a large share of turnover"
+                   if debt_service_burden > 0.3
+                   else "manageable — debt service is a modest share of "
+                        "turnover")
+        ratios["debt_service_burden"] = _entry(
+            debt_service_burden, dsb_formula,
+            f"Debt-service burden {pct:.1f}% of annual revenue: {reading}.")
 
     return ratios

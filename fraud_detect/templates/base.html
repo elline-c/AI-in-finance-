@@ -3,18 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Statement Screening{% endblock %}</title>
+  <title>{% block title %}Statement Screening{% endblock %} · Green Link Digital Bank</title>
   <style>
-    :root { --bg:#0f1720; --panel:#182430; --ink:#e7edf3; --muted:#8fa3b3; --line:#26333f; --accent:#3b82f6; }
+    /* Green Link Digital Bank brand palette (shared across all three consoles):
+       corporate blue + orange accent. Light theme by default; dark overrides
+       below. The analyst console used to be dark-only — it now follows the same
+       GLDB theme with a user light/dark toggle. Existing class names are kept;
+       hardcoded colours were lifted onto CSS variables so both themes work. */
+    :root {
+      --bg:#f4f6fb; --panel:#ffffff; --ink:#1b2733; --muted:#5e6e7e;
+      --line:#e3e8ef; --brand:#1a56db; --brand-dark:#123a94;
+      --accent:#1a56db; --orange:#f08a24;
+      --field:#ffffff; --chip:#eef2f8;
+      --danger:#b42318; --ok:#1a7f4b; --warn:#9a6700;
+      --sev-high:#b42318; --sev-med:#9a6700; --sev-low:#1a7f4b; --sev-info:#1a56db;
+      --evidence:#45586a;
+      --b-pending:#546e7a; --b-needsinfo:#f9a825; --b-needsinfo-ink:#1b2733;
+    }
+    :root[data-theme="dark"] {
+      --bg:#0f1720; --panel:#182430; --ink:#e7edf3; --muted:#8fa3b3;
+      --line:#26333f; --brand:#5b8def; --brand-dark:#3b6fd6;
+      --accent:#3b82f6; --orange:#f6a550;
+      --field:#0d151d; --chip:#22303c;
+      --danger:#c62828; --ok:#2e7d32; --warn:#f9a825;
+      --sev-high:#ff8a80; --sev-med:#ffd54f; --sev-low:#a5d6a7; --sev-info:#90caf9;
+      --evidence:#c9d6e0;
+      --b-pending:#546e7a; --b-needsinfo:#f9a825; --b-needsinfo-ink:#1b2733;
+    }
     * { box-sizing: border-box; }
     body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
            background:var(--bg); color:var(--ink); }
     a { color:var(--accent); text-decoration:none; }
-    header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex;
-             align-items:center; gap:12px; background:var(--panel); }
+    header { padding:14px 24px; border-bottom:1px solid var(--line); display:flex;
+             align-items:center; gap:16px; background:var(--panel); }
     header h1 { font-size:16px; margin:0; font-weight:600; }
+    .logo { display:flex; align-items:center; }
+    .logo svg { height:30px; width:auto; display:block; }
     header .tag { font-size:11px; color:var(--muted); border:1px solid var(--line);
                   padding:2px 8px; border-radius:999px; }
+    .theme-toggle { cursor:pointer; border:1px solid var(--line); background:var(--panel);
+            color:var(--ink); border-radius:999px; padding:6px 13px; font-size:13px;
+            font-weight:600; display:inline-flex; align-items:center; gap:6px; }
+    .theme-toggle:hover { border-color:var(--brand); }
     main { padding:24px; max-width:1100px; margin:0 auto; }
     .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px;
              padding:18px 20px; margin-bottom:18px; }
@@ -28,41 +58,96 @@
     .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
     .kv { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--line); font-size:14px; }
     .btn { display:inline-block; padding:9px 16px; border-radius:8px; border:1px solid var(--line);
-           background:#22303c; color:var(--ink); cursor:pointer; font-size:14px; }
-    .btn.primary { background:var(--accent); border-color:var(--accent); }
-    .btn.danger { background:#c62828; border-color:#c62828; }
-    .btn.ok { background:#2e7d32; border-color:#2e7d32; }
-    input, textarea, select { width:100%; padding:9px 11px; background:#0d151d; color:var(--ink);
+           background:var(--chip); color:var(--ink); cursor:pointer; font-size:14px; }
+    .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .btn.danger { background:var(--danger); border-color:var(--danger); color:#fff; }
+    .btn.ok { background:var(--ok); border-color:var(--ok); color:#fff; }
+    input, textarea, select { width:100%; padding:9px 11px; background:var(--field); color:var(--ink);
              border:1px solid var(--line); border-radius:8px; font-size:14px; }
     label { font-size:12px; color:var(--muted); display:block; margin:10px 0 4px; }
-    .sev-HIGH { color:#ff8a80; } .sev-MEDIUM { color:#ffd54f; } .sev-LOW { color:#a5d6a7; } .sev-INFO { color:#90caf9; }
-    code { background:#0d151d; padding:1px 6px; border-radius:5px; font-size:12px; }
-    .evidence { font-size:13px; color:#c9d6e0; margin-top:4px; }
+    .sev-HIGH { color:var(--sev-high); } .sev-MEDIUM { color:var(--sev-med); } .sev-LOW { color:var(--sev-low); } .sev-INFO { color:var(--sev-info); }
+    code { background:var(--field); padding:1px 6px; border-radius:5px; font-size:12px; }
+    .evidence { font-size:13px; color:var(--evidence); margin-top:4px; }
     .tabs { display:flex; gap:6px; align-items:center; margin-bottom:16px; }
     .tab { padding:8px 14px; border-radius:8px; border:1px solid var(--line);
-           background:#22303c; color:var(--muted); font-size:14px; }
+           background:var(--chip); color:var(--muted); font-size:14px; }
     .tab.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
     .tab:hover { text-decoration:none; color:var(--ink); }
     .stage-head { display:flex; align-items:center; gap:10px; }
     .count { font-size:12px; font-weight:700; padding:1px 9px; border-radius:999px;
-             background:#0d151d; border:1px solid var(--line); }
-    .count.hit { background:#c62828; border-color:#c62828; color:#fff; }
-    .count.ok { background:#1b5e20; border-color:#1b5e20; color:#fff; }
+             background:var(--field); border:1px solid var(--line); }
+    .count.hit { background:var(--danger); border-color:var(--danger); color:#fff; }
+    .count.ok { background:var(--ok); border-color:var(--ok); color:#fff; }
     tr.flag td { background:rgba(198,40,40,.10); }
     .num { text-align:right; font-variant-numeric:tabular-nums; }
     .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; color:#fff; }
-    .b-PENDING{background:#546e7a}.b-NEEDS_INFO{background:#f9a825;color:#1b2733}
-    .b-APPROVED{background:#2e7d32}.b-REJECTED{background:#c62828}
+    .b-PENDING{background:var(--b-pending)}.b-NEEDS_INFO{background:var(--b-needsinfo);color:var(--b-needsinfo-ink)}
+    .b-APPROVED{background:var(--ok)}.b-REJECTED{background:var(--danger)}
   </style>
 </head>
 <body>
   <header>
-    <h1>🛡️ Bank Statement Tampering Screening</h1>
+    {# Green Link Digital Bank brand mark — original inline-SVG recreation,
+       shared across all three consoles so the suite carries one brand. #}
+    <span class="logo">
+      <svg viewBox="0 0 320 64" width="320" height="64" role="img"
+           aria-label="Green Link Digital Bank (绿联国际银行)"
+           xmlns="http://www.w3.org/2000/svg">
+        <title>Green Link Digital Bank · 绿联国际银行</title>
+        <text x="0" y="22" fill="var(--brand-dark)"
+              font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+              font-size="21" font-weight="800" letter-spacing="0.5">GREEN LINK</text>
+        <text x="0" y="41" fill="var(--brand-dark)"
+              font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+              font-size="15" font-weight="700" letter-spacing="2.5">DIGITAL BANK</text>
+        <text x="0" y="60" fill="var(--brand)"
+              font-family="system-ui,-apple-system,'Segoe UI',Roboto,'Noto Sans CJK SC',sans-serif"
+              font-size="14" font-weight="600" letter-spacing="2">绿联国际银行</text>
+        <g transform="translate(288,32)">
+          <circle cx="0" cy="0" r="24" fill="none"
+                  stroke="var(--orange)" stroke-width="5"/>
+          <path d="M 14 -13 A 19 19 0 1 0 19 5 L 4 5"
+                fill="none" stroke="var(--orange)" stroke-width="5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+      </svg>
+    </span>
+    <h1>🛡️ Statement Tampering Screening</h1>
     <span class="tag">4-agent pipeline</span>
     <span class="tag">human-in-the-loop</span>
     <span style="flex:1"></span>
     <a href="/">Dashboard</a>
+    <button type="button" class="theme-toggle" id="themeToggle"
+            aria-label="Toggle light or dark mode" title="Toggle light / dark mode">
+      <span id="themeIcon">🌙</span><span id="themeLabel">Dark</span>
+    </button>
   </header>
   <main>{% block body %}{% endblock %}</main>
+  <script>
+    /* Light/dark theme toggle shared across all Green Link Digital Bank portals. */
+    (function () {
+      var KEY = "gldb-theme";
+      var root = document.documentElement;
+      function apply(mode) {
+        if (mode === "dark") { root.setAttribute("data-theme", "dark"); }
+        else { root.removeAttribute("data-theme"); }
+        var icon = document.getElementById("themeIcon");
+        var label = document.getElementById("themeLabel");
+        if (icon) { icon.textContent = mode === "dark" ? "☀️" : "🌙"; }
+        if (label) { label.textContent = mode === "dark" ? "Light" : "Dark"; }
+      }
+      var saved = null;
+      try { saved = localStorage.getItem(KEY); } catch (e) {}
+      apply(saved === "dark" ? "dark" : "light");
+      var btn = document.getElementById("themeToggle");
+      if (btn) {
+        btn.addEventListener("click", function () {
+          var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+          apply(next);
+          try { localStorage.setItem(KEY, next); } catch (e) {}
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

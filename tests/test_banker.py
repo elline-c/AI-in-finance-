@@ -115,3 +115,78 @@ def test_banker_never_overrides_fraud_rejection(apps, samples):
     assert bc.get(f"/application/{tam.case_id}").status_code == 403
     assert bc.post(f"/application/{tam.case_id}/decide", data={
         "decision": "approve", "officer": "X", "rationale": "y"}).status_code == 409
+
+
+# --------------------------------------------------------------------------- #
+# Credit memo + the new lending panels (FEAT-002)
+# --------------------------------------------------------------------------- #
+def test_cleared_application_shows_new_panels(apps, samples):
+    _, _, store = apps
+    clean = _screen(store, samples["clean"])
+    r = TestClient(banker_app.app).get(f"/application/{clean.case_id}")
+    assert r.status_code == 200
+    # The four new sections render alongside the existing ones.
+    assert "Notable transactions" in r.text
+    assert "Cash-flow metrics" in r.text
+    assert "Credit memo" in r.text
+    assert "Key lending ratios" in r.text
+    # Officer-entered labelling is explicit (separation from statement figures).
+    assert "Officer-entered" in r.text
+    # Existing sections are untouched.
+    assert "Lending decision" in r.text
+    assert "Statement financials" in r.text
+    assert "Audit log" in r.text
+
+
+def test_save_memo_persists_and_audits(apps, samples):
+    _, _, store = apps
+    clean = _screen(store, samples["clean"])
+    bc = TestClient(banker_app.app)
+    r = bc.post(f"/application/{clean.case_id}/memo", data={
+        "officer": "Daniel Lim",
+        "accounts_receivable": "120,000",
+        "accounts_payable": "80000",
+        "inventory": "50000",
+        "total_debt": "SGD 300,000",
+        "monthly_debt_repayments": "9000",
+        "reported_annual_revenue": "1200000",
+        "reported_net_profit": "150000",
+        "equity": "400000",
+        "collateral_description": "Commercial unit at 123 Example Rd",
+        "collateral_value": "250000",
+    })
+    assert r.status_code == 200  # 303 followed to the refreshed application page
+    case = store.get(clean.case_id)
+    memo = case.credit.memo
+    assert memo is not None
+    assert memo.accounts_receivable == 120000.0
+    assert memo.accounts_payable == 80000.0
+    assert memo.total_debt == 300000.0
+    assert memo.monthly_debt_repayments == 9000.0
+    assert memo.reported_annual_revenue == 1200000.0
+    assert memo.equity == 400000.0
+    assert memo.collateral_value == 250000.0
+    assert memo.collateral_description  # scrubbed, non-empty
+    assert memo.updated_by == "Daniel Lim"
+    assert any(e["event"] == "CREDIT_MEMO_SAVED" for e in case.audit_log)
+    # The ratios now render a computed DSCR on the refreshed page.
+    assert "DSCR" in r.text
+
+
+def test_save_memo_on_uncleared_case_is_refused(apps, samples):
+    _, _, store = apps
+    tam = _screen(store, samples["tampered"])   # HUMAN_REVIEW, not cleared
+    bc = TestClient(banker_app.app)
+    r = bc.post(f"/application/{tam.case_id}/memo", data={
+        "officer": "X", "total_debt": "300000",
+    })
+    assert r.status_code == 409  # fraud not cleared -> separation of duties
+    case = store.get(tam.case_id)
+    assert case.credit.memo is None  # nothing persisted
+
+
+def test_save_memo_on_missing_case_is_404(apps, samples):
+    _, _, store = apps
+    bc = TestClient(banker_app.app)
+    r = bc.post("/application/NOPE-404/memo", data={"total_debt": "1"})
+    assert r.status_code == 404
