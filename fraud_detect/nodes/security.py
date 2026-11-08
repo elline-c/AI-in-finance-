@@ -76,7 +76,7 @@ _INSTRUCTION_PATTERNS: list[tuple[str, str, re.Pattern[str]]] = [
     (
         "role_hijack",
         "attempt to reassign the system's role",
-        re.compile(r"\b(you\s+are\s+now|act\s+as|system\s*:|as\s+an?\s+ai\b)",
+        re.compile(r"\b(you\s+are\s+now\b|act\s+as\b|system\s*:|as\s+an?\s+ai\b)",
                    re.IGNORECASE),
     ),
 ]

@@ -33,6 +33,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .ml.gnn import gnn_lookup
+from .nodes import ml_statement, ml_transaction
 from .models import Case, ReviewDecision, Routing
 from .pipeline import run_pipeline
 from .registry import live_lookup_lifespan
@@ -89,6 +90,10 @@ store = CaseStore(str(BASE.parent / "data" / "cases.json"))
 
 # Load the precomputed GNN scores once at startup (fail-safe to None if absent).
 GNN_SCORES = gnn_lookup.load_scores()
+# Same optional ML models as the analyst app (fail-safe: None if the file is absent;
+# the transaction model is also off unless FRAUD_ENABLE_TXN_MODEL is set).
+TXN_MODEL = ml_transaction.load_live_model()
+STATEMENT_MODEL = ml_statement.load_model()
 
 
 # --------------------------------------------------------------------------- #
@@ -225,7 +230,8 @@ async def apply(
         raise HTTPException(status_code=400, detail="The uploaded file was empty")
 
     # Screen through the exact same pipeline the analyst app uses.
-    report = run_pipeline(str(dest), store=store, gnn_scores=GNN_SCORES)
+    report = run_pipeline(str(dest), store=store, txn_model=TXN_MODEL,
+                          statement_model=STATEMENT_MODEL, gnn_scores=GNN_SCORES)
     store.upsert_report(report)
 
     # The case_id doubles as the customer's application reference number.

@@ -134,8 +134,9 @@ async def upload(file: UploadFile):
     # Run in a worker thread: with the LLM reviewer on, screening can take tens of seconds and
     # must not stall every other request (the sample route below already runs in the pool).
     report = await run_in_threadpool(
-        run_pipeline, str(dest), txn_model=TXN_MODEL, statement_model=STATEMENT_MODEL,
-        gnn_scores=GNN_SCORES, explainer=EXPLAINER, explainer_store=store)
+        run_pipeline, str(dest), store=store, txn_model=TXN_MODEL,
+        statement_model=STATEMENT_MODEL, gnn_scores=GNN_SCORES,
+        explainer=EXPLAINER, explainer_store=store)
     store.upsert_report(report)
     return RedirectResponse(url=f"/case/{report.case_id}", status_code=303)
 
@@ -153,8 +154,9 @@ def screen_sample(name: str = Form(...)):
     target = (samples_dir / safe).resolve()
     if samples_dir not in target.parents or not target.is_file():
         raise HTTPException(status_code=404, detail="Sample not found")
-    report = run_pipeline(str(target), txn_model=TXN_MODEL, statement_model=STATEMENT_MODEL,
-                          gnn_scores=GNN_SCORES, explainer=EXPLAINER, explainer_store=store)
+    report = run_pipeline(str(target), store=store, txn_model=TXN_MODEL,
+                          statement_model=STATEMENT_MODEL, gnn_scores=GNN_SCORES,
+                          explainer=EXPLAINER, explainer_store=store)
     store.upsert_report(report)
     return RedirectResponse(url=f"/case/{report.case_id}", status_code=303)
 
