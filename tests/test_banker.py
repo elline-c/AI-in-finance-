@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from fraud_detect import banker_app, webapp
+from fraud_detect.audit.verify import VerificationStatus
 from fraud_detect.models import CreditDecision, ReviewDecision
 from fraud_detect.pipeline import run_pipeline
 from fraud_detect.store import CaseStore
@@ -21,7 +22,10 @@ from fraud_detect.synthetic import generate_clean, generate_tampered
 
 @pytest.fixture()
 def apps(tmp_path):
-    store = CaseStore(os.path.join(tmp_path, "cases.json"))
+    store = CaseStore(
+        os.path.join(tmp_path, "cases.json"),
+        audit_path=os.path.join(tmp_path, "audit_chain.jsonl"),
+    )
     banker_app.store = store
     webapp.store = store
     return banker_app.app, webapp.app, store
@@ -169,6 +173,19 @@ def test_save_memo_persists_and_audits(apps, samples):
     assert memo.collateral_description  # scrubbed, non-empty
     assert memo.updated_by == "Daniel Lim"
     assert any(e["event"] == "CREDIT_MEMO_SAVED" for e in case.audit_log)
+    # The hash-chained audit (not just the cases.json mirror) must carry the
+    # memo event, and the chain must still verify intact afterwards. This is
+    # the tamper-evidence the feature leans on, so assert it directly.
+    chain_events = store._audit.events_for(clean.case_id)
+    assert any(ev.event == "CREDIT_MEMO_SAVED" for ev in chain_events)
+    # The shared timestamp keeps the chain and the cases.json mirror in agreement.
+    chain_memo = next(ev for ev in chain_events if ev.event == "CREDIT_MEMO_SAVED")
+    mirror_memo = next(e for e in case.audit_log if e["event"] == "CREDIT_MEMO_SAVED")
+    assert chain_memo.detail == mirror_memo["detail"]
+    result = store._audit.verify()
+    assert result.status in (VerificationStatus.INTACT_SIGNED,
+                             VerificationStatus.INTACT_UNSIGNED)
+    assert result.intact is True
     # The ratios now render a computed DSCR on the refreshed page.
     assert "DSCR" in r.text
 

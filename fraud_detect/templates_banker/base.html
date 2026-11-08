@@ -79,6 +79,9 @@
     .metric .k { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
     .metric .v { font-size:22px; font-weight:800; margin-top:4px; font-variant-numeric:tabular-nums; }
     .metric .v.pos { color:var(--ok); } .metric .v.neg { color:var(--bad); }
+    /* Bare pos/neg for table amounts (e.g. largest inflow/outflow cells) so
+       inflows read green and outflows red in both themes via --ok / --bad. */
+    .pos { color:var(--ok); } .neg { color:var(--bad); }
 
     .pill { display:inline-block; padding:3px 11px; border-radius:999px; font-size:12px;
             font-weight:700; }
