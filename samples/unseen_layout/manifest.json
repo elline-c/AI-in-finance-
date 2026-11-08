@@ -1,0 +1,74 @@
+{
+  "layout": "kestrel_landscape_serif",
+  "tampered": "samples/unseen_layout/tampered_kestrel.pdf",
+  "clean": "samples/unseen_layout/clean_kestrel.pdf",
+  "rows_tampered": 52,
+  "rows_clean": 59,
+  "planted": [
+    {
+      "node": "Node3",
+      "code": "FL_PERIOD_GAP",
+      "detail": "No rows from 12 May to 24 Jun 2025 (43 days)."
+    },
+    {
+      "node": "Node3",
+      "code": "FL_STRUCTURING",
+      "detail": "Four cash deposits of 9,710-9,890 between 14 and 17 Apr."
+    },
+    {
+      "node": "Node3",
+      "code": "FL_SUDDEN_DEPOSIT",
+      "detail": "310,000 credit on 8 Jul, about 40x a normal credit."
+    },
+    {
+      "node": "Node3",
+      "code": "FL_UNVERIFIED_COUNTERPARTY",
+      "detail": "Payer 'UNKNOWN HOLDINGS LLC' appears once."
+    },
+    {
+      "node": "Node3",
+      "code": "FL_RAPID_PASS_THROUGH",
+      "detail": "305,500 leaves on 10 Jul, two days after the 310,000 arrives."
+    },
+    {
+      "node": "Node3",
+      "code": "FL_BALANCE_BREAK",
+      "detail": "Credit on 2025-03-14 inflated by 4,000; balance on 2025-06-24 raised by 12,000."
+    },
+    {
+      "node": "Node3",
+      "code": "FL_CLOSING_MISMATCH",
+      "detail": "Header closing balance is 18,500 above the last row."
+    },
+    {
+      "node": "Node3",
+      "code": "FL_UEN_NAME_MISMATCH",
+      "detail": "Holder printed as 'Cobalt Reach Marine Pte Ltd'; ACRA says 'Harbourfront Foods Pte Ltd'."
+    },
+    {
+      "node": "Node2",
+      "code": "VF_FONT_MISMATCH",
+      "detail": "Three money cells re-typed in Courier inside a Times/Helvetica document."
+    },
+    {
+      "node": "Node2",
+      "code": "VF_CURRENCY_MIX",
+      "detail": "Three amounts print 'S$' where every other amount prints 'SGD'."
+    },
+    {
+      "node": "Node2",
+      "code": "VF_EDIT_SOFTWARE",
+      "detail": "Producer metadata is 'iLovePDF'."
+    },
+    {
+      "node": "Node2",
+      "code": "VF_CREATION_BEFORE_PERIOD",
+      "detail": "CreationDate is 12 Jan 2025; the period starts 1 Mar 2025."
+    },
+    {
+      "node": "Node6b",
+      "code": "ML_STATEMENT_FORGERY_LIKELIHOOD",
+      "detail": "Balance breaks, mixed currency, odd font, and a modified-after-creation date."
+    }
+  ]
+}
