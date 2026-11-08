@@ -115,7 +115,7 @@ def main() -> None:
 
     # Analyst requests more info on the tampered case -> NEEDS_INFO
     ac.post(f"/case/{tam_ref}/request-info", data={
-        "reviewer": "Jane Tan, Credit Risk",
+        "reviewer": "Jane Tan - Credit Risk Analyst",
         "message": ("Thank you for your application. Could you please re-upload a "
                     "clearer copy of pages 2 and 3 of your statement, and confirm "
                     "the account holder name as registered with ACRA?"),
