@@ -5,23 +5,31 @@ Validates the *numbers and behaviour* of the statement:
     * Mathematical continuity — every running balance must equal the previous
       balance plus the row amount (row-by-row reconciliation).
     * Opening/closing consistency — first/last balances match the header.
-    * Period continuity — no unexplained multi-week gaps between transactions.
-    * Suspicious transactions — sudden deposits far above the historical baseline
-      and inflows from unverified / shell-like counterparties.
-    * Structuring — repeated amounts sitting just below the reporting threshold.
+    * Period continuity — no silence longer than the company's own rhythm allows.
+    * Suspicious transactions — deposits unusually large for THIS company, money that
+      leaves again within days, and large inflows from names never seen before.
+    * Structuring — clusters of credits just below a reporting level.
     * Entity cross-check — account-holder name vs the ACRA record for the UEN
       (catches statements reused under a different company).
 
-Findings are explainable and carry the offending page/row where possible.
+Findings are explainable and carry the offending page/row where possible. Every
+setting is in ``logic_config.FinancialLogicConfig``.
 """
 from __future__ import annotations
 
+import itertools
+import re
+import statistics
 from collections import Counter
+from dataclasses import dataclass
 from datetime import date, timedelta
+from typing import Optional, Sequence
 
+from ..history import TrailingHistory, counterparty_key, credit_sizes, monthly_credit_totals
 from ..models import AgentReport, Finding, IngestionResult, Severity, Transaction
 from . import fabrication
 from .fabrication import DEFAULT_CONFIG
+from .logic_config import DEFAULT_LOGIC_CONFIG, FinancialLogicConfig
 from .coverage import (
     duplicate_months,
     missing_months,
@@ -32,23 +40,13 @@ from .coverage import (
 from ..registry import NOT_FOUND as REGISTRY_NOT_FOUND
 from ..registry import UNAVAILABLE as REGISTRY_UNAVAILABLE
 from ..registry import lookup_entity, names_match
-from ..reference_data import (
-    CASHFLOW_BASELINE,
-    KNOWN_VENDORS,
-    STRUCTURING_THRESHOLD,
-)
+from ..reference_data import CASHFLOW_BASELINE, KNOWN_VENDORS
 
 AGENT = "Node3:FinancialLogic"
 
-_BALANCE_TOL = 0.01           # rounding tolerance
-_GAP_DAYS = 25                # unexplained-gap threshold
-_STRUCTURING_WINDOW = 0.05    # within 5% below threshold
-_SUSPICIOUS_MULTIPLE = 3.0    # single credit > 3x avg monthly credit
-_MIN_PERIOD_MONTHS = 6        # corporate-loan policy: statements must cover >= 6 months
-_MAX_PERIOD_MONTHS = 12       # corporate-loan policy: statements must cover <= 12 months
 
-
-def _reconcile(ing: IngestionResult) -> list[Finding]:
+def _reconcile(ing: IngestionResult,
+               cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG) -> list[Finding]:
     findings: list[Finding] = []
     txns = ing.transactions
     if not txns:
@@ -60,7 +58,7 @@ def _reconcile(ing: IngestionResult) -> list[Finding]:
             prev_balance = t.balance
             continue
         expected = round(prev_balance + t.amount, 2)
-        if abs(expected - t.balance) > _BALANCE_TOL:
+        if abs(expected - t.balance) > cfg.balance_tolerance:
             findings.append(Finding(
                 agent=AGENT, code="FL_BALANCE_BREAK",
                 title="Running balance does not reconcile",
@@ -77,11 +75,12 @@ def _reconcile(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
-def _closing_check(ing: IngestionResult) -> list[Finding]:
+def _closing_check(ing: IngestionResult,
+                   cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG) -> list[Finding]:
     findings: list[Finding] = []
     if ing.closing_balance is not None and ing.transactions:
         last = ing.transactions[-1].balance
-        if last is not None and abs(last - ing.closing_balance) > _BALANCE_TOL:
+        if last is not None and abs(last - ing.closing_balance) > cfg.balance_tolerance:
             findings.append(Finding(
                 agent=AGENT, code="FL_CLOSING_MISMATCH",
                 title="Closing balance disagrees with last row",
@@ -92,19 +91,66 @@ def _closing_check(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
-def _period_continuity(ing: IngestionResult) -> list[Finding]:
+def gaps_between_active_days(dates: Sequence[date]) -> list[int]:
+    """Days of silence between consecutive distinct transaction dates."""
+    days = sorted(set(dates))
+    return [(b - a).days for a, b in zip(days, days[1:])]
+
+
+def gap_limit(baseline_gaps: Sequence[int],
+              cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG) -> tuple[float, str]:
+    """Learn how long this company normally goes without a transaction.
+
+    Returns ``(limit_in_days, basis)``. A busy account that posts nearly every day
+    gets a short limit; a sparse account gets a longer one. The limit is
+    ``median + gap_mad_mult * robust spread`` of the observed gaps, so a single
+    long silence (the thing we are hunting) cannot stretch its own limit. The result
+    is clamped to ``[gap_min_days, gap_max_days]``. With fewer than
+    ``gap_min_observations`` gaps there is nothing to learn from, so the fixed
+    ``gap_default_days`` is used.
+    """
+    if len(baseline_gaps) < cfg.gap_min_observations:
+        return float(cfg.gap_default_days), "default (too few transactions to learn a pattern)"
+    med = statistics.median(baseline_gaps)
+    mad = statistics.median(abs(g - med) for g in baseline_gaps)
+    limit = med + cfg.gap_mad_mult * 1.4826 * mad
+    limit = min(max(limit, cfg.gap_min_days), cfg.gap_max_days)
+    return limit, f"learned (median gap {med:g} days, spread {mad:g} days)"
+
+
+def _period_continuity(
+    ing: IngestionResult,
+    trailing_gap_days: Optional[Sequence[int]] = None,
+    trailing_source: Optional[str] = None,
+    cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG,
+) -> list[Finding]:
+    """Flag unusually long silences, judged against the company's own rhythm.
+
+    The baseline is the company's trailing statements when supplied
+    (``trailing_gap_days``), otherwise the gaps in this statement itself.
+    ``trailing_source`` is a short human-readable description of where the trailing
+    history came from; it is quoted in the evidence so a reviewer can audit it.
+    """
     findings: list[Finding] = []
     dated = [t for t in ing.transactions if t.date]
+    own_gaps = gaps_between_active_days([t.date for t in dated])
+    if trailing_gap_days is not None and len(trailing_gap_days) >= cfg.gap_min_observations:
+        limit, basis = gap_limit(list(trailing_gap_days), cfg)
+        basis = "trailing statements" + (f" ({trailing_source})" if trailing_source else "") \
+            + ", " + basis
+    else:
+        limit, basis = gap_limit(own_gaps, cfg)
     for a, b in zip(dated, dated[1:]):
         gap = (b.date - a.date).days
-        if gap > _GAP_DAYS:
+        if gap > limit:
             findings.append(Finding(
                 agent=AGENT, code="FL_PERIOD_GAP",
                 title="Unexplained gap in statement period",
                 severity=Severity.MEDIUM, weight=12, page=b.page,
                 evidence=(f"{gap}-day gap between {a.date} and {b.date} with no "
-                          f"transactions. Continuous business accounts rarely go this "
-                          f"long silent; may indicate removed pages/rows."),
+                          f"transactions. This account's normal limit is about "
+                          f"{limit:.0f} days ({basis}). A silence this long may "
+                          f"indicate removed pages/rows."),
             ))
     return findings
 
@@ -128,7 +174,8 @@ def period_months(start: date, end: date) -> int:
     return months
 
 
-def _period_length(ing: IngestionResult) -> list[Finding]:
+def _period_length(ing: IngestionResult,
+                   cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG) -> list[Finding]:
     """Flag when the declared statement period falls outside the required
     6-12 month window. Missing dates are handled elsewhere (DQ_MISSING_PERIOD),
     so we emit nothing when either bound is absent."""
@@ -140,8 +187,8 @@ def _period_length(ing: IngestionResult) -> list[Finding]:
 
     months = period_months(start, end)
 
-    if months < _MIN_PERIOD_MONTHS or months > _MAX_PERIOD_MONTHS:
-        too_short = months < _MIN_PERIOD_MONTHS
+    if months < cfg.min_period_months or months > cfg.max_period_months:
+        too_short = months < cfg.min_period_months
         direction = "too short" if too_short else "too long"
         consequence = ("selectively removed pages" if too_short
                        else "padded pages")
@@ -151,7 +198,7 @@ def _period_length(ing: IngestionResult) -> list[Finding]:
             severity=Severity.MEDIUM, weight=12,
             evidence=(f"Statement covers {start} to {end} ({months} months); "
                       f"corporate-loan policy requires "
-                      f"{_MIN_PERIOD_MONTHS}\u2013{_MAX_PERIOD_MONTHS} months of "
+                      f"{cfg.min_period_months}\u2013{cfg.max_period_months} months of "
                       f"statements. A {direction} period may indicate "
                       f"{consequence}."),
         ))
@@ -299,77 +346,310 @@ def _month_out_of_order(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
-def _suspicious_transactions(ing: IngestionResult) -> list[Finding]:
-    findings: list[Finding] = []
-    baseline = CASHFLOW_BASELINE.get(ing.uen or "", {})
-    avg_credit = baseline.get("avg_monthly_credit")
+# --------------------------------------------------------------------------- #
+# Credit baseline: what is a normal credit, and a normal month, for THIS company?
+# --------------------------------------------------------------------------- #
+# A bank judges a deposit against the customer's own moving history, not against one
+# fixed number. The baseline comes from, in order of preference:
+#   1. the company's earlier human-approved statements (``history``);
+#   2. this statement's own complete months (median, so one spike cannot move it);
+#   3. a declared per-UEN monthly figure in ``CASHFLOW_BASELINE`` (old 3x rule).
+_DOCS_TO_REQUEST = ("Suggested request: the invoice or contract (or purchase order) behind "
+                    "this payment, and who the payer is and why they paid.")
 
+
+@dataclass(frozen=True)
+class CreditBaseline:
+    typical_monthly: float                 # median total credits of a complete month
+    sizes: tuple[float, ...]               # sizes of the company's credits (empty if unknown)
+    source: str                            # where this came from, quoted in the evidence
+    declared_only: bool = False            # True when only a declared monthly figure exists
+    from_statement: bool = False           # True when ``sizes`` come from the statement itself
+    typical_credit: float = 0.0            # median credit size
+    fence: float = 0.0                     # upper end of normal credit sizes
+
+
+def _make_baseline(monthly: float, sizes: Sequence[float], source: str,
+                   cfg: FinancialLogicConfig, **flags) -> CreditBaseline:
+    if not sizes:
+        return CreditBaseline(float(monthly), (), source, **flags)
+    med = statistics.median(sizes)
+    mad = statistics.median(abs(x - med) for x in sizes)
+    return CreditBaseline(float(monthly), tuple(sizes), source, typical_credit=med,
+                          fence=med + cfg.spike_mad_mult * 1.4826 * mad, **flags)
+
+
+def _credit_baseline(ing: IngestionResult, history: Optional[TrailingHistory],
+                     cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG) -> Optional[CreditBaseline]:
+    if history is not None and len(history.credits) >= cfg.credit_min_obs \
+            and len(history.monthly_credits) >= cfg.credit_min_months:
+        return _make_baseline(statistics.median(history.monthly_credits), history.credits,
+                              f"trailing statements ({history.describe()})", cfg)
+    sizes = credit_sizes(ing.transactions)
+    monthly = monthly_credit_totals(
+        ing.transactions, ing.statement_period_start, ing.statement_period_end)
+    if len(sizes) >= cfg.credit_min_obs and len(monthly) >= cfg.credit_min_months:
+        return _make_baseline(statistics.median(monthly), sizes,
+                              f"this statement's {len(monthly)} complete months", cfg,
+                              from_statement=True)
+    declared = CASHFLOW_BASELINE.get(ing.uen or "", {}).get("avg_monthly_credit")
+    if declared and declared > 0:
+        return _make_baseline(declared, (), "the declared per-UEN monthly baseline", cfg,
+                              declared_only=True)
+    return None
+
+
+def _large_how(amount: float, base: CreditBaseline, cfg: FinancialLogicConfig,
+               relaxed: bool = False) -> Optional[str]:
+    """None unless ``amount`` is large for this company; else a phrase saying how large.
+
+    Large means above the company's normal credit sizes AND a big share of a normal
+    month of credits. ``relaxed`` drops the month-share condition (used when another
+    clue, such as a shell-like name, already points at the credit). With only a declared
+    monthly figure, the old rule applies: more than ``declared_baseline_mult`` times it.
+    """
+    if base.typical_monthly <= 0:
+        return None
+    if base.declared_only:
+        if amount <= cfg.declared_baseline_mult * base.typical_monthly:
+            return None
+        return (f"{amount / base.typical_monthly:.1f}x the declared monthly credit "
+                f"({base.typical_monthly:,.0f})")
+    if amount <= base.fence:
+        return None
+    if not relaxed and amount < cfg.spike_month_share * base.typical_monthly:
+        return None
+    return (f"{amount / base.typical_credit:.1f}x this company's normal credit "
+            f"({base.typical_credit:,.0f}) and {amount / base.typical_monthly:.0%} of its "
+            f"normal month of credits ({base.typical_monthly:,.0f})")
+
+
+def _sudden_deposits(ing: IngestionResult, base: Optional[CreditBaseline],
+                     passed_through: set[int],
+                     cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG) -> list[Finding]:
+    """Credits that are large for THIS company, as a prompt to ask for documents.
+
+    That is a request for invoices or contracts, not an accusation, so the severity is
+    MEDIUM. It is raised to HIGH only when the money also left again within days
+    (``passed_through``, see FL_RAPID_PASS_THROUGH).
+    """
+    if base is None:
+        return []
+    findings: list[Finding] = []
     for t in ing.transactions:
         if t.amount is None or t.amount <= 0:
             continue
-        # Sudden massive deposit vs baseline
-        if avg_credit and t.amount > _SUSPICIOUS_MULTIPLE * avg_credit:
-            findings.append(Finding(
-                agent=AGENT, code="FL_SUDDEN_DEPOSIT",
-                title="Sudden deposit far above historical baseline",
-                severity=Severity.HIGH, weight=20, page=t.page,
-                field=f"row {t.index}",
-                evidence=(f"Credit of {t.amount:,.2f} on {t.date} ({t.description}) is "
-                          f"{t.amount/avg_credit:.1f}x the historical average monthly "
-                          f"credit ({avg_credit:,.0f}). Off-baseline inflow warrants review."),
-            ))
-        # Unverified counterparty on a large inflow
-        desc = (t.description or "").strip()
-        looks_shell = any(k in desc.upper() for k in ("UNKNOWN", "LLC", "HOLDINGS", "TT"))
-        known = any(v.upper() in desc.upper() for v in KNOWN_VENDORS)
-        if t.amount >= 50000 and looks_shell and not known:
-            findings.append(Finding(
-                agent=AGENT, code="FL_UNVERIFIED_COUNTERPARTY",
-                title="Large inflow from unverified counterparty",
-                severity=Severity.MEDIUM, weight=12, page=t.page,
-                field=f"row {t.index}",
-                evidence=(f"Large credit of {t.amount:,.2f} from '{desc}', which does not "
-                          f"match any known/recurring vendor and has shell-like naming."),
-            ))
+        how = _large_how(t.amount, base, cfg)
+        if how is None:
+            continue
+        also = t.index in passed_through
+        findings.append(Finding(
+            agent=AGENT, code="FL_SUDDEN_DEPOSIT",
+            title="Deposit unusually large for this company",
+            severity=Severity.HIGH if also else Severity.MEDIUM,
+            weight=20 if also else 12, page=t.page, field=f"row {t.index}",
+            evidence=(f"Credit of {t.amount:,.2f} on {t.date} ({t.description}) is {how}, "
+                      f"judged against {base.source}. "
+                      + ("The money also left the account within days (see "
+                         "FL_RAPID_PASS_THROUGH). " if also else "")
+                      + _DOCS_TO_REQUEST),
+        ))
     return findings
 
 
-# FL_STRUCTURING fires only on a CLUSTER: three or more near-threshold credits
-# (lo <= amount < threshold) inside a span of _STRUCTURING_CLUSTER_DAYS days
-# (last - first <= 14, inclusive). An undated near-threshold credit cannot be placed
-# in time, so it counts as inside every span; 3+ undated credits fire on their own.
-# Spans start at each dated near-threshold credit in date order and the earliest
-# qualifying span is reported (independent of file row order).
-# Accepted trade-off: slow structuring spread over weeks (e.g. one deposit every
-# 3-4 weeks) is missed; this avoids flagging ordinary near-threshold credits that are
-# scattered across a statement period.
-_STRUCTURING_CLUSTER_DAYS = 14
+# --------------------------------------------------------------------------- #
+# Velocity: large money in, almost the same money out again within days
+# --------------------------------------------------------------------------- #
+def _pass_through_pairs(ing: IngestionResult, base: Optional[CreditBaseline],
+                        cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG):
+    """[(credit, [debits], total_out)] for large credits that leave again within days.
+
+    "Large" is relative to the company: a multiple of its normal credit (from the
+    baseline when there is one, otherwise this statement). Each debit is matched to at
+    most one credit, earliest credit first.
+    """
+    sizes = list(base.sizes) if base is not None and base.sizes else credit_sizes(ing.transactions)
+    if len(sizes) < cfg.pass_min_credits:
+        return []
+    cutoff = cfg.pass_large_mult * statistics.median(sizes)
+    exclude = (re.compile(r"\b(?:" + "|".join(re.escape(w) for w in cfg.pass_exclude_words)
+                          + r")\b", re.IGNORECASE) if cfg.pass_exclude_words else None)
+    dated = sorted((t for t in ing.transactions if t.date is not None and t.amount is not None),
+                   key=lambda t: (t.date, t.index))
+    credits = [t for t in dated if t.amount > 0 and t.amount >= cutoff]
+    debits = [t for t in dated if t.amount < 0
+              and not (exclude and exclude.search(t.description or ""))]
+    window = timedelta(days=cfg.pass_window_days)
+    used: set[int] = set()
+    pairs = []
+    for c in credits:
+        # The money must leave AFTER it arrived: a debit printed above the credit
+        # (same day, earlier row) cannot have been paid out of it.
+        cands = [d for d in debits
+                 if d.index not in used and (d.date, d.index) > (c.date, c.index)
+                 and d.date <= c.date + window]
+        cands = sorted(cands, key=lambda d: d.amount)[:cfg.pass_max_candidates]   # biggest outflows
+        best, best_gap = None, None
+        for k in range(1, cfg.pass_max_payments + 1):
+            for combo in itertools.combinations(cands, k):
+                total = -sum(d.amount for d in combo)
+                if cfg.pass_match_ratio * c.amount <= total <= cfg.pass_max_ratio * c.amount:
+                    gap = abs(total - c.amount)
+                    if best_gap is None or gap < best_gap:
+                        best, best_gap = (combo, total), gap
+        if best is not None:
+            combo, total = best
+            used.update(d.index for d in combo)
+            pairs.append((c, sorted(combo, key=lambda d: (d.date, d.index)), total))
+    return pairs
 
 
-def _structuring_span(near: list[Transaction]):
+def _pass_through(pairs, cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG) -> list[Finding]:
+    if not pairs:
+        return []
+    shown = pairs[:cfg.pass_max_shown]
+    parts = []
+    for c, out, total in shown:
+        days = (max(d.date for d in out) - c.date).days
+        parts.append(f"row {c.index}: {c.date.strftime('%d %b %Y')} credit {c.amount:,.2f} "
+                     f"({c.description}), then {total:,.2f} out within {days} day(s) "
+                     f"(row{'s' if len(out) > 1 else ''} {', '.join(str(d.index) for d in out)})")
+    more = f", and {len(pairs) - len(shown)} more" if len(pairs) > len(shown) else ""
+    rows = sorted({c.index for c, _, _ in pairs} | {d.index for _, o, _ in pairs for d in o})
+    many = len(pairs) >= cfg.pass_escalate_pairs
+    return [Finding(
+        agent=AGENT, code="FL_RAPID_PASS_THROUGH",
+        title="Large credits leave the account again within days",
+        severity=Severity.HIGH if many else Severity.MEDIUM, weight=20 if many else 12,
+        page=pairs[0][0].page, field="rows " + ", ".join(str(r) for r in rows),
+        evidence=(f"{len(pairs)} large credit(s) were followed within {cfg.pass_window_days} "
+                  f"days by payments out of {cfg.pass_match_ratio:.0%}-{cfg.pass_max_ratio:.0%} "
+                  f"of the amount: "
+                  + "; ".join(parts) + more + ". Money that arrives and leaves this fast can "
+                  "be pass-through activity, but refunds and agency or trading flows can look "
+                  "the same. Suggested request: the contract or invoice for both the incoming "
+                  "and the outgoing payment, and the relationship with each counterparty."),
+    )]
+
+
+# --------------------------------------------------------------------------- #
+# Large inflow from a name never seen before
+# --------------------------------------------------------------------------- #
+def _unverified_counterparty(ing: IngestionResult, base: Optional[CreditBaseline],
+                             history: Optional[TrailingHistory],
+                             cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG) -> list[Finding]:
+    """A large credit from a payer that appears nowhere else in the history.
+
+    "Seen before" means the payer's name (rail words, references and company suffixes
+    removed, whole words only) occurs on another row of this statement or in the
+    company's approved earlier statements. A credit is "large" for this company by the
+    same test as FL_SUDDEN_DEPOSIT; a shell-like word in the name (UNKNOWN, LLC, ...)
+    relaxes that to "above the company's normal credit sizes". With no baseline at all
+    there is nothing to measure against, so a shell-like name AND the fallback amount
+    are both required.
+    """
+    known_names = frozenset(history.counterparties) if history is not None else frozenset()
+    keys = [counterparty_key(t.description) for t in ing.transactions]
+    seen_here = Counter(k for k in keys if k)
+    shell_re = (re.compile(r"\b(?:" + "|".join(re.escape(w) for w in cfg.counterparty_shell_words)
+                           + r")\b", re.IGNORECASE) if cfg.counterparty_shell_words else None)
+    vendor_res = [re.compile(r"\b" + re.escape(v) + r"\b", re.IGNORECASE) for v in KNOWN_VENDORS]
+    where = ("the company's approved earlier statements or on any other row of this statement"
+             if known_names else "any other row of this statement")
+    findings: list[Finding] = []
+    for t, key in zip(ing.transactions, keys):
+        if t.amount is None or t.amount <= 0 or not key:
+            continue
+        if key in known_names or seen_here[key] > 1:
+            continue
+        desc = (t.description or "").strip()
+        if any(r.search(desc) for r in vendor_res):
+            continue
+        shell = sorted({m.group(0).upper() for m in shell_re.finditer(desc)}) if shell_re else []
+        if base is None:
+            if not shell or t.amount < cfg.counterparty_fallback_amount:
+                continue
+            how = (f"at least the fixed {cfg.counterparty_fallback_amount:,.0f} used when no "
+                   f"baseline for the company exists")
+        else:
+            how = _large_how(t.amount, base, cfg, relaxed=bool(shell))
+            if how is None:
+                continue
+        clue = (f" The name also contains {', '.join(shell)}." if shell else "")
+        findings.append(Finding(
+            agent=AGENT, code="FL_UNVERIFIED_COUNTERPARTY",
+            title="Large inflow from a payer not seen before",
+            severity=Severity.MEDIUM, weight=12, page=t.page, field=f"row {t.index}",
+            evidence=(f"Credit of {t.amount:,.2f} on {t.date} from '{desc}' is {how}. The payer "
+                      f"'{key}' does not appear on {where}.{clue} Suggested request: who the "
+                      f"payer is (registration and relationship to the company) and the "
+                      f"invoice or contract behind the payment."),
+        ))
+    return findings
+
+
+# --------------------------------------------------------------------------- #
+# Structuring: clusters of credits just under a reporting level
+# --------------------------------------------------------------------------- #
+# FL_STRUCTURING fires only on a CLUSTER: ``structuring_min_credits`` or more credits
+# just under a reporting level (lo <= amount < level) inside a span of
+# ``structuring_cluster_days`` days (last - first <= 14, inclusive). An undated
+# near-level credit cannot be placed in time, so it counts as inside every span; 3+
+# undated credits fire on their own. Spans start at each dated near-level credit in
+# date order and the earliest qualifying span is reported (independent of file row
+# order). Accepted trade-off: slow structuring spread over weeks is missed.
+#
+# When a baseline for the company exists, two more tests apply, because the same cluster
+# means different things to different companies:
+#   * the cluster must total at least ``structuring_month_share`` of a normal month of
+#     credits (three 9,700 credits are noise to a company that banks millions a month);
+#   * near-level credits must not already be ``structuring_routine_share`` of the
+#     company's OTHER credits (a business with fixed 9,800 fees is not structuring).
+# With no baseline the absolute rule above is all there is.
+def _structuring_span(near: list[Transaction],
+                      cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG):
     """Return (rows, start, end) for the earliest qualifying span, or None."""
     undated = [t for t in near if t.date is None]
     dated = sorted((t for t in near if t.date is not None),
                    key=lambda t: (t.date, t.index))
-    limit = timedelta(days=_STRUCTURING_CLUSTER_DAYS)
+    limit = timedelta(days=cfg.structuring_cluster_days)
     for first in dated:
         inside = [t for t in dated if first.date <= t.date <= first.date + limit]
-        if len(inside) + len(undated) >= 3:
+        if len(inside) + len(undated) >= cfg.structuring_min_credits:
             rows = sorted(inside + undated, key=lambda t: t.index)
             return rows, first.date, inside[-1].date
-    if len(undated) >= 3:
+    if len(undated) >= cfg.structuring_min_credits:
         return sorted(undated, key=lambda t: t.index), None, None
     return None
 
 
-def _structuring(ing: IngestionResult) -> list[Finding]:
+def _structuring(ing: IngestionResult, base: Optional[CreditBaseline] = None,
+                 cfg: FinancialLogicConfig = DEFAULT_LOGIC_CONFIG) -> list[Finding]:
     findings: list[Finding] = []
-    lo = STRUCTURING_THRESHOLD * (1 - _STRUCTURING_WINDOW)
-    near_all = [t for t in ing.transactions
-                if t.amount is not None and lo <= t.amount < STRUCTURING_THRESHOLD]
-    span = _structuring_span(near_all)
-    if span is not None:
+    credits = [t for t in ing.transactions if t.amount is not None and t.amount > 0]
+    for level in sorted(set(cfg.structuring_levels)):
+        lo = level * (1 - cfg.structuring_band)
+        span = _structuring_span([t for t in credits if lo <= t.amount < level], cfg)
+        if span is None:
+            continue
         near, start, end = span
+        relative = ""
+        if base is not None and base.typical_monthly > 0:
+            total = sum(t.amount for t in near)
+            if total < cfg.structuring_month_share * base.typical_monthly:
+                continue                                  # small next to this company's size
+            others = list(base.sizes)
+            if base.from_statement:                       # do not let the cluster vouch for itself
+                for t in near:
+                    if t.amount in others:
+                        others.remove(t.amount)
+            if len(others) >= cfg.structuring_min_others and \
+                    sum(1 for x in others if lo <= x < level) / len(others) \
+                    >= cfg.structuring_routine_share:
+                continue                                  # near-level credits are this company's norm
+            relative = (f" The cluster totals {total:,.0f}, {total / base.typical_monthly:.0%} of "
+                        f"this company's normal month of credits ({base.typical_monthly:,.0f}), "
+                        f"judged against {base.source}.")
         when = (f" within {start.isoformat()} to {end.isoformat()}"
                 if start is not None else " (undated rows)")
         rows = ", ".join(f"#{t.index}({t.amount:,.0f})" for t in near)
@@ -377,9 +657,10 @@ def _structuring(ing: IngestionResult) -> list[Finding]:
             agent=AGENT, code="FL_STRUCTURING",
             title="Possible structuring below reporting threshold",
             severity=Severity.HIGH, weight=20, page=near[0].page,
-            evidence=(f"{len(near)} deposits fall in {lo:,.0f}-{STRUCTURING_THRESHOLD:,.0f}{when} "
-                      f"(just under the {STRUCTURING_THRESHOLD:,.0f} reporting threshold): "
-                      f"{rows}. Repeated near-threshold amounts suggest deliberate splitting."),
+            evidence=(f"{len(near)} deposits fall in {lo:,.0f}-{level:,.0f}{when} "
+                      f"(just under the {level:,.0f} reporting threshold): "
+                      f"{rows}. Repeated near-threshold amounts suggest deliberate splitting."
+                      f"{relative}"),
         ))
     return findings
 
@@ -425,17 +706,41 @@ def _entity_crosscheck(ing: IngestionResult) -> list[Finding]:
     return findings
 
 
-def analyze(ing: IngestionResult, fabrication_config=None) -> AgentReport:
+def analyze(ing: IngestionResult, fabrication_config=None,
+            trailing_gap_days: Optional[Sequence[int]] = None,
+            trailing_source: Optional[str] = None,
+            history: Optional[TrailingHistory] = None,
+            config: Optional[FinancialLogicConfig] = None) -> AgentReport:
+    """Run all Node 3 checks.
+
+    ``history`` is what the case store knows about this company from earlier,
+    human-approved statements. It feeds the gap, deposit, pass-through, counterparty
+    and structuring checks. ``trailing_gap_days`` / ``trailing_source`` override the gap
+    part only. ``config`` holds every threshold (default: ``DEFAULT_LOGIC_CONFIG``).
+    """
+    cfg = DEFAULT_LOGIC_CONFIG if config is None else config
+    if history is not None and history.case_ids:
+        if trailing_gap_days is None:
+            trailing_gap_days = history.gap_days
+        if trailing_source is None:
+            trailing_source = history.describe()
+    else:
+        history = None
+    base = _credit_baseline(ing, history, cfg)
     findings: list[Finding] = []
-    findings += _reconcile(ing)
-    findings += _closing_check(ing)
-    findings += _period_continuity(ing)
-    findings += _period_length(ing)
+    findings += _reconcile(ing, cfg)
+    findings += _closing_check(ing, cfg)
+    findings += _period_continuity(ing, trailing_gap_days, trailing_source, cfg)
+    findings += _period_length(ing, cfg)
     findings += _month_missing(ing)
     findings += _month_duplicate(ing)
     findings += _month_out_of_order(ing)
-    findings += _suspicious_transactions(ing)
-    findings += _structuring(ing)
+    pairs = _pass_through_pairs(ing, base, cfg)
+    passed_through = {c.index for c, _, _ in pairs}
+    findings += _sudden_deposits(ing, base, passed_through, cfg)
+    findings += _pass_through(pairs, cfg)
+    findings += _unverified_counterparty(ing, base, history, cfg)
+    findings += _structuring(ing, base, cfg)
     findings += _entity_crosscheck(ing)
     findings += fabrication.analyze_fabrication(
         ing, DEFAULT_CONFIG if fabrication_config is None else fabrication_config

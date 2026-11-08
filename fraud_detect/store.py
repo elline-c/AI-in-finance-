@@ -8,12 +8,16 @@ here it is a JSON file so the prototype is self-contained and inspectable.
 from __future__ import annotations
 
 import json
+import os
 import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from .audit import AuditChain, build_signer_from_env
+from .audit.verify import VerificationStatus
+from .history import TrailingHistory, counterparty_key, credit_sizes, monthly_credit_totals
+from .registry import names_match
 from .models import (
     Case,
     CreditDecision,
@@ -26,6 +30,10 @@ from .models import (
 )
 
 _LOCK = threading.Lock()
+
+# Trailing-history settings (Node 3 gap learning).
+_ENV_REQUIRE_CHAIN = "TRAILING_HISTORY_REQUIRE_CHAIN"   # "0" switches the chain check off
+_MAX_TRAILING_STATEMENTS = 6                             # moving window: most recent N
 
 
 # --------------------------------------------------------------------------- #
@@ -195,6 +203,103 @@ class CaseStore:
                     "fingerprint": fp,
                 })
         return memory
+
+    # ---- trailing history (Node 3 gap learning) ------------------------ #
+    def _chain_is_sound(self) -> bool:
+        """True unless the audit chain is broken or carries an invalid signature.
+
+        An unsigned-but-intact chain is accepted (signing is optional). The result
+        is cached against the chain file's size and mtime so a screening does not
+        re-walk the whole chain every time.
+        """
+        path = self._audit.path
+        try:
+            st = path.stat()
+            key = (st.st_size, st.st_mtime_ns)
+        except FileNotFoundError:
+            key = (0, 0)
+        cached = getattr(self, "_chain_check", None)
+        if cached and cached[0] == key:
+            return cached[1]
+        status = self._audit.verify().status
+        sound = status in (VerificationStatus.INTACT_SIGNED,
+                           VerificationStatus.INTACT_UNSIGNED)
+        self._chain_check = (key, sound)
+        return sound
+
+    def _human_approved_in_chain(self, case_id: str) -> bool:
+        """True when the LAST human decision the chain holds for this case is APPROVED."""
+        human = [e.event for e in self._audit.events_for(case_id)
+                 if e.event.startswith("HUMAN_")]
+        return bool(human) and human[-1] == "HUMAN_APPROVED"
+
+    def trailing_history(
+        self, uen: Optional[str], holder: Optional[str],
+        exclude_case_id: Optional[str] = None, *,
+        require_chain: Optional[bool] = None,
+        max_statements: int = _MAX_TRAILING_STATEMENTS,
+    ) -> TrailingHistory:
+        """Behaviour history of a company (gaps, credit sizes, monthly credit totals),
+        from earlier cases we can trust.
+
+        A past case counts only when ALL of these hold:
+          * a human reviewer APPROVED it (an auto-clear is a machine's guess and is
+            not used, so a planted statement cannot teach Node 3 a false rhythm);
+          * its UEN equals ``uen`` and its account holder matches ``holder``;
+          * (``require_chain``, on by default) the audit chain is sound and its last
+            human event for the case is HUMAN_APPROVED, so an edit to cases.json
+            alone cannot make a case trusted.
+
+        Gaps are measured INSIDE each earlier statement and then pooled. Dates are
+        never joined across statements, which would hide the silence between them.
+        The ``max_statements`` most recent qualifying statements are used, so the
+        baseline moves with the company.
+        """
+        if not uen or not holder:
+            return TrailingHistory()
+        if require_chain is None:
+            require_chain = os.environ.get(_ENV_REQUIRE_CHAIN, "1") != "0"
+        if require_chain and not self._chain_is_sound():
+            return TrailingHistory()
+
+        from .nodes.financial_logic import gaps_between_active_days  # avoid import cycle
+
+        picked: list[Case] = []
+        for case in self.list_cases():
+            if exclude_case_id and case.case_id == exclude_case_id:
+                continue
+            rep = case.report
+            if case.review.decision != ReviewDecision.APPROVED:
+                continue
+            if rep.uen != uen or not names_match(rep.account_holder, holder):
+                continue
+            if require_chain and not self._human_approved_in_chain(case.case_id):
+                continue
+            picked.append(case)
+        picked.sort(key=lambda c: c.report.created_at, reverse=True)
+        picked = picked[:max_statements]
+
+        gaps: list[int] = []
+        credits: list[float] = []
+        monthly: list[float] = []
+        names: set[str] = set()
+        for case in picked:
+            txns = case.report.transactions
+            gaps += gaps_between_active_days([t.date for t in txns if t.date is not None])
+            credits += credit_sizes(txns)
+            names |= {k for k in (counterparty_key(t.description) for t in txns) if k}
+            segs = case.report.statement_segments
+            starts = [s.period_start for s in segs if s.period_start is not None]
+            ends = [s.period_end for s in segs if s.period_end is not None]
+            monthly += monthly_credit_totals(
+                txns, min(starts) if starts else None, max(ends) if ends else None)
+        return TrailingHistory(
+            gap_days=tuple(gaps),
+            credits=tuple(credits),
+            monthly_credits=tuple(monthly),
+            case_ids=tuple(c.case_id for c in picked),
+            counterparties=tuple(sorted(names)),
+        )
 
     def list_cases(self) -> list[Case]:
         data = self._read()

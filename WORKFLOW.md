@@ -17,7 +17,7 @@ flowchart TD
 
     %% Independent detection agents all consume the ingestion result
     N1 --> N2["<b>Node 2 — Visual Forensics</b><br/>font mismatch, mixed date/<br/>currency, editor metadata,<br/>impossible creation date"]
-    N1 --> N3["<b>Node 3 — Financial Logic</b><br/>balance reconciliation, gaps,<br/>sudden deposits, structuring,<br/>UEN/ACRA cross-check"]
+    N1 --> N3["<b>Node 3 — Financial Logic</b><br/>balance reconciliation, gaps,<br/>unusual deposits, pass-through,<br/>structuring, UEN/ACRA cross-check"]
 
     %% ML agents: loaded at startup; 6a's transaction scoring is off by default
     N1 --> N6A["<b>Node 6a — ML Transaction</b><br/>GNN graph-risk lookup<br/>(GBM scoring off by default)"]
@@ -88,11 +88,25 @@ conditional step left is Node 5, which runs only when a case store is supplied.
 - Checks whether the numbers behave:
   - running-balance math reconciles row by row (a break means an amount was altered),
   - opening/closing balances match the rows,
-  - no suspicious multi-week gaps (possible removed pages),
-  - sudden deposits far above the account's normal pattern,
-  - big inflows from shady, unverified counterparties,
-  - **structuring** — several deposits sitting just under a reporting threshold,
+  - no gap with no transactions that is unusually long **for this company** (possible
+    removed pages). The limit is learned from how often the company normally transacts,
+    not a fixed number of days,
+  - deposits that are unusually large **for this company**: judged against its own normal
+    credit sizes and a normal month of credits, not a fixed multiple. A flag is a prompt
+    to ask for the invoice or contract, not an accusation,
+  - money that comes in and leaves again within days (**rapid pass-through**), judged
+    against the company's normal credit size,
+  - big inflows from a payer never seen before (matched on whole words, so "BATTERY" is
+    not mistaken for a shell company),
+  - **structuring** — several deposits sitting just under a reporting threshold. When the
+    company's normal size is known, a cluster that is small next to it, or that matches
+    how the company normally gets paid, is not flagged,
   - account-holder name vs the official company registry (UEN/ACRA) record.
+- **What "normal for this company" means.** Node 3 learns it from the company's earlier
+  statements that a **human approved** (same UEN and holder name, confirmed in the audit
+  chain). Without such history it uses the statement's own complete months. An analyst's
+  approval therefore teaches Node 3 the company's rhythm. Details and limits:
+  [Node 3 learned baselines](FRAUD_DETECT_README.md#node-3-learned-baselines-gaps-deposits-pass-through).
 
 ### Node 5 — Cross-Case Memory (the long memory)
 - Gives the system a memory across cases: before finalising, it compares this

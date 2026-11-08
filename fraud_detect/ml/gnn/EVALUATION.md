@@ -175,6 +175,28 @@ derived each account's baseline from its **KYC-declared** monthly turnover (else
 income). The Node 3 numbers below are "Node 3 with a declared-income baseline",
 not "Node 3 as it behaves live today".
 
+**Update: Node 3 has changed since this snapshot, and the figures below have not been
+re-measured** (the comparison cannot be regenerated, see above). The numbers describe
+the old rules and stay as measured. What changed (commits `064783a` to `e12a5f3`; see
+`FRAUD_DETECT_README.md`, "Node 3 learned baselines"):
+
+- `FL_SUDDEN_DEPOSIT` no longer relies on a declared figure alone. It now prefers the
+  company's approved earlier statements, then the statement's own complete months (needs
+  10 credits and 3 complete months), and uses a declared monthly figure (the 3x rule
+  measured here) only as a last resort. A credit must be above the company's normal credit
+  sizes and at least half of a normal month. Severity is MEDIUM, or HIGH if the money also
+  left within days. A re-run on this dataset could give different numbers; whether these
+  accounts have enough history for the new baselines was not checked.
+- `RAPID_PASS_THROUGH` (29/30 below, found by the rules in the unit above) now has its own
+  rule, `FL_RAPID_PASS_THROUGH`. It is not part of the unit defined above and was not
+  measured on this dataset.
+- `FL_UNVERIFIED_COUNTERPARTY` now needs a payer name not seen elsewhere, matched on whole
+  words. The dataset's descriptions carry no names, so it still cannot be evaluated here.
+- `FL_STRUCTURING` is unchanged when no baseline exists. With one, a cluster can be dropped
+  when it is small next to the company. The reporting level is now a setting
+  (`structuring_levels`), so the 20,000 sensitivity run described below could be repeated
+  without a code change. It was not.
+
 ### Test split: 1,201 accounts, 27 fraud accounts (95% Wilson intervals)
 
 | Detector | Alerts | Fraud caught | False alarms | Precision | Recall |
@@ -234,7 +256,8 @@ rest are caught by the sudden-deposit rule. A sensitivity run with the
 threshold raised to 20,000 puts 56 of 315 transactions in the window and moves
 overall recall only from 53.1% to 55.0%. `FL_UNVERIFIED_COUNTERPARTY` never fires
 because the dataset's descriptions are generic ("FAST TRANSFER IN") and carry no
-counterparty names, so that rule cannot be evaluated on this data.
+counterparty names, so that rule cannot be evaluated on this data. (Update: reporting
+levels are now configurable; see the note at the top of this section.)
 
 ### What this says
 

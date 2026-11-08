@@ -10,7 +10,7 @@ principles (the machine never approves or rejects a customer on its own).
 ### The 4-agent pipeline
 1. **Ingestion** — reads the statement, flags missing/messy data.
 2. **Visual Forensics** — flags editing-software traces, altered metadata, dodgy supporting docs.
-3. **Financial Logic** — checks balances add up; detects structuring, anomalous & pass-through transactions.
+3. **Financial Logic** — checks balances add up; detects structuring, deposits that are unusual for that company, and money that passes straight through. "Unusual" is judged against the company's own history, not a fixed number.
 4. **Risk & Synthesis** — combines everything into a risk score (1–100) + confidence score, then decides: auto-clear or send to a human.
 
 ### Run it (no installation — pure Python 3)

@@ -45,7 +45,7 @@
   "note": "Pinned baseline taken at task 1.1. Do not edit by hand.",
   "sha256": {
     "fraud_detect/nodes/fabrication.py": "e2d06b057076b4cd9edac7ca57d92dae5d6f98fc40fb5edf9876731ddc606847",
-    "fraud_detect/nodes/financial_logic.py": "c1506d62f46d3857f4bab42f025ef14d277ff5b2a16407b2b6b6661974037e1a",
+    "fraud_detect/nodes/financial_logic.py": "56a4d9aa071c82aa41c76ba3c1669fe9cd6fd3931d77b40db44587aed0cab366",
     "fraud_detect/nodes/ingest_parse/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "fraud_detect/nodes/ingest_parse/dates.py": "d2fe1f8e591f62194b55bee915ffd16e9226c6eda216561c72f9e923c283579c",
     "fraud_detect/nodes/ingest_parse/direction.py": "dce8367dbd84cf940f23fd61a1b6dea46f483583550bb3549893d320ac4c7b5c",

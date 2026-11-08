@@ -26,8 +26,10 @@ Python. It is a **finished prototype**, not a finished product.
     altered-text hints, and irrelevant/mismatched supporting documents.
   - **Node 3 — Financial Logic:** checks running balances add up row by row,
     reconciles the statement total, checks the dates flow correctly, and detects
-    structuring (deposits just under limits), sudden abnormal deposits, and rapid
-    in-then-out "pass-through" money movements.
+    structuring (clusters of deposits just under a reporting level), deposits that are
+    unusually large for that company, large credits from payers never seen before, and
+    rapid in-then-out "pass-through" money movements. "Unusual" is judged against the
+    company's own history, not against fixed numbers.
   - **Node 4 — Risk & Synthesis:** combines everything into a **risk score
     (1–100, banded Low / Medium / High / Very High)** and an **inverted confidence
     score (High / Medium / Low / Very Low)**.
@@ -48,8 +50,12 @@ Python. It is a **finished prototype**, not a finished product.
 - **Real image forensics** (pixel/layer analysis) — currently done with metadata +
   rules, not true image inspection.
 - The **analyst review screen** (human-in-the-loop UI) and the **feedback loop**.
-- **Historical baselines** (comparing to expected cash flow / known vendors),
-  database, integration, tests, security, and deployment.
+- **Peer-group benchmarking and a production history store** (comparing a company with
+  similar businesses, and a real database of customer history), known-vendor data,
+  integration, security, and deployment. _Built at prototype level:_ Node 3 now learns
+  each company's own baseline from its statement and from earlier human-approved cases
+  in the local case store (synthetic data only). No open data on company transaction
+  records was found for peer benchmarking, so a bank would need to supply it.
 
 > In short: **the entire "brain" (decision engine) is complete; the real-world
 > inputs, the human review screen, and production hardening are what remain.**
@@ -170,6 +176,10 @@ _Start from the prototype in this repo._
 - Formalise the input contract as a versioned JSON Schema; validate at the boundary.
 - Config-drive the thresholds (structuring band, σ multiplier, gap days, auto-clear
   ceiling) instead of hard-coding — analysts will want to tune these.
+  _Status:_ done for Node 3 (`FinancialLogicConfig` in `fraud_detect/nodes/logic_config.py`;
+  the σ multiplier became a robust-spread multiplier) and for the fabrication rules
+  (`FabricationConfig`). Not yet done for the Node 2 settings or the Node 4 auto-clear
+  ceiling, which are still module constants.
 - Structured logging + a stable machine-readable report (already emitted as JSON).
 - **Deliverable:** tested, configurable screening engine with CI.
 
@@ -193,6 +203,10 @@ _Start from the prototype in this repo._
 - Analyst records **approve / reject + reason**; reason is mandatory and stored.
 - Wire the feedback loop: analyst outcomes feed the feedback store for threshold
   tuning and (later) model retraining — this is the "let the AI know why" step.
+  _Prototype status:_ an analyst's APPROVE already teaches Node 3 that company's normal
+  rhythm (only human-approved, audit-chain-checked cases count). Per-flag feedback, such as
+  "this gap flag was a false positive", is not captured yet, so an approval covers the
+  whole case.
 - **Deliverable:** analysts work entirely in-tool; nothing auto-rejects.
 
 ### Phase 5 — Integration, pilot & hardening (3–4 weeks)
