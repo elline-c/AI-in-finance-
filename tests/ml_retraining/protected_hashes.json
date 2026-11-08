@@ -1,0 +1,67 @@
+{
+  "node4_pinned": {
+    "module_constants": {
+      "AUTO_CLEAR_MAX_RISK": 25,
+      "MIN_CONFIDENCE_FOR_AUTO": 60
+    },
+    "numeric_literals_by_function": {
+      "_band_conf": [
+        25,
+        50,
+        75
+      ],
+      "_band_risk": [
+        25,
+        50,
+        75
+      ],
+      "_compute_confidence": [
+        85,
+        25,
+        2,
+        10,
+        12,
+        10,
+        1,
+        40,
+        0,
+        1,
+        20,
+        40,
+        100,
+        8
+      ],
+      "_compute_risk": [
+        1,
+        2,
+        10,
+        1,
+        100,
+        26
+      ],
+      "_route": []
+    }
+  },
+  "note": "Pinned baseline taken at task 1.1. Do not edit by hand.",
+  "sha256": {
+    "fraud_detect/nodes/fabrication.py": "e2d06b057076b4cd9edac7ca57d92dae5d6f98fc40fb5edf9876731ddc606847",
+    "fraud_detect/nodes/financial_logic.py": "56a4d9aa071c82aa41c76ba3c1669fe9cd6fd3931d77b40db44587aed0cab366",
+    "fraud_detect/nodes/ingest_parse/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fraud_detect/nodes/ingest_parse/dates.py": "d2fe1f8e591f62194b55bee915ffd16e9226c6eda216561c72f9e923c283579c",
+    "fraud_detect/nodes/ingest_parse/direction.py": "dce8367dbd84cf940f23fd61a1b6dea46f483583550bb3549893d320ac4c7b5c",
+    "fraud_detect/nodes/ingest_parse/eval_layouts.py": "ee1dc09ad4084029844a7531c3081a2a7ee8f39d0322dd1c987ef9d3d7d80570",
+    "fraud_detect/nodes/ingest_parse/header.py": "c22c6b3044e182754f65150a7f7a3fd2f11abaf781677d7ada595978e5010194",
+    "fraud_detect/nodes/ingest_parse/layouts.py": "9d86f56f31354f0823c2c28f240c8c3f6016c70b14cf4e9dcd5948496de4fc44",
+    "fraud_detect/nodes/ingest_parse/money.py": "3550b671f5ff266249b69b245c7eecb339a7f7df2042316bdc16e20f0e4c2b58",
+    "fraud_detect/nodes/ingest_parse/parser.py": "da05d0521de7e850bc56cf48f452b9a40023a7f372a02ee0bb65ec0d05c69ff8",
+    "fraud_detect/nodes/ingest_parse/sections.py": "ac9983f7c0e932684e2a8cf9ce959877e9bb9e577d37014e364b813504d469b4",
+    "fraud_detect/nodes/ingest_parse/selfcheck.py": "1b80288db035e54d6e074516d80cfe1c5777670c71950eb109ce5a24171161c9",
+    "fraud_detect/nodes/ingest_parse/table.py": "3ab8a14d1967584e3c5a18c5ae7081eea5367f542e97aa6276374ebba4734497",
+    "fraud_detect/nodes/ingest_parse/types.py": "0f6196d48144bd0794b07ebb2e5992ae7613d61115bd0c7bc457ee9722ee9736",
+    "fraud_detect/nodes/ingestion.py": "eb17d31a1a5a20fdea86a25b9af11b7ab4b51c7cf1537e4190acc3cf30c8e2a6",
+    "fraud_detect/nodes/risk_synthesis.py": "57f0800d9f87abd0b05afa2a50e6a70e1eeef0964cd6685d2970f0cf7dd941bc",
+    "fraud_detect/nodes/visual_forensics.py": "aa04e7519e021bd0a24e35fb599e791f749ff7141500fd42233d1344e1752deb",
+    "fraud_detect/reference_data.py": "deac21783fd814ad4093be25479696a3a2c0c43bb9221a8c571b0fd8275d7549",
+    "fraud_detect/registry.py": "c9e3a623a3d659150ae1e6d84c81166a659faf8e454166007629afd69ed77058"
+  }
+}

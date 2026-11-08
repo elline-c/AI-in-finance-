@@ -33,6 +33,31 @@ _GNN_HIGH = 0.80
 _GNN_MEDIUM = 0.50
 
 
+# The per-transaction model is switched OFF in the live app by default. Trained
+# on the available dataset, it either relies on fields a PDF statement does not
+# carry (channel, counterparty, KYC) or, restricted to statement-only fields,
+# mistakes ordinary business-sized transactions for fraud: it raised false alarms
+# on clean statements without adding detection the rule-based checks lack. Set
+# this environment variable to 1/true/yes to switch it back on (e.g. once it is
+# retrained on representative statements). The GNN lookup in this node is
+# separate and is not affected.
+ENABLE_ENV = "FRAUD_ENABLE_TXN_MODEL"
+
+
+def load_live_model(path: str = "models/txn_fraud_clf.joblib", env=None):
+    """Model for live screening, or ``None`` while the model is switched off.
+
+    Returns ``None`` unless ``FRAUD_ENABLE_TXN_MODEL`` is set to a true value;
+    then behaves like :func:`load_model` (also ``None`` if the file is missing).
+    """
+    import os
+
+    env = os.environ if env is None else env
+    if str(env.get(ENABLE_ENV, "")).strip().lower() not in ("1", "true", "yes", "on"):
+        return None
+    return load_model(path)
+
+
 def load_model(path: str = "models/txn_fraud_clf.joblib"):
     """Load the saved pipeline bundle, or return None if unavailable (fail-safe)."""
     try:
@@ -40,6 +65,21 @@ def load_model(path: str = "models/txn_fraud_clf.joblib"):
         return joblib.load(path)
     except Exception:
         return None
+
+
+def _feature_spec(model):
+    """Return ``(feature builder, column list)`` matching how ``model`` was trained.
+
+    Bundles from ``train_transaction`` record their ``feature_set``: ``"pdf"``
+    models are trained on statement-only fields with date-only timestamps, so
+    they must be fed by ``build_pdf_features``. Bundles without the key predate
+    feature sets and used the full column list.
+    """
+    if isinstance(model, dict) and model.get("feature_set") == "pdf":
+        return tf.build_pdf_features, list(model["feature_columns"])
+    if isinstance(model, dict) and model.get("feature_columns"):
+        return tf.build_features, list(model["feature_columns"])
+    return tf.build_features, tf.FEATURE_COLUMNS
 
 
 def _rows_from_ingestion(ing: IngestionResult) -> pd.DataFrame:
@@ -107,10 +147,9 @@ def _append_gbm_findings(ing: IngestionResult, model, findings: list[Finding]) -
     findings. Behaviourally identical to the original inline implementation."""
     try:
         df = _rows_from_ingestion(ing)
-        feat = tf.build_features(
-            df.assign(is_fraud=0, split="train")  # dummy cols for build_features
-        )
-        X = feat[tf.FEATURE_COLUMNS]
+        build, columns = _feature_spec(model)
+        feat = build(df.assign(is_fraud=0, split="train"))  # dummy target/split cols
+        X = feat[columns]
         pipe = model["pipeline"] if isinstance(model, dict) else model
         probs = pipe.predict_proba(X)[:, 1]
     except Exception:

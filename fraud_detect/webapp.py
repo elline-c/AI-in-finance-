@@ -25,6 +25,7 @@ from .ml.gnn import gnn_lookup
 from .nodes import ml_statement, ml_transaction
 from .models import ReviewDecision
 from .pipeline import run_pipeline
+from .registry import live_lookup_lifespan
 from .store import CaseStore
 
 BASE = Path(__file__).resolve().parent
@@ -57,7 +58,7 @@ def _safe_upload_destination(filename: str | None) -> Path:
         raise HTTPException(status_code=400, detail="Invalid upload filename")
     return dest
 
-app = FastAPI(title="Bank Statement Tampering Screening")
+app = FastAPI(title="Bank Statement Tampering Screening", lifespan=live_lookup_lifespan)
 templates = Jinja2Templates(directory=str(BASE / "templates"))
 store = CaseStore(str(BASE.parent / "data" / "cases.json"))
 
@@ -69,7 +70,8 @@ GNN_SCORES = gnn_lookup.load_scores()
 # Load the trained ML models once at startup, mirroring the GNN_SCORES pattern.
 # Both loaders are fail-safe (return None if the .joblib file is absent), so the
 # optional ML nodes (6a/6b) simply stay dormant when a model is missing.
-TXN_MODEL = ml_transaction.load_model()
+# Off by default: see ml_transaction.ENABLE_ENV. GNN_SCORES above still feed Node 6a.
+TXN_MODEL = ml_transaction.load_live_model()
 STATEMENT_MODEL = ml_statement.load_model()
 
 _BAND_COLOR = {

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Loan Approval{% endblock %} · Approval Console</title>
+  <style>
+    :root {
+      --bg:#eef2f4; --card:#ffffff; --ink:#15202b; --muted:#5a6b78;
+      --line:#dce3e8; --brand:#0f766e; --brand-dark:#0b5a53;
+      --ok:#1a7f4b; --ok-bg:#e8f6ee; --warn:#9a6700; --warn-bg:#fdf3e0;
+      --bad:#b42318; --bad-bg:#fdeceb; --refer:#9a6700;
+      --shadow:0 1px 3px rgba(16,24,40,.08);
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+           background:var(--bg); color:var(--ink); line-height:1.5; }
+    a { color:var(--brand); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+
+    header { background:var(--ink); color:#fff; }
+    .bar { max-width:1040px; margin:0 auto; padding:14px 24px; display:flex;
+           align-items:center; gap:12px; }
+    .logo { font-weight:800; font-size:17px; display:flex; align-items:center; gap:9px; }
+    .logo .mark { width:26px; height:26px; border-radius:7px; background:var(--brand);
+                  display:grid; place-items:center; font-size:15px; }
+    .bar .role { margin-left:auto; font-size:12px; color:#9fb0ba;
+                 border:1px solid #33454f; padding:3px 10px; border-radius:999px; }
+    .bar a { color:#cfe0e6; font-size:14px; }
+
+    main { max-width:1040px; margin:0 auto; padding:26px 24px 60px; }
+    h1 { font-size:24px; margin:0 0 6px; } h2 { font-size:17px; margin:0 0 12px; }
+    .lede { color:var(--muted); margin:0 0 20px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:13px;
+            padding:22px; box-shadow:var(--shadow); margin-bottom:20px; }
+
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { text-align:left; padding:11px 12px; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase;
+         letter-spacing:.04em; }
+    tr:last-child td { border-bottom:0; }
+    .num { text-align:right; font-variant-numeric:tabular-nums; }
+
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+    .metric { background:#f7fafb; border:1px solid var(--line); border-radius:11px; padding:14px 16px; }
+    .metric .k { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+    .metric .v { font-size:22px; font-weight:800; margin-top:4px; font-variant-numeric:tabular-nums; }
+    .metric .v.pos { color:var(--ok); } .metric .v.neg { color:var(--bad); }
+
+    .pill { display:inline-block; padding:3px 11px; border-radius:999px; font-size:12px;
+            font-weight:700; }
+    .pill.ok { background:var(--ok-bg); color:var(--ok); }
+    .pill.warn { background:var(--warn-bg); color:var(--warn); }
+    .badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; }
+    .b-PENDING{background:#e7eef2;color:#475b67}
+    .b-APPROVED{background:var(--ok-bg);color:var(--ok)}
+    .b-DECLINED{background:var(--bad-bg);color:var(--bad)}
+    .b-REFERRED{background:var(--warn-bg);color:var(--warn)}
+
+    label { display:block; font-size:13px; font-weight:600; margin:14px 0 6px; }
+    .hint { font-weight:400; color:var(--muted); font-size:12px; }
+    input,select,textarea { width:100%; padding:10px 12px; font-size:14px; color:var(--ink);
+            background:#fff; border:1px solid var(--line); border-radius:9px; font-family:inherit; }
+    input:focus,select:focus,textarea:focus { outline:2px solid var(--brand); border-color:var(--brand); }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+    .btn { display:inline-block; border:0; cursor:pointer; font-size:14px; font-weight:600;
+           padding:11px 20px; border-radius:9px; background:var(--brand); color:#fff; }
+    .btn:hover { background:var(--brand-dark); text-decoration:none; }
+    .btn.ghost { background:#eef2f4; color:var(--ink); border:1px solid var(--line); }
+    .kv { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+    .note { font-size:13px; color:var(--muted); background:#f7fafb; border:1px solid var(--line);
+            border-radius:10px; padding:13px 15px; }
+    .note strong { color:var(--ink); }
+    footer { max-width:1040px; margin:0 auto; padding:6px 24px 36px; color:var(--muted); font-size:12px; }
+    @media(max-width:720px){ .metrics{grid-template-columns:repeat(2,1fr)} .row{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <span class="logo"><span class="mark">★</span> Approval Console</span>
+      <a href="/">Approval queue</a>
+      <span class="role">Loan officer</span>
+    </div>
+  </header>
+  <main>{% block body %}{% endblock %}</main>
+  <footer>
+    Lending decisions are made by the loan officer. Document authenticity is
+    verified separately by fraud screening — this console only shows fraud-cleared
+    applications and cannot override a fraud decision.
+  </footer>
+</body>
+</html>

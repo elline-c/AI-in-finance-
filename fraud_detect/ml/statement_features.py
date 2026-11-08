@@ -22,6 +22,15 @@ from typing import Optional
 import pdfplumber
 from pypdf import PdfReader
 
+# Inputs to the forgery model.
+#
+# ``n_distinct_date_formats`` and ``duplicate_amount_overlap`` are still computed by
+# ``extract_features`` (the Node 6b evidence text uses them) but are NOT model
+# inputs. In the training data genuine and forged documents have the same median
+# for both (2 and 3); the model used them to recognise how the dataset's own
+# generator prints a document (two date formats, a summary block that repeats
+# numbers), so any statement printed differently scored as forged. Removing them
+# cost nothing on held-out data (out-of-layout ROC-AUC 0.938 either way).
 FEATURE_NAMES = [
     "n_pages",
     "n_text_objects",
@@ -30,13 +39,18 @@ FEATURE_NAMES = [
     "n_content_streams",         # extra content streams hint at overlay edits
     "has_editing_software",      # editor Producer/Creator present
     "moddate_after_creation",    # ModDate strictly later than CreationDate
-    "n_distinct_date_formats",   # mixed date formats in the text
     "n_money_tokens",
     "balance_reconcile_breaks",  # rows where running balance doesn't add up
     "balance_reconcile_rate",    # breaks / rows checked
     "n_currency_styles",
-    "duplicate_amount_overlap",  # same amount token appearing suspiciously often
 ]
+
+# Features that scale with how long a document is. Training documents are single
+# months (median 28 transactions, at most 3 pages), so the model cannot judge a
+# document outside the sizes it saw. Node 6b stays silent on such documents
+# instead of guessing (see ``ml_statement``). Deliberately NOT the tamper-signal
+# features: a large break count is evidence of forgery, not unfamiliarity.
+SIZE_FEATURES = ["n_pages", "n_text_objects", "n_money_tokens"]
 
 _EDITING_SOFTWARE = ["photoshop", "illustrator", "gimp", "inkscape", "acrobat",
                      "pdfescape", "pdf-xchange", "foxit", "libreoffice", "word"]
@@ -106,6 +120,44 @@ def _money_to_float(tok: str) -> Optional[float]:
         return None
 
 
+_OPENING_LINE_RE = re.compile(r"BALANCE BROUGHT FORWARD|Opening Balance", re.IGNORECASE)
+_ANY_DATE_RE = re.compile("|".join(_DATE_PATTERNS.values()))
+
+
+def _reconcile_rows(lines: list[str]) -> tuple[int, float]:
+    """Row-by-row balance reconciliation from the statement's text lines.
+
+    A transaction row is a line that carries a date and at least two money values;
+    its LAST two values are the amount and the running balance. The opening
+    balance comes from a "BALANCE BROUGHT FORWARD" / "Opening Balance" line, so
+    the first row is checked too. Header summary lines (several numbers, no date),
+    page markers and closing totals are skipped. Both signs are tried, because
+    some layouts print the amount unsigned in separate debit/credit columns.
+
+    Returns ``(break_count, break_rate)``. Replaces the earlier approach of
+    pairing every money value on the page as alternating amount/balance, which
+    mis-paired the header summary and so reported many "breaks" on genuine
+    documents.
+    """
+    prev: Optional[float] = None
+    checked = breaks = 0
+    for line in lines:
+        vals = [v for v in (_money_to_float(t) for t in _MONEY_RE.findall(line)) if v is not None]
+        if not vals:
+            continue
+        if _OPENING_LINE_RE.search(line):
+            prev = vals[0]
+            continue
+        if len(vals) >= 2 and _ANY_DATE_RE.search(line):
+            amount, balance = abs(vals[-2]), vals[-1]
+            if prev is not None:
+                checked += 1
+                if not (abs(prev + amount - balance) <= 0.01 or abs(prev - amount - balance) <= 0.01):
+                    breaks += 1
+            prev = balance
+    return breaks, (breaks / checked if checked else 0.0)
+
+
 def _reconcile_rate(amounts: list[float], balances: list[float]) -> tuple[int, float]:
     """Count rows where balance[i] != balance[i-1] + amount[i] (within tolerance).
 
@@ -173,9 +225,7 @@ def extract_features(path: str) -> Optional[dict[str, float]]:
     money_vals = [v for v in (_money_to_float(t) for t in money_tokens) if v is not None]
     # Heuristic: treat the sequence of money values as alternating amount/balance
     # is unreliable, so reconcile on the full ordered balance-like series.
-    amounts = money_vals[0::2]
-    balances = money_vals[1::2]
-    breaks, rate = _reconcile_rate(amounts, balances)
+    breaks, rate = _reconcile_rows(raw_text.splitlines())
 
     # Duplicate amount overlap: overlays often leave the original value in the
     # text layer AND the new value -> suspiciously repeated tokens.

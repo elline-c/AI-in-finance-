@@ -1,0 +1,442 @@
+{
+  "pbtResults": {
+    "6.3 Write property tests for the subtle amount edit": {
+      "status": "passed",
+      "lastRunTimestamp": 1794038682235
+    }
+  },
+  "executionHistory": {
+    "1.1 Record Golden_Hashes of the unchanged generator": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216083
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029227072
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030310616
+      }
+    ],
+    "1.2 Record baseline test counts": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216112
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029227116
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030311376
+      }
+    ],
+    "2.1 Write failing tests for the schema additions and write the schema additions": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216129
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030318539
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030534470
+      }
+    ],
+    "2.2 Builder validation, counts, manifest keys and `--style-version`": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216146
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030541857
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032058074
+      }
+    ],
+    "3.1 Write failing tests for `styling.py`": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216171
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030318888
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030534418
+      }
+    ],
+    "3.2 Implement `fraud_detect/corpus/styling.py`": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216193
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030542545
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032057433
+      }
+    ],
+    "4.1 `finish.py`: Creator, footer font and address helper": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216211
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030543556
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032058751
+      }
+    ],
+    "4.2 `generator_v1.py`: address line and footer font": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216228
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032071513
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032340816
+      }
+    ],
+    "4.3 `dataset_family.py`: address line, bank-line font and footer font": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216253
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032071577
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032341067
+      }
+    ],
+    "4.4 `pdf_ops._apply_metadata` tolerates a missing producer": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216285
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030544196
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032059794
+      }
+    ],
+    "4.5 Render, read back and compare, for all six Layouts": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216305
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032359168
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794042176971
+      }
+    ],
+    "5.1 Version-2 path in `_build_document`, and the Style_Block": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216324
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032071602
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032341656
+      }
+    ],
+    "5.2 Tests for the version-2 build": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216344
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032359246
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794042177362
+      }
+    ],
+    "6.1 Write failing tests for `subtle_amount_edit`": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216361
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030319732
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030534622
+      }
+    ],
+    "6.2 Implement `tamper/subtle.py` and register it": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216388
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030544697
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032060421
+      }
+    ],
+    "7. Checkpoint - generator complete": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216410
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794043424346
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794044830298
+      }
+    ],
+    "8.1 Simulate the ml-retraining gates on Balanced_Styling style tables": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216436
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032071767
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032342873
+      }
+    ],
+    "8.2 Check `verify.py` and the report with the new tamper type": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216453
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032071966
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032343097
+      }
+    ],
+    "9.1 Update the build command, the mix and the counts": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216470
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032360162
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794042179354
+      }
+    ],
+    "9.2 Round-trip test through the Retraining_Pipeline reader": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216487
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794042179859
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794043424316
+      }
+    ],
+    "10. Final checkpoint - ask the user": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794029216504
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794044830783
+      }
+    ],
+    "1. Safety net before any generator change": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794030311415
+      }
+    ],
+    "3. Balanced styling module": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032057460
+      }
+    ],
+    "2. Schema, builder validation and command line": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032058103
+      }
+    ],
+    "6. Subtle amount-change tamper": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032060451
+      }
+    ],
+    "8. Gate simulation and verify compatibility": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032343122
+      }
+    ],
+    "3.3 Write property tests for `styling.py`": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032361157
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794042176714
+      }
+    ],
+    "6.3 Write property tests for the subtle amount edit": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794032361304
+      },
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794042178354
+      }
+    ],
+    "4. Renderers and PDF metadata honour the style": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794042176993
+      }
+    ],
+    "5. Builder wiring and manifests": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794042177395
+      }
+    ],
+    "9. Switch the ml-retraining build to Balanced_Styling": [
+      {
+        "executionId": "520fcaf9-ade2-4c10-b8c7-49cf694d0dc6",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1794043424376
+      }
+    ]
+  }
+}

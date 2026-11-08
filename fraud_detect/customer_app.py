@@ -39,6 +39,7 @@ from fastapi.templating import Jinja2Templates
 from .ml.gnn import gnn_lookup
 from .models import ApplicationDetails, Case, ReviewDecision
 from .pipeline import run_pipeline
+from .registry import live_lookup_lifespan
 from .store import CaseStore
 
 BASE = Path(__file__).resolve().parent
@@ -99,7 +100,7 @@ def _safe_upload_destination(filename: str | None) -> Path:
     return dest
 
 
-app = FastAPI(title="Corporate Loan Application Portal")
+app = FastAPI(title="Corporate Loan Application Portal", lifespan=live_lookup_lifespan)
 templates = Jinja2Templates(directory=str(BASE / "templates_customer"))
 store = CaseStore(str(BASE.parent / "data" / "cases.json"))
 

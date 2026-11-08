@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Not available{% endblock %}
+{% block body %}
+
+<h1>This application isn't ready for a lending decision</h1>
+<p class="lede">The approval console only shows applications whose documents have
+cleared fraud screening.</p>
+
+<div class="card">
+  <div class="note">
+    <strong>Why am I seeing this?</strong><br>
+    Case <code>{{ case.case_id }}</code> currently has a fraud-screening status of
+    <b>{{ case.review.decision.value.replace("_", " ") }}</b>
+    (routing: {{ case.report.routing.value }}).
+    A loan officer can only decide on a file once the fraud team has cleared it —
+    this preserves separation of duties, and the approval console cannot override a
+    fraud outcome.
+  </div>
+  <div style="margin-top:16px">
+    <a class="btn" href="/">← Back to the approval queue</a>
+  </div>
+</div>
+{% endblock %}

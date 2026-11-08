@@ -1,0 +1,522 @@
+{
+  "pbtResults": {
+    "2.3 Property test — deterministic canonical hashing": {
+      "status": "passed",
+      "lastRunTimestamp": 1792946161345
+    },
+    "4.5 Property test — concurrent in-process appends serialize cleanly": {
+      "status": "passed",
+      "lastRunTimestamp": 1792947280735
+    },
+    "6.4 Property test — unsigned chains reported as UNSIGNED, never signed": {
+      "status": "passed",
+      "lastRunTimestamp": 1792947860850
+    },
+    "6.7 Property test — rewrite-with-rehash forgery still caught": {
+      "status": "passed",
+      "lastRunTimestamp": 1792947928639
+    },
+    "6.5 Property test — any single structural corruption is BROKEN_CHAIN": {
+      "status": "passed",
+      "lastRunTimestamp": 1792948032382
+    }
+  },
+  "executionHistory": {
+    "1. Scaffold the `fraud_detect/audit/` subpackage and add the crypto dependency": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010354
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945023523
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945159145
+      }
+    ],
+    "2.1 Implement canonical serialization + hash/signed payload helpers": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010405
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945165415
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945348462
+      }
+    ],
+    "2.2 Implement the `AuditEvent` pydantic v2 model": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010448
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945354407
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945590856
+      }
+    ],
+    "3.1 Define the `Signer` protocol and `LocalFileSigner`": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010472
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946222080
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946375315
+      }
+    ],
+    "3.2 Implement `build_signer_from_env` with fail-loud key handling": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010494
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946381405
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946594433
+      }
+    ],
+    "4.1 Implement `AuditChain` construction and read helpers": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010520
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946802959
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946951148
+      }
+    ],
+    "4.2 Implement `append` with chaining, signing, fsync, and lock": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010545
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946957446
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947112274
+      }
+    ],
+    "5. Checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010579
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947341116
+      }
+    ],
+    "6.1 Implement the `VerificationResult` model": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010610
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947341833
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947511297
+      }
+    ],
+    "6.2 Implement `AuditChain.verify` (two-pass re-walk)": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010635
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947517737
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947726818
+      }
+    ],
+    "7.1 Implement `python -m fraud_detect.audit.verify`": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010659
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948332078
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948709680
+      }
+    ],
+    "8.1 Construct the chain + signer in `CaseStore.__init__`": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010685
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948718047
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948913802
+      }
+    ],
+    "8.2 Append `SCREENED` / `HUMAN_*` events from the existing call sites": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010705
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948920511
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792949136600
+      }
+    ],
+    "9. Honest security-boundary documentation (R11)": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010728
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792949144946
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792949341857
+      }
+    ],
+    "10. Final checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945010752
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792949349514
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792949390027
+      }
+    ],
+    "2. Canonical serialization, hashing, and the `AuditEvent` model": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792945590895
+      }
+    ],
+    "2.3 Property test — deterministic canonical hashing": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946038916
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946215013
+      }
+    ],
+    "2.4 Property test — field-format invariant on `AuditEvent`": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946039899
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946215671
+      }
+    ],
+    "3. Signing backend: `Signer` interface + `LocalFileSigner` + env builder": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946594460
+      }
+    ],
+    "3.3 Property test — signing round-trip and key resolution": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946601645
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946794639
+      }
+    ],
+    "3.4 Unit tests — fail-loud construction and local-file semantics": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946602792
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792946795589
+      }
+    ],
+    "4. `AuditChain.append` — append-only, hash-chained, signed, durable": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947112321
+      }
+    ],
+    "4.3 Property test — append preserves prior content as an exact prefix": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947120074
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947309199
+      }
+    ],
+    "4.4 Property test — genesis and chaining invariant": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947121475
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947310181
+      }
+    ],
+    "4.5 Property test — concurrent in-process appends serialize cleanly": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947122938
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947311552
+      }
+    ],
+    "4.6 Property test — every event carries its case_id": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947123504
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947312250
+      }
+    ],
+    "6. `VerificationResult` model and the verifier": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947726849
+      }
+    ],
+    "6.3 Property test — signed chain round-trip verifies as INTACT_SIGNED": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947734363
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948079718
+      }
+    ],
+    "6.4 Property test — unsigned chains reported as UNSIGNED, never signed": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947735823
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948081142
+      }
+    ],
+    "6.5 Property test — any single structural corruption is BROKEN_CHAIN": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947736710
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948082013
+      }
+    ],
+    "6.6 Property test — signature tampering is SIGNATURE_INVALID": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947738159
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948083431
+      }
+    ],
+    "6.7 Property test — rewrite-with-rehash forgery still caught": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792947739078
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948084245
+      }
+    ],
+    "6.8 Property test — verification has no side effects": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948106645
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948324828
+      }
+    ],
+    "6.9 Unit test — empty chain verifies as INTACT_SIGNED": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948107367
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948325572
+      }
+    ],
+    "7. Verification CLI with exit-code contract": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948709719
+      }
+    ],
+    "7.2 Unit tests — CLI exit codes for each outcome": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948717307
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792948912912
+      }
+    ],
+    "8. Integrate `AuditChain` into `CaseStore`": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792949136642
+      }
+    ],
+    "8.3 Integration test — end-to-end screen + decision chain verifies": [
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792949144188
+      },
+      {
+        "executionId": "c64f7104-da83-46bb-85b1-88db80953306",
+        "chatSessionId": "sess_b1c0b0cf-f2c0-4a6d-ab0f-0a38b704afad",
+        "timestamp": 1792949341285
+      }
+    ]
+  }
+}

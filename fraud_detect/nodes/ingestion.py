@@ -13,6 +13,7 @@ The output is a strict, validated ``IngestionResult`` (the JSON contract).
 """
 from __future__ import annotations
 
+import os
 import re
 from datetime import date, datetime
 from typing import Optional
@@ -27,10 +28,21 @@ from ..models import (
     IngestionResult,
     PageText,
     Severity,
+    StatementSegment,
     Transaction,
 )
 
+from .ingest_parse.parser import parse_pages
+from .ingest_parse.table import _group_lines
+from .ingest_parse.types import Line, PageContent, Word
+
 AGENT = "Node1:Ingestion"
+
+# Matches every "Statement Period:" header; used with finditer so a combined
+# PDF with several monthly sections is split into one segment per header.
+_PERIOD_RE = re.compile(
+    r"Statement Period:\s*(\d{2}/\d{2}/\d{4})\s*-\s*(\d{2}/\d{2}/\d{4})"
+)
 
 # A row looks like: "04/01/2025 M1 Limited SGD-2,945.32 SGD52,054.68"
 # amount/balance may use SGD or S$ prefix and optional leading + / -.
@@ -90,9 +102,14 @@ def _extract_fonts(pdf: "pdfplumber.PDF") -> list[FontUsage]:
     return usage
 
 
-def _grab(pattern: str, text: str) -> Optional[str]:
-    m = re.search(pattern, text)
-    return m.group(1).strip() if m else None
+def _page_content(page_no: int, page: "pdfplumber.page.Page") -> PageContent:
+    """Word boxes and grouped text lines for one page (for the layout-tolerant parser)."""
+    words = [
+        Word(text=w["text"], x0=float(w["x0"]), x1=float(w["x1"]), top=float(w["top"]))
+        for w in page.extract_words(keep_blank_chars=False, use_text_flow=False)
+    ]
+    lines = [Line(text=" ".join(w.text for w in grp), top=grp[0].top) for grp in _group_lines(words)]
+    return PageContent(page=page_no, lines=lines, words=words)
 
 
 def ingest(path: str) -> IngestionResult:
@@ -101,6 +118,7 @@ def ingest(path: str) -> IngestionResult:
     with pdfplumber.open(path) as pdf:
         page_count = len(pdf.pages)
         page_texts = [(i + 1, (p.extract_text() or "")) for i, p in enumerate(pdf.pages)]
+        page_contents = [_page_content(i + 1, p) for i, p in enumerate(pdf.pages)]
         fonts = _extract_fonts(pdf)
 
     raw_text = "\n".join(t for _, t in page_texts)
@@ -114,66 +132,18 @@ def ingest(path: str) -> IngestionResult:
                      "scan requiring OCR fallback / manual review.",
         ))
 
-    # ---- header fields -----------------------------------------------------
-    holder = _grab(r"Account Holder:\s*(.+)", raw_text)
-    uen = _grab(r"UEN:\s*([A-Z0-9]+)", raw_text)
-    account_number = _grab(r"Account No:\s*([0-9]+)", raw_text)
-    currency = _grab(r"Currency:\s*([A-Za-z$]+)", raw_text)
+    # ---- layout-tolerant parse (header, sections, rows, self-check) --------
+    parsed = parse_pages(page_contents)
+    source_name = os.path.basename(path)
+    segments = [seg.model_copy(update={"source": source_name}) for seg in parsed.segments]
+    # DQ_NO_TEXT is decided above from the extracted text; skip the parser's copy.
+    dq.extend(f for f in parsed.findings if f.code != "DQ_NO_TEXT")
 
-    period_start = period_end = None
-    pm = re.search(r"Statement Period:\s*(\d{2}/\d{2}/\d{4})\s*-\s*(\d{2}/\d{2}/\d{4})", raw_text)
-    if pm:
-        period_start, _ = _parse_date(pm.group(1))
-        period_end, _ = _parse_date(pm.group(2))
-
-    opening_balance = _parse_money(_grab(r"Opening Balance:\s*([^\n]+)", raw_text) or "")
-    closing_balance = _parse_money(_grab(r"Closing Balance:\s*([^\n]+)", raw_text) or "")
-
-    # mandatory-field data-quality checks (explicit nulls, no guessing)
-    for label, value, code in [
-        ("account holder", holder, "DQ_MISSING_HOLDER"),
-        ("UEN", uen, "DQ_MISSING_UEN"),
-        ("statement period", period_start, "DQ_MISSING_PERIOD"),
-        ("opening balance", opening_balance, "DQ_MISSING_OPENING"),
-    ]:
-        if value in (None, ""):
-            dq.append(Finding(
-                agent=AGENT, code=code, title=f"Missing mandatory field: {label}",
-                severity=Severity.MEDIUM, weight=8, field=label,
-                evidence=f"Could not read the {label} from the statement; flagged rather than inferred.",
-            ))
-
-    # ---- transactions ------------------------------------------------------
-    transactions: list[Transaction] = []
-    idx = 0
-    for page_no, text in page_texts:
-        for line in text.splitlines():
-            m = _ROW_RE.match(line.strip())
-            if not m:
-                continue
-            d, d_raw = _parse_date(m.group("date"))
-            amt = _parse_money(m.group("amount"))
-            bal = _parse_money(m.group("balance"))
-            if amt is None or bal is None:
-                dq.append(Finding(
-                    agent=AGENT, code="DQ_UNREADABLE_ROW",
-                    title="Unreadable transaction row", severity=Severity.LOW,
-                    weight=3, page=page_no,
-                    evidence=f"Row could not be fully parsed: {line!r}",
-                ))
-                continue
-            transactions.append(Transaction(
-                index=idx, date=d, date_raw=d_raw, description=m.group("desc").strip(),
-                amount=amt, balance=bal, page=page_no,
-            ))
-            idx += 1
-
-    if not transactions:
-        dq.append(Finding(
-            agent=AGENT, code="DQ_NO_TXNS", title="No transactions parsed",
-            severity=Severity.HIGH, weight=15,
-            evidence="No transaction rows could be parsed from the statement.",
-        ))
+    holder, uen = parsed.holder, parsed.uen
+    account_number, currency = parsed.account_number, parsed.currency
+    period_start, period_end = parsed.period_start, parsed.period_end
+    opening_balance, closing_balance = parsed.opening_balance, parsed.closing_balance
+    transactions = parsed.transactions
 
     return IngestionResult(
         source_path=path,
@@ -182,6 +152,7 @@ def ingest(path: str) -> IngestionResult:
         page_texts=[PageText(page=pno, text=txt) for pno, txt in page_texts],
         metadata=metadata,
         fonts=fonts,
+        segments=segments,
         account_holder=holder,
         uen=uen,
         account_number=account_number,
@@ -191,5 +162,20 @@ def ingest(path: str) -> IngestionResult:
         closing_balance=closing_balance,
         declared_currency=currency,
         transactions=transactions,
+        layout_profile=parsed.layout_profile,
+        parse_coverage=parsed.parse_coverage,
+        sections=parsed.sections,
         data_quality_findings=dq,
     )
+
+
+def ingest_many(paths: list[str]) -> list[IngestionResult]:
+    """Ingest a SET of statement files submitted as one application.
+
+    Additive convenience over ``ingest(path)``: it simply ingests each path and
+    returns the results. The returned list follows the input order purely as a
+    convenience — month identity is carried inside each result's parsed period
+    dates (and segments), NOT by list position, so screening the same files in
+    any order yields the same month identification and coverage findings.
+    """
+    return [ingest(p) for p in paths]

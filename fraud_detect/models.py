@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # --------------------------------------------------------------------------- #
@@ -50,6 +50,21 @@ class ReviewDecision(str, Enum):
     REJECTED = "REJECTED"
 
 
+class CreditDecision(str, Enum):
+    """The banker / loan officer's FINAL lending decision.
+
+    Distinct from ReviewDecision (which is the fraud-screening outcome). A banker
+    only reaches this stage once the document's authenticity is settled: the
+    analyst cleared the fraud concern (APPROVED) or the statement auto-cleared.
+    The screening decides whether the document can be *trusted*; the banker
+    decides whether to *lend*.
+    """
+    PENDING = "PENDING"             # fraud-cleared, awaiting the loan officer
+    APPROVED = "APPROVED"           # loan approved
+    DECLINED = "DECLINED"           # loan declined on credit grounds
+    REFERRED = "REFERRED"           # escalated to a senior officer / credit committee
+
+
 # --------------------------------------------------------------------------- #
 # Findings & evidence
 # --------------------------------------------------------------------------- #
@@ -81,6 +96,21 @@ class Transaction(BaseModel):
     amount: Optional[float] = None          # signed: credits +, debits -
     balance: Optional[float] = None
     page: Optional[int] = None
+    # Optional Node 1 (multi-layout) additions; old stored rows omit them.
+    value_date_raw: Optional[str] = None      # second date column text, when printed
+    direction_method: Optional[str] = None    # "column" | "printed_sign" | "balance_change"
+
+
+class SectionSummary(BaseModel):
+    """One monthly statement section as read by Node 1 (all fields optional)."""
+    period_start: Optional[date_type] = None
+    period_end: Optional[date_type] = None
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+    opening: Optional[float] = None
+    closing: Optional[float] = None
+    total_deposits: Optional[float] = None
+    total_withdrawals: Optional[float] = None
 
 
 class DocumentMetadata(BaseModel):
@@ -105,6 +135,26 @@ class PageText(BaseModel):
     text: str
 
 
+class StatementSegment(BaseModel):
+    """One contiguous statement section inside a (possibly combined) PDF.
+
+    A combined PDF can staple several monthly statements together; each printed
+    "Statement Period:" header starts a new segment. ``page_start`` / ``page_end``
+    delimit the pages that segment spans. All fields are Optional-with-default so
+    partially-parsed or hand-built segments still validate.
+    """
+    period_start: Optional[date_type] = None
+    period_end: Optional[date_type] = None
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+    # Basename of the file this segment was ingested from. Used only for
+    # human-readable evidence on a MULTI-FILE submission (so duplicate-month
+    # evidence can name the colliding files); never used for month identity.
+    # Optional-with-default so single-file/combined-PDF and hand-built segments
+    # are unchanged.
+    source: Optional[str] = None
+
+
 class IngestionResult(BaseModel):
     source_path: str
     page_count: int
@@ -112,6 +162,10 @@ class IngestionResult(BaseModel):
     page_texts: list[PageText] = Field(default_factory=list)
     metadata: DocumentMetadata
     fonts: list[FontUsage] = Field(default_factory=list)
+
+    # One entry per "Statement Period:" header found in the PDF. Empty for older
+    # stored reports / hand-built results; a single-period PDF yields exactly one.
+    segments: list[StatementSegment] = Field(default_factory=list)
 
     # Parsed statement header
     account_holder: Optional[str] = None
@@ -124,6 +178,11 @@ class IngestionResult(BaseModel):
     declared_currency: Optional[str] = None
 
     transactions: list[Transaction] = Field(default_factory=list)
+
+    # Multi-layout parser additions (optional; absent on older results).
+    layout_profile: Optional[str] = None
+    parse_coverage: Optional[float] = None
+    sections: list[SectionSummary] = Field(default_factory=list)
 
     # Data-quality flags collected during parsing
     data_quality_findings: list[Finding] = Field(default_factory=list)
@@ -187,6 +246,13 @@ class RiskReport(BaseModel):
     closing_balance: Optional[float] = None
     declared_currency: Optional[str] = None
 
+    # Per-segment coverage summary (period + page range for each statement
+    # section found in the source PDF). A single-period statement yields exactly
+    # one segment; a combined multi-month PDF yields several. Optional (defaults
+    # to empty) so older stored reports still validate and single-segment cases
+    # render unchanged.
+    statement_segments: list[StatementSegment] = Field(default_factory=list)
+
     # Cross-case memory: fingerprints of this case's transactions, persisted so
     # that future screenings can detect recurrence of the same entity/amount.
     transaction_fingerprints: list[TxnFingerprint] = Field(default_factory=list)
@@ -235,6 +301,9 @@ class Case(BaseModel):
     case_id: str
     report: RiskReport
     review: ReviewRecord
+    # The banker's lending decision. Optional/defaulted so older stored cases
+    # (persisted before this field existed) still validate.
+    credit: CreditRecord = Field(default_factory=lambda: CreditRecord(case_id=""))
     audit_log: list[dict] = Field(default_factory=list)
     # The applicant's typed form values. Optional-with-default so cases stored
     # before this field existed still load and render (backward compatible).

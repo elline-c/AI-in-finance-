@@ -21,6 +21,7 @@ Conditional decisions (per the design):
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from .models import AgentReport, RiskReport
@@ -35,6 +36,8 @@ from .nodes import (
     visual_forensics,
 )
 from .store import CaseStore
+
+_log = logging.getLogger(__name__)
 
 
 def run_pipeline(
@@ -74,7 +77,21 @@ def run_pipeline(
 
     # Nodes 2 & 3 (independent; both consume the ingestion result)
     visual_report = visual_forensics.analyze(ing)
-    financial_report = financial_logic.analyze(ing)
+    # Node 3 learns this company's normal transaction rhythm from its earlier,
+    # human-approved statements when a store is available. Any trouble reading
+    # the history falls back to learning from this statement alone, so screening
+    # never fails because of it.
+    history = None
+    if store is not None and ing.uen:
+        try:
+            history = store.trailing_history(
+                ing.uen, ing.account_holder,
+                exclude_case_id=risk_synthesis._case_id(ing.source_path),
+            )
+        except Exception:  # noqa: BLE001 - history is an optional refinement
+            _log.warning("trailing history unavailable; using the statement itself",
+                         exc_info=True)
+    financial_report = financial_logic.analyze(ing, history=history)
 
     reports = [security_report, visual_report, financial_report]
 

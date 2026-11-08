@@ -46,6 +46,30 @@
   </div>
 </div>
 
+{% if r.statement_segments and r.statement_segments|length > 1 %}
+<div class="panel">
+  <h3 style="margin-top:0">Statement coverage</h3>
+  <p class="muted" style="margin-top:0">This submission combines {{ r.statement_segments|length }} statement
+  segments. Each row shows which pages cover which month.</p>
+  <table>
+    <thead><tr><th>#</th><th>Period</th><th>Pages</th></tr></thead>
+    <tbody>
+      {% for seg in r.statement_segments %}
+      <tr>
+        <td class="muted">{{ loop.index }}</td>
+        <td>{{ seg.period_start or "—" }} to {{ seg.period_end or "—" }}</td>
+        <td>
+          {% if seg.page_start and seg.page_end %}
+            {% if seg.page_start == seg.page_end %}p. {{ seg.page_start }}{% else %}pp. {{ seg.page_start }}–{{ seg.page_end }}{% endif %}
+          {% elif seg.page_start %}p. {{ seg.page_start }}{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
 <div class="panel">
   <div class="stage-head" style="margin-bottom:10px">
     <h3 style="margin:0">Findings by pipeline stage</h3>
