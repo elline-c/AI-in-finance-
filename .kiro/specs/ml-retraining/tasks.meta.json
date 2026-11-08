@@ -1,0 +1,1565 @@
+{
+  "pbtResults": {
+    "4.4 Write property test for loading": {
+      "status": "passed",
+      "lastRunTimestamp": 1793805901492
+    },
+    "1.4 Write property test for the write guard": {
+      "status": "passed",
+      "lastRunTimestamp": 1793805949137
+    },
+    "4.5 Write property tests for the group checks": {
+      "status": "passed",
+      "lastRunTimestamp": 1793932697983
+    },
+    "11.4 Write property tests for cutoffs": {
+      "status": "passed",
+      "lastRunTimestamp": 1793933317589
+    },
+    "8.4 Write property tests for audit validation and the Creator-only rule": {
+      "status": "passed",
+      "lastRunTimestamp": 1793934418606
+    },
+    "5.3 Write property test for the UEN manifest gate": {
+      "status": "passed",
+      "lastRunTimestamp": 1793934412059
+    },
+    "20.3 Write property test for the monitor": {
+      "status": "passed",
+      "lastRunTimestamp": 1793935988650
+    },
+    "21.5 Write property test for switch and restore": {
+      "status": "passed",
+      "lastRunTimestamp": 1793936719078
+    },
+    "10.3 Write property tests for the Leak_Test": {
+      "status": "passed",
+      "lastRunTimestamp": 1793936845333
+    },
+    "9.5 Write property tests for the Node 6a adapter and history locality": {
+      "status": "passed",
+      "lastRunTimestamp": 1793937245302
+    },
+    "22.3 Write property test for the report banner and markers": {
+      "status": "passed",
+      "lastRunTimestamp": 1793938255318
+    },
+    "17.3 Write property test for the Awkward_Set structure": {
+      "status": "passed",
+      "lastRunTimestamp": 1793938271703
+    },
+    "23.3 Write property test for determinism": {
+      "status": "passed",
+      "lastRunTimestamp": 1793941919622
+    }
+  },
+  "executionHistory": {
+    "1.1 Create the package skeleton, test scaffolding and the Mini_Corpus fixture": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053562
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804097793
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804784296
+      }
+    ],
+    "1.2 Write failing tests for configuration, safe I/O, gates and the decision log": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053598
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804792055
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805061894
+      }
+    ],
+    "1.3 Implement `config.py`, `safe_io.py`, `gates.py` and `decisions.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053630
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805252045
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805492131
+      }
+    ],
+    "1.4 Write property test for the write guard": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053655
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805845103
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806029847
+      }
+    ],
+    "2.1 Write failing tests for the Awkward_Set spike": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053689
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804792127
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805062013
+      }
+    ],
+    "2.2 Implement the spike in `fraud_detect/ml/retraining/awkward_spike.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053721
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805631577
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805817399
+      }
+    ],
+    "3. Checkpoint - Awkward_Set spike result": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053755
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942085766
+      }
+    ],
+    "4.1 Write failing tests for loading and group checks": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053784
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804792655
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805062528
+      }
+    ],
+    "4.2 Implement `fraud_detect/ml/retraining/corpora.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053812
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805252079
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805492247
+      }
+    ],
+    "4.3 Implement `fraud_detect/ml/retraining/group_checks.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053851
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805631637
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805817498
+      }
+    ],
+    "4.4 Write property test for loading": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053888
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805845140
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806030338
+      }
+    ],
+    "4.5 Write property tests for the group checks": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053919
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793932600994
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793933180813
+      }
+    ],
+    "5.1 Write failing tests for the manifest UEN gate": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053946
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805845203
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806031164
+      }
+    ],
+    "5.2 Implement the UEN manifest gate in `group_checks.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804053972
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806331201
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806486245
+      }
+    ],
+    "5.3 Write property test for the UEN manifest gate": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054001
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793934039735
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935624146
+      }
+    ],
+    "6.1 Write failing tests for the style profile and the composition gates": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054028
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804793359
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805063403
+      }
+    ],
+    "6.2 Implement `fraud_detect/ml/retraining/style_profile.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054054
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805252765
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805618824
+      }
+    ],
+    "6.3 Implement `fraud_detect/ml/retraining/corpus_gates.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054087
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805631992
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805818351
+      }
+    ],
+    "6.4 Write property tests for styling and capability": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054116
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793932601035
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793933181577
+      }
+    ],
+    "6.5 Write property tests for composition and subtle tampers": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054145
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793932601443
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793933182390
+      }
+    ],
+    "7. Checkpoint - Owner decisions on corpus gates": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054171
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942085833
+      }
+    ],
+    "8.1 Write failing tests for the audit and the neutralisation toolbox": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054210
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804793788
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805064156
+      }
+    ],
+    "8.2 Implement `fraud_detect/ml/retraining/neutralise.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054239
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805253517
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805492331
+      }
+    ],
+    "8.3 Implement `fraud_detect/ml/retraining/audit.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054270
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805632806
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805819081
+      }
+    ],
+    "8.4 Write property tests for audit validation and the Creator-only rule": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054303
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793933200466
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935622030
+      }
+    ],
+    "9.1 Write failing tests for the feature tables and caches": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054335
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806514842
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793932591183
+      }
+    ],
+    "9.2 Implement `fraud_detect/ml/retraining/features_b.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054364
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793934039707
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935622083
+      }
+    ],
+    "9.3 Implement `fraud_detect/ml/retraining/features_a.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054399
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793934039640
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935622729
+      }
+    ],
+    "9.4 Write property tests for caches and skipped documents": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054430
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936662735
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936968768
+      }
+    ],
+    "9.5 Write property tests for the Node 6a adapter and history locality": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054460
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793937004984
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938026746
+      }
+    ],
+    "10.1 Write failing tests for the Leak_Test": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054487
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806515511
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793933182921
+      }
+    ],
+    "10.2 Implement `fraud_detect/ml/retraining/leak.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054519
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793934039675
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935623539
+      }
+    ],
+    "10.3 Write property tests for the Leak_Test": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054567
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936662777
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936969422
+      }
+    ],
+    "11.1 Write failing tests for metrics and cutoffs": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054603
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805064640
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805244297
+      }
+    ],
+    "11.2 Implement `fraud_detect/ml/retraining/metrics.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054634
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805254344
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805618023
+      }
+    ],
+    "11.3 Implement `fraud_detect/ml/retraining/cutoffs.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054662
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805633473
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805819855
+      }
+    ],
+    "11.4 Write property tests for cutoffs": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054689
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793933200443
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793934029748
+      }
+    ],
+    "11.5 Write property tests for metrics and statistics": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054717
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805845586
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806031962
+      }
+    ],
+    "12. Checkpoint - Owner decisions on cutoffs and the Switch_Rule": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054745
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942086065
+      }
+    ],
+    "13.1 Write failing tests for the vault, the freeze and the change log": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054777
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805846359
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806033048
+      }
+    ],
+    "13.2 Implement `fraud_detect/ml/retraining/vault.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054811
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806331271
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806486306
+      }
+    ],
+    "13.3 Write property tests for the vault and change detection": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054838
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935638244
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935866486
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936612097
+      }
+    ],
+    "14.1 Write failing tests for sources and the training-list guard": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054872
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806084787
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806309018
+      }
+    ],
+    "14.2 Implement `fraud_detect/ml/retraining/sources.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054910
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806331700
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806660954
+      }
+    ],
+    "14.3 Write property test for the training-list guard": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054946
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935638213
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935866548
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936611870
+      }
+    ],
+    "15.1 Write failing tests for Node 6b training": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804054987
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793937005796
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938028457
+      }
+    ],
+    "15.2 Implement `fraud_detect/ml/retraining/train_b.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055019
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938035707
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938974000
+      }
+    ],
+    "15.3 Write property test for the audit-decides-input rule": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055046
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938983345
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793939672509
+      }
+    ],
+    "16.1 Write failing tests for Node 6a training and the GNN accounting": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055071
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793937015925
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938029191
+      }
+    ],
+    "16.2 Implement `fraud_detect/ml/retraining/train_a.py` and `gnn_eval.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055102
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938036741
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938975060
+      }
+    ],
+    "16.3 Write property tests for statement-level flags and GNN accounting": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055133
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938984386
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793939672543
+      }
+    ],
+    "17.1 Write failing tests for the Awkward_Set": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055163
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936652966
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936966852
+      }
+    ],
+    "17.2 Implement `fraud_detect/ml/retraining/awkward.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055195
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793937003941
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938027638
+      }
+    ],
+    "17.3 Write property test for the Awkward_Set structure": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055228
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938037560
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938975592
+      }
+    ],
+    "18.1 Write failing tests for baseline scoring and evaluation": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055255
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938039244
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938974224
+      }
+    ],
+    "18.2 Implement `fraud_detect/ml/retraining/baseline.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055294
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938982648
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793939673029
+      }
+    ],
+    "18.3 Implement `fraud_detect/ml/retraining/evaluation.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055321
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938994493
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793940049927
+      }
+    ],
+    "18.4 Write property tests for source separation, comparison and baseline states": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055355
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793940050663
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793941506437
+      }
+    ],
+    "19.1 Write failing tests for the Size_Guard analysis": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055389
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806084881
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806309339
+      }
+    ],
+    "19.2 Implement `fraud_detect/ml/retraining/size_guard.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055432
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806332531
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806486658
+      }
+    ],
+    "19.3 Write property tests for the Size_Guard": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055463
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935638597
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935867134
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936613968
+      }
+    ],
+    "20.1 Write failing tests for the monitor": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055496
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806085509
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806310161
+      }
+    ],
+    "20.2 Implement `fraud_detect/ml/retraining/monitor.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055529
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806333405
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806487526
+      }
+    ],
+    "20.3 Write property test for the monitor": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055564
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935639426
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935868083
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936613564
+      }
+    ],
+    "21.1 Write failing tests for the Switch_Rule and model operations": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055595
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806086108
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806311196
+      }
+    ],
+    "21.2 Implement `fraud_detect/ml/retraining/switch_rule.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055622
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806513548
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806660190
+      }
+    ],
+    "21.3 Implement `fraud_detect/ml/retraining/modelops.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055660
+      },
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806514033
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793933183740
+      }
+    ],
+    "21.4 Write property tests for the Switch_Rule": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055686
+      },
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935640222
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935868628
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936612735
+      }
+    ],
+    "21.5 Write property test for switch and restore": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055717
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936653438
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936966934
+      }
+    ],
+    "22.1 Write failing tests for the report": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055747
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936654267
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936967733
+      }
+    ],
+    "22.2 Implement `fraud_detect/ml/retraining/comparison_report.py`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055779
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793937003960
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938026713
+      }
+    ],
+    "22.3 Write property test for the report banner and markers": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055810
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938038644
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938974046
+      }
+    ],
+    "23.1 Write failing tests for the commands": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055854
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938984909
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793939673777
+      }
+    ],
+    "23.2 Implement `fraud_detect/ml/retraining/cli.py` fully": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055895
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793940051500
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793941506402
+      }
+    ],
+    "23.3 Write property test for determinism": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055922
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793941544917
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942014965
+      }
+    ],
+    "24.1 Write and run the hygiene tests": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055955
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793941545476
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942015478
+      }
+    ],
+    "25.1 Write failing tests for the README section": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804055984
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793940084458
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793941506780
+      }
+    ],
+    "25.2 Update `FRAUD_DETECT_README.md`": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804056012
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793941546117
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942014987
+      }
+    ],
+    "26. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793804056038
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942092465
+      },
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793943115298
+      }
+    ],
+    "2. Spike: can the existing simulator knobs reach the Awkward_Set figures": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793805817465
+      }
+    ],
+    "1. Foundations and safety net": [
+      {
+        "executionId": "b41cddfa-88c7-497e-a629-a118b72f73ed",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793806029896
+      }
+    ],
+    "4. Corpus loading and group-aware split checks": [
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793933180873
+      }
+    ],
+    "6. Style profile and corpus-composition gates": [
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793933182426
+      }
+    ],
+    "11. Metrics, statistics and cutoff selection": [
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793934029832
+      }
+    ],
+    "8. Feature_Audit": [
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935622150
+      }
+    ],
+    "5. UEN collision-check requirement on the corpus manifest": [
+      {
+        "executionId": "cda503d3-5eba-47b1-9f0c-bdcfbf8061e3",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793935624183
+      }
+    ],
+    "14. Read-only sources and the training-list guard": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936611916
+      }
+    ],
+    "13. Freeze, held-out vault and change log": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936612124
+      }
+    ],
+    "20. Implausible-measurement monitor and stop lock": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936613592
+      }
+    ],
+    "19. Size_Guard analysis": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936614000
+      }
+    ],
+    "21. Switch_Rule, switch and restore": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936966969
+      }
+    ],
+    "10. Leak_Test": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793936969451
+      }
+    ],
+    "9. Feature tables for Node 6b and Node 6a": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938026775
+      }
+    ],
+    "22. Comparison report": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938974077
+      }
+    ],
+    "17. Awkward_Set": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793938975626
+      }
+    ],
+    "15. Node 6b candidate training": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793939672584
+      }
+    ],
+    "16. Node 6a candidate training and GNN lookup accounting": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793939672613
+      }
+    ],
+    "18. Baseline scoring and evaluation": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793941506480
+      }
+    ],
+    "23. Command-line wiring and orchestration": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942015013
+      }
+    ],
+    "25. README and report framing": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942015050
+      }
+    ],
+    "24. Hygiene tests": [
+      {
+        "executionId": "78311d9f-6546-4a46-8db5-c4bf84805f74",
+        "chatSessionId": "sess_18fddd49-f672-40a9-b4ea-25a20287b0f7",
+        "timestamp": 1793942015510
+      }
+    ]
+  }
+}

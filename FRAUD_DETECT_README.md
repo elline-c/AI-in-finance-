@@ -510,6 +510,147 @@ leave the metadata untouched, and this check cannot see those.
 
 ---
 
+## Synthetic corpus generator
+
+A small tool that makes **fictional** company bank statements as PDFs, in the six
+layouts Node 1 already reads, and writes the "answer key" for each one: which rows
+are fake, what was changed, how, and in which layout. It can make clean ("genuine")
+statements and 16 kinds of tampered ones. A second command then feeds the PDFs
+through Nodes 1 to 4 and reports what was read and what was flagged. Use it to
+test and demo the pipeline on more data than the hand-made samples.
+
+**All data is synthetic.** Companies, accounts, counterparties and amounts are made
+up. The generated corpus is **never committed**: the default output folder
+`data/corpus` is under `data/`, which is git-ignored.
+
+### Build a corpus
+
+```bash
+python -m fraud_detect.corpus.build --out data/corpus --seed 20260601
+```
+
+| Option | Meaning (default) |
+|--------|-------------------|
+| `--out` | Output folder (`data/corpus`) |
+| `--seed` | Master seed (`20260601`) |
+| `--per-layout-genuine` | Genuine documents per layout (`2`) |
+| `--per-layout-tampered` | Tampered documents per layout (`2`) |
+| `--months-min` / `--months-max` | Fewest / most months per statement, 1 to 24 |
+| `--hold-out-layout LAYOUT` | Keep one layout for the `test_unseen_layout` split |
+| `--tamper-mix TYPE=WEIGHT,...` | Tamper types by weight, e.g. `metadata_inconsistency=1,font_mismatch=2` (even mix) |
+| `--split-fractions TRAIN,VAL,TEST` | Split sizes, must sum to 1 (`0.70,0.15,0.15`) |
+| `--force` | Build into a non-empty folder (existing files are never deleted) |
+| `--uen-snapshot` / `--check-live-uen` | Check invented UENs against real ones, see [UEN check](#uen-check-no-invented-company-number-should-be-a-real-one) |
+
+Run `python -m fraud_detect.corpus.build --help` for the full list of tamper type names.
+
+**Output folder**
+
+- `pdfs/<doc_id>.pdf`: the statements
+- `manifests/<doc_id>.json`: per-document answer key (tamper type, method, changed rows)
+- `labels.csv`: one row per document (layout, tampered or not, tamper type, split)
+- `rows.csv`: one row per statement line, with the fake ones marked
+- `companies.json`: the fictional companies
+- `corpus_manifest.json`: settings, counts and generator version
+- `README.txt`: a plain summary of the build, with any warnings
+
+**Reproducible by seed.** The same options and `--seed` give the same corpus. A
+different seed gives a different one.
+
+### UEN check (no invented company number should be a real one)
+
+Each fictional company gets an invented UEN. By chance it could equal the UEN of a
+real Singapore company, and a statement must never look like that company's. So while
+the corpus is built, every UEN is checked and, if it is taken, drawn again from the
+company's own seeded stream. Only the UEN changes; the rest of the company stays the
+same, and the same seed with the same snapshot gives the same corpus.
+
+| Option | Meaning (default) |
+|--------|-------------------|
+| `--uen-snapshot PATH` | A file of real UENs to avoid: one UEN per line (blank lines and `#` lines are skipped), a CSV with a column named `uen`, or a JSON list of UENs (default: none) |
+| `--check-live-uen` | Also ask the live data.gov.sg lookup about each UEN (default: off) |
+
+- **Default.** Without either option the UENs are compared only with the in-repo test
+  registry and with each other. No network request is made, and the build prints a
+  warning that the real registry was **not** checked. The warning is also stored in
+  `corpus_manifest.json` and `README.txt`.
+- **Live lookup is never on by default.** It needs the network and its answer can change
+  from day to day, so a corpus built with it is repeatable only with the same snapshot or
+  while the live data are unchanged. Use `--check-live-uen` on purpose.
+- **A failed check stops the build.** A snapshot that is missing, unreadable, empty or in
+  an unknown format, or a live lookup that cannot answer, prints the reason, exits with
+  code 2 and writes no file. "Could not ask" is never treated as "free".
+- **Getting a snapshot.** Download the ACRA UEN list from data.gov.sg yourself and keep
+  it **outside the repository**. The tool only reads it.
+- **What is stored.** `corpus_manifest.json` and `README.txt` record the source of the
+  check, the snapshot file name and its SHA-256, and the counts (UENs checked,
+  redraws). No real company name or figure is stored.
+
+### Verify a corpus
+
+```bash
+python -m fraud_detect.corpus.verify --corpus data/corpus --sample 5 \
+    --json data/corpus/report.json --markdown data/corpus/report.md
+```
+
+`--sample N` measures at most N documents per layout (faster). `--json` and
+`--markdown` write the report to those files; nothing else is written, and the
+corpus is only read. The report covers:
+
+- **Node 1:** share of rows read (genuine and tampered separately), share where
+  the replayed balance equals the printed closing balance, share with matching
+  header, the layout profile chosen, finding codes, and overlay rows dropped.
+- **Nodes 2 to 4:** false alarms on genuine documents, detection per tamper type,
+  blind spots, figures per layout and per split, decision breakdown, and
+  follow-up suggestions (text only).
+
+Screening runs in memory with no case store, no audit chain and the live registry
+lookup off.
+
+### The six layouts
+
+`generator_v1`, `two_col_dmon`, `two_col_slash`, `two_col_dual_date`,
+`signed_amount_iso`, `two_col_ddmmyy_cr` (see
+[The six layout profiles](#the-six-layout-profiles)).
+
+### The 16 tamper types
+
+| Type | Group | What it does |
+|------|-------|--------------|
+| `edited_amount` | Document | One amount changed; balances recomputed or left as printed |
+| `altered_date` | Document | One date changed |
+| `broken_balance` | Document | One printed balance changed, amounts untouched |
+| `font_mismatch` | Document | The edited amount is drawn in Courier |
+| `metadata_inconsistency` | Document | Editor-style Producer and later ModDate |
+| `genuine_resaved` | Hard negative | Print/export Producer and later ModDate; **not** tampered |
+| `fabricated_receipts` | Content | 6 to 12 extra credits copying an existing receipt |
+| `cross_month_copy` | Content | Receipt copy landing in a different month |
+| `turnover_inflation` | Content | Extra credits with new invoice numbers in 2+ months |
+| `structuring` | Behaviour | 3 to 5 credits of 9,500 to 9,999.99 within 14 days |
+| `sudden_large_deposit` | Behaviour | One credit far above the average monthly credit |
+| `shell_counterparty` | Behaviour | One credit of 50,000+ from a name like UNKNOWN TRADING LLC |
+| `rapid_pass_through` | Behaviour | Money in, almost the same out within 1 to 3 days (expected blind spot) |
+| `dormant_reactivation` | Behaviour | Months of only bank charges, then large activity (expected blind spot) |
+| `period_gap` | Behaviour | One middle month removed |
+| `uen_mismatch` | Behaviour | Printed holder name differs from the registered name |
+
+### Known limits and blind spots
+
+Results are indicative only: small samples, our own tamper designs, and a
+generator and detectors written by the same team (possible circularity). Some
+tampers are not caught by any rule (for example `rapid_pass_through`). Document
+level only; row-level accuracy is not measured. See
+[`evaluation-results.md`](.kiro/specs/synthetic-corpus-generator/evaluation-results.md)
+for the measured numbers and the full list.
+
+### What is unchanged
+
+Nodes 1 to 4 and the reference data are **unchanged**. The fictional companies are
+registered only temporarily, in memory, while `verify` measures, and are not
+written anywhere in the repo.
+
+---
+
 ## Governance alignment
 
 - **MAS FEAT (Fairness, Ethics, Accountability, Transparency):** every flag carries
@@ -765,3 +906,74 @@ incident. The system never auto-repairs or rewrites the chain (auto-editing an
 append-only log would itself be a tamper vector), and an integrity failure never
 triggers an automated reject on a customer — consistent with the whole system's
 never-auto-reject stance.
+
+## Stage B: ML retraining
+
+**Purpose.** Stage B is an offline pipeline that retrains the two ML models (Node 6b, the statement model, and Node 6a, the transaction model) on synthetic data and compares each new model with the Current model. It is an end-to-end demonstration of the process on synthetic data. It does not produce a claim about real-world accuracy, and it changes no live behaviour unless the user runs `switch`. The code lives in `fraud_detect/ml/retraining/`. Everything it writes goes to git-ignored folders (`data/private/ml_retraining/`, `models/backup/`).
+
+### The circularity risk
+
+The Corpus is made by our own generator, so a model trained on synthetic data can learn the generator's output and habits instead of fraud. Scores on such a model can look good because the test data comes from the same source as the training data. This circularity risk is the main limit of Stage B, and all results here are measured on synthetic data.
+
+Seven mitigations are used together. None of them removes the risk on its own:
+
+1. Use held-out layouts: some statement layouts are kept out of training and used only for testing on synthetic data.
+2. Use held-out Master_Seeds: a separate seed is used only for the final evaluation on synthetic data.
+3. Use randomised styling: fonts, spacing and similar surface features vary, so a model cannot key on them in the synthetic data.
+4. The Leak_Test: checks whether a single feature, or the layout alone, separates the classes on synthetic data. A suspect stops the run until a person decides.
+5. The Real_Style_Files: labelled statements that were not made by the generator.
+6. The Switch_Rule: a fixed rule, written down before any evaluation, that decides whether a Candidate model replaces the Current model.
+7. The Awkward_Set: deliberately odd synthetic data used to look for brittle behaviour.
+
+### Real-style data is very small
+
+Only two labelled real-style statements exist (`statement_E` and `statement_F`). That is too small to estimate accuracy, so results on them are indicative only, and the synthetic data results must not be read as a substitute. With the default `real_style_role = required`, the Switch_Rule needs more than these two files, so it cannot be met.
+
+### Commands
+
+Run all commands from the repository root. Every command accepts `--help`.
+
+```
+python -m fraud_detect.ml.retraining init      # write run.json: hashes, code fingerprint, Switch_Rule, cutoff rule
+python -m fraud_detect.ml.retraining build     # build the seed corpora and the held-out-seed corpus
+python -m fraud_detect.ml.retraining check     # integrity gates; "check --plan" prints document counts
+python -m fraud_detect.ml.retraining audit     # audit the Corpus, writes audit/audit-v1.json
+python -m fraud_detect.ml.retraining leak-test # Leak_Test on synthetic data
+python -m fraud_detect.ml.retraining decide    # record a decision: leak-feature, waive-gate, investigation, awkward-review
+python -m fraud_detect.ml.retraining train     # freeze cutoffs, fit Candidate models (6b and 6a)
+python -m fraud_detect.ml.retraining compare   # Candidate vs Current, writes the report
+python -m fraud_detect.ml.retraining switch    # apply the Switch_Rule; backs up Current models first
+python -m fraud_detect.ml.retraining restore   # put the backed-up Current models back
+```
+
+The stop-and-decide flow: when a gate or the Leak_Test needs a person, the command stops with exit code 3 and names the offenders. Record the answer with `decide` (for example `exclude` or `accept` for a suspect feature, or `waive-gate`), then run the command again. A waiver is printed in the report. A failing gate leaves no model file. A lock file refuses a second run on the same run folder, and an interrupted run resumes at the first unwritten unit.
+
+The exit code of every command is one of these: 0 success; 1 other failure; 2 integrity gate failed, refused, bad arguments, missing run, lock held or write guard; 3 a waivable gate or Leak_Test suspect is waiting for a decision; 4 implausible measurement on synthetic data, so the run stops for a person to look.
+
+### Results
+
+Measured in run `5cfdabba015843e5` (5 training Master_Seeds, 80 genuine and 80 tampered slots per layout, Balanced_Styling corpora, held-out layout `two_col_ddmmyy_cr`, held-out seed 20260899). This end-to-end demonstration reports every score on synthetic data and is not real-world accuracy. Candidate values are the mean over the 5 seeds; catch and false-alarm rates are at the medium cutoff chosen on validation. Cutoff targets were medium 5.0% and high 2.5%: the high target deviates from the planned 1.0% because the top genuine validation scores tie, and 1.0% was not reachable at this validation size (run `bb7741a2ee1c984c` stopped there on both nodes). The Real_Style and Forgery_Dataset files were not read, so those sources are "not run".
+| Node | Source and split | Candidate (AUC / catch / false alarm) | Current (AUC / catch / false alarm) | Switch_Rule outcome |
+|---|---|---|---|---|
+| Node 6a | generator_corpus test (synthetic data) | 0.65 / 27.8% / 4.3% | 0.49 / 7.2% / 6.0% | keep |
+| Node 6a | generator_corpus held-out layout (synthetic data) | 0.66 / 27.2% / 6.0% | 0.48 / 6.3% / 9.5% | pass, not decisive alone |
+| Node 6a | generator_corpus held-out seed (synthetic data) | 0.66 / 27.4% / 5.5% | 0.53 / 9.0% / 7.1% | pass, not decisive alone |
+| Node 6b | generator_corpus test (synthetic data) | 0.61 / 12.4% / 4.0% | baseline failed (see below) | keep |
+| Node 6b | generator_corpus held-out layout (synthetic data) | 0.65 / 14.4% / 3.6% | baseline failed | not decisive |
+| Node 6b | generator_corpus held-out seed (synthetic data) | 0.63 / 16.1% / 3.9% | baseline failed | not decisive |
+| Node 6b | awkward_set (synthetic data, 13 per class) | 0.47 / 6.7% / 5.3% | not run | no effect (not reviewed) |
+| Both | forgery_dataset, real_style | not run | not run | not decisive |
+
+Notes on these synthetic data results (not real-world accuracy). The Node 6b Current model loads and scores, but no cutoff on its validation scores reaches 5% false alarms (closest 7.9%), so the pipeline reports it as "baseline failed"; at its deployed cutoff of 0.7 it flags about 34.5% of genuine documents. The Node 6b Candidate mainly catches `font_mismatch` and some balance-break tampers; it misses most content and behavioural tampers, and it scores `metadata_inconsistency` as more genuine than genuine documents because legitimate re-saves also carry a later ModDate. Both Candidates beat the Current models on this generated data, but every score is judged on the generator's output.
+
+### Status after Stage B
+
+Node 6a: under the default Switch_Rule (`real_style_role = required`, only two Real_Style files) it is not switched, because the required real-style evidence is not available, even when scores on synthetic data look good. The Current model stays in use (`models/txn_fraud_clf.joblib`). Any change needs the user to run `switch` after a manual run.
+
+Node 6b: under the default Switch_Rule (`real_style_role = required`, only two Real_Style files) it is not switched, because the required real-style evidence is not available, even when scores on synthetic data look good. The Current model stays in use until the user runs `switch`.
+
+Node 4: its weights and thresholds are not changed by Stage B.
+
+### Labels and open decisions
+
+Each Candidate bundle stores the label "model trained on synthetic data". The label is stored in the bundle and is not yet shown in the demo (decision 9). The other open decisions were settled as follows: `real_style_role` defaults to `required` (`veto_only` is accepted), and the Current models are always backed up before `switch`, so `restore` can undo it. Results on synthetic data are never presented as real-world accuracy.
