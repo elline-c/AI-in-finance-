@@ -5,24 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Corporate Loan Application{% endblock %} · Green Link Digital Bank</title>
   <style>
-    /* Brand palette approximated from the supplied Green Link Digital Bank logo
-       (dark-blue wordmark + orange circular "G" monogram). The header logo is an
-       original inline-SVG recreation (see header below), not the official asset;
-       using web-safe system fonts for the wordmark. */
+    /* Brand palette matching the Green Link Digital Bank website: clean white
+       surfaces, a warm orange/amber primary accent, and dark navy-blue text +
+       wordmark. The header logo is an original inline-SVG recreation (see header
+       below), not the official asset; using web-safe system fonts for the
+       wordmark. Orange/amber (not bright yellow) is used deliberately to match
+       the real GLDB brand and preserve text contrast. */
     :root {
-      --bg:#f4f6fb; --card:#ffffff; --ink:#1b2733; --muted:#5e6e7e;
-      --line:#e3e8ef; --brand:#1a56db; --brand-dark:#123a94;
-      --accent:#f08a24; --accent-dark:#d1731a;
+      /* Green Link Digital Bank palette: white surfaces, a warm orange/amber
+         primary accent, and dark navy text + wordmark. --brand is now the
+         orange call-to-action colour; --navy carries the dark-blue wordmark /
+         focus accents. (The site uses orange/amber, not bright yellow, to
+         match GLDB's real branding and keep text contrast accessible.) */
+      --bg:#fffaf3; --card:#ffffff; --ink:#0b3c87; --muted:#5e6e7e;
+      --line:#eadfce;
+      --brand:#ed7d1c; --brand-dark:#d1731a;      /* orange primary action */
+      --accent:#f39019; --accent-dark:#d1731a;     /* amber accent / monogram */
+      --amber-soft:#f6a94a;                         /* lighter amber for washes */
+      --navy:#0b3c87; --navy-dark:#123a94;          /* dark-blue wordmark/text */
       --ok:#1a7f4b; --ok-bg:#e8f6ee; --warn:#9a6700; --warn-bg:#fdf3e0;
-      --info:#1a56db; --info-bg:#e9f0fe; --shadow:0 1px 3px rgba(16,24,40,.08);
+      --info:#0b3c87; --info-bg:#eef3fb; --shadow:0 1px 3px rgba(16,24,40,.08);
     }
     * { box-sizing:border-box; }
     body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
            background:var(--bg); color:var(--ink); line-height:1.5; }
-    a { color:var(--brand); text-decoration:none; }
+    a { color:var(--navy); text-decoration:none; }
     a:hover { text-decoration:underline; }
 
-    header { background:var(--card); border-bottom:1px solid var(--line); }
+    header { background:linear-gradient(90deg,#ffffff 55%,rgba(246,169,74,.14) 100%);
+             border-bottom:1px solid var(--line); }
     .bar { max-width:900px; margin:0 auto; padding:16px 24px; display:flex;
            align-items:center; gap:12px; }
     .logo { display:flex; align-items:center; }
@@ -43,7 +54,8 @@
     .hint { font-weight:400; color:var(--muted); font-size:12px; }
     input, select { width:100%; padding:11px 13px; font-size:15px; color:var(--ink);
             background:#fff; border:1px solid var(--line); border-radius:9px; }
-    input:focus, select:focus { outline:2px solid var(--brand); border-color:var(--brand); }
+    input:focus, select:focus, textarea:focus {
+            outline:2px solid var(--brand); border-color:var(--brand); }
     .file { border:1.5px dashed var(--line); border-radius:11px; padding:18px;
             background:#fafbfe; }
     .row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
@@ -95,8 +107,8 @@
     .step::before { content:""; position:absolute; top:15px; left:-50%; width:100%;
                     height:2px; background:#e3e8ef; z-index:0; }
     .step:first-child::before { display:none; }
-    .step.done .dot, .step.active .dot { background:var(--brand); color:#fff; }
-    .step.done::before, .step.active::before { background:var(--brand); }
+    .step.done .dot, .step.active .dot { background:var(--navy); color:#fff; }
+    .step.done::before, .step.active::before { background:var(--navy); }
     .step.active { color:var(--ink); font-weight:600; }
 
     .note { font-size:13px; color:var(--muted); background:#f7f9fc;
@@ -118,23 +130,25 @@
          build environment, so this vector is drawn from scratch (not traced or
          copied) to evoke the supplied image's layout and palette. #}
       <span class="logo">
-        <svg viewBox="0 0 320 64" width="320" height="64" role="img"
+        <svg viewBox="0 0 192 64" width="192" height="64" role="img"
              aria-label="Green Link Digital Bank (绿联国际银行)"
              xmlns="http://www.w3.org/2000/svg">
           <title>Green Link Digital Bank · 绿联国际银行</title>
-          <!-- English wordmark, two lines, dark corporate blue -->
-          <text x="0" y="22" fill="var(--brand-dark)"
+          <!-- English wordmark, two lines, dark navy blue -->
+          <text x="0" y="22" fill="var(--navy-dark)"
                 font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
                 font-size="21" font-weight="800" letter-spacing="0.5">GREEN LINK</text>
-          <text x="0" y="41" fill="var(--brand-dark)"
+          <text x="0" y="41" fill="var(--navy-dark)"
                 font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
                 font-size="15" font-weight="700" letter-spacing="2.5">DIGITAL BANK</text>
-          <!-- Chinese characters, blue, on the line beneath -->
-          <text x="0" y="60" fill="var(--brand)"
+          <!-- Chinese characters, navy, on the line beneath -->
+          <text x="0" y="60" fill="var(--navy)"
                 font-family="system-ui,-apple-system,'Segoe UI',Roboto,'Noto Sans CJK SC',sans-serif"
                 font-size="14" font-weight="600" letter-spacing="2">绿联国际银行</text>
-          <!-- Orange circular "G" monogram to the right -->
-          <g transform="translate(288,32)">
+          <!-- Orange circular "G" monogram, pulled in close to the right edge
+               of the wordmark (center at x=162, ring radius 24 + 2.5 stroke
+               reaches ~188.5, just inside the 192-wide viewBox). -->
+          <g transform="translate(162,32)">
             <!-- outer ring -->
             <circle cx="0" cy="0" r="24" fill="none"
                     stroke="var(--accent)" stroke-width="5"/>

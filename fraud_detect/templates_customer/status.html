@@ -52,6 +52,9 @@
     {% if app and app.loan_reason %}
     <li><strong>Reason for loan:</strong> {{ app.loan_reason }}</li>
     {% endif %}
+    {% if app and app.loan_reason_detail %}
+    <li><strong>In their words:</strong> {{ app.loan_reason_detail }}</li>
+    {% endif %}
     {% if case.report.statement_period %}
     <li><strong>Statement period:</strong> {{ case.report.statement_period }}</li>
     {% endif %}

@@ -294,6 +294,7 @@ class ApplicationDetails(BaseModel):
     contact_email: Optional[str] = None
     loan_amount: Optional[str] = None
     loan_reason: Optional[str] = None
+    loan_reason_detail: Optional[str] = None
 
 
 class Case(BaseModel):
