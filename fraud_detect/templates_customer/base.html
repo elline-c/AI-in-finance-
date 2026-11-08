@@ -6,8 +6,9 @@
   <title>{% block title %}Corporate Loan Application{% endblock %} · Green Link Digital Bank</title>
   <style>
     /* Brand palette approximated from the supplied Green Link Digital Bank logo
-       (dark-blue wordmark + orange circular "G" monogram). Final font/logo
-       pending brand assets — using web-safe system fonts for now. */
+       (dark-blue wordmark + orange circular "G" monogram). The header logo is an
+       original inline-SVG recreation (see header below), not the official asset;
+       using web-safe system fonts for the wordmark. */
     :root {
       --bg:#f4f6fb; --card:#ffffff; --ink:#1b2733; --muted:#5e6e7e;
       --line:#e3e8ef; --brand:#1a56db; --brand-dark:#123a94;
@@ -24,11 +25,10 @@
     header { background:var(--card); border-bottom:1px solid var(--line); }
     .bar { max-width:900px; margin:0 auto; padding:16px 24px; display:flex;
            align-items:center; gap:12px; }
-    .logo { font-weight:800; font-size:18px; color:var(--brand); display:flex;
-            align-items:center; gap:8px; }
-    /* Orange circular monogram, echoing the Green Link logo's "G" mark. */
-    .logo .mark { width:26px; height:26px; border-radius:50%; background:var(--accent);
-                  color:#fff; display:grid; place-items:center; font-size:15px; }
+    .logo { display:flex; align-items:center; }
+    /* Original SVG recreation of the Green Link Digital Bank brand mark. Scales
+       crisply in the ~34px-tall header logo area without breaking the .bar row. */
+    .logo svg { height:34px; width:auto; display:block; }
     .bar nav { margin-left:auto; display:flex; gap:20px; font-size:14px; }
 
     main { max-width:900px; margin:0 auto; padding:32px 24px 56px; }
@@ -112,7 +112,39 @@
 <body>
   <header>
     <div class="bar">
-      <span class="logo"><span class="mark">G</span> Green Link Digital Bank</span>
+      {# Original SVG recreation approximating the Green Link Digital Bank brand
+         mark; not the official asset — swap in the official logo file when
+         available. The official website/logo could not be reached from the
+         build environment, so this vector is drawn from scratch (not traced or
+         copied) to evoke the supplied image's layout and palette. #}
+      <span class="logo">
+        <svg viewBox="0 0 320 64" width="320" height="64" role="img"
+             aria-label="Green Link Digital Bank (绿联国际银行)"
+             xmlns="http://www.w3.org/2000/svg">
+          <title>Green Link Digital Bank · 绿联国际银行</title>
+          <!-- English wordmark, two lines, dark corporate blue -->
+          <text x="0" y="22" fill="var(--brand-dark)"
+                font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+                font-size="21" font-weight="800" letter-spacing="0.5">GREEN LINK</text>
+          <text x="0" y="41" fill="var(--brand-dark)"
+                font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+                font-size="15" font-weight="700" letter-spacing="2.5">DIGITAL BANK</text>
+          <!-- Chinese characters, blue, on the line beneath -->
+          <text x="0" y="60" fill="var(--brand)"
+                font-family="system-ui,-apple-system,'Segoe UI',Roboto,'Noto Sans CJK SC',sans-serif"
+                font-size="14" font-weight="600" letter-spacing="2">绿联国际银行</text>
+          <!-- Orange circular "G" monogram to the right -->
+          <g transform="translate(288,32)">
+            <!-- outer ring -->
+            <circle cx="0" cy="0" r="24" fill="none"
+                    stroke="var(--accent)" stroke-width="5"/>
+            <!-- stylized G: an open arc plus a short inward bar -->
+            <path d="M 14 -13 A 19 19 0 1 0 19 5 L 4 5"
+                  fill="none" stroke="var(--accent)" stroke-width="5"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+        </svg>
+      </span>
       <nav>
         <a href="/">New application</a>
         <a href="/status">Track application</a>

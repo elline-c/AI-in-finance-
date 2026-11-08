@@ -13,8 +13,11 @@ Privacy / FEAT stance (important — this is NOT the analyst view):
       routing label. Exposing those would tip off bad actors and would
       misrepresent an internal screening signal as a decision.
     * The machine never approves or rejects the customer. The customer only ever
-      sees neutral, human-centred statuses: *Received*, *Being verified*,
-      *Verified*, *More information needed*, or *A specialist will contact you*.
+      sees neutral, human-centred statuses: *Received*, *Being reviewed*,
+      *More information needed*, or *Verified* — where *Verified* is only ever
+      shown after a **human specialist** approves, never as an automatic result.
+      An automatically auto-cleared case still shows *Being reviewed*, identical
+      to a human-review case, because no person has decided yet.
     * A ``HUMAN_REVIEW`` routing is surfaced simply as "being reviewed by a
       specialist" — never as "suspected tampering".
 
@@ -34,7 +37,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .ml.gnn import gnn_lookup
-from .models import ApplicationDetails, Case, ReviewDecision, Routing
+from .models import ApplicationDetails, Case, ReviewDecision
 from .pipeline import run_pipeline
 from .store import CaseStore
 
@@ -115,7 +118,6 @@ def customer_status(case: Case) -> dict:
     the 1-3 index into the progress tracker and ``tone`` drives colour only.
     """
     decision = case.review.decision
-    routing = case.report.routing
 
     # A human has made the final call — surface it neutrally.
     if decision == ReviewDecision.APPROVED:
@@ -156,20 +158,14 @@ def customer_status(case: Case) -> dict:
             "step": 2,
         }
 
-    # No human decision yet — base the message on the automated routing, but
-    # never reveal scores or that anything was "flagged".
-    if routing == Routing.AUTO_CLEAR:
-        return {
-            "key": "verified",
-            "label": "Verified",
-            "tone": "ok",
-            "headline": "Your bank statement has been verified",
-            "detail": ("Your document passed our automated verification checks "
-                       "and your application is moving forward. We will be in "
-                       "touch about the next steps of your loan assessment."),
-            "step": 3,
-        }
-    # HUMAN_REVIEW — surfaced simply as a specialist review, no alarm language.
+    # No human decision yet. A fraud analyst must ALWAYS be in the loop before
+    # any decision, so even an automatic AUTO_CLEAR is NOT presented as a
+    # completed check or a final "verified" result — doing so would wrongly imply
+    # a decision no human has made. Both AUTO_CLEAR and HUMAN_REVIEW therefore
+    # surface the SAME neutral "being reviewed" status (tone=info, step=2), so the
+    # customer cannot tell the two routings apart and nothing looks approved
+    # automatically. We never reveal scores, evidence, or that anything was
+    # "flagged".
     return {
         "key": "in_review",
         "label": "Being reviewed",
