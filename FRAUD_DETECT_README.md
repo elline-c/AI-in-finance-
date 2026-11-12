@@ -161,6 +161,25 @@ in the red-team set is rejected. With `--live`: at least 95% of answers parse, a
 validation, and p95 time per case is at most 90 s. The offline self-test uses synthetic
 statements only. Numbers from it say nothing about how well a given model writes.
 
+**Held-out evaluation.** The 8 tuning documents are too few and too familiar to say how the model
+behaves on new statements. `python -m fraud_detect.reviewer.heldout --live --seed N` builds a fresh
+labelled corpus (six layouts, 6 to 12 months) plus hand-built statements with new planted
+instructions, seeds a store with earlier decided cases (and PENDING / NEEDS_INFO decoys that must
+never be retrieved), and reports acceptance with a 95% interval, a per-kind breakdown and why answers
+were rejected. Extra pass criteria: the seeded precedent is retrieved, decoys never are, and no firm's
+name or number reaches the output. `--stability` repeats a subset at temperature 0.3 with several
+seeds. Use a new `--seed` after any change to the prompt or validator: a set that has been looked at
+no longer measures anything. The 10 hand-built statements use fixed seeds, so only the corpus
+documents change with `--seed`. Case ids hash the file path, so the tool uses a fixed working folder
+by default; a random one would change the order of equally similar past cases and the prompt with it.
+
+**Citation repair.** Before validation, `reviewer/repair.py` fixes two slips in a model's answer: a
+routing explanation that does not cite the routing decision, and a row mentioned without citing the
+finding that has it. It adds citations only, never edits wording, never invents a row, and does not touch
+pages. Each fix is stored with the notes, written to the audit event (`repairs=n`), shown on the page,
+and counted by the evaluation as "accepted only after a citation repair", so repairs cannot quietly raise
+the acceptance rate.
+
 ---
 
 ## Human-in-the-loop review UI

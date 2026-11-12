@@ -59,6 +59,13 @@
   </ul>
   {% endif %}
 
+  {% if rn.repairs %}
+  <p class="muted" style="margin:12px 0 0; font-size:12px">
+    Citations fixed automatically before checking ({{ rn.repairs | length }}):
+    {{ rn.repairs | join("; ") }}. The wording was not changed.
+  </p>
+  {% endif %}
+
   <p class="muted" style="margin:14px 0 0; font-size:11px">
     Source: {{ rn.source }}{% if rn.model %} · model {{ rn.model }}{% endif %} · prompt {{ rn.prompt_version }}
     {% if rn.knowledge_version %} · knowledge {{ rn.knowledge_version }}{% endif %}

@@ -70,3 +70,19 @@ class PerfectClient:
             "similar_cases": [],
         }
         return LLMResult(content=json.dumps(answer), seconds=0.05, model=self.model)
+
+
+class PrecedentAwareClient(PerfectClient):
+    """Like PerfectClient, and writes a similar-case claim whenever past cases are shown."""
+    model = "precedent:1b"
+
+    def chat_json(self, messages, schema, **kw):
+        res = super().chat_json(messages, schema, **kw)
+        data = json.loads(res.content)
+        shown = json.loads(messages[-1]["content"].split("\n", 1)[1])["past_cases"]
+        if shown:
+            first = shown[0]
+            data["similar_cases"] = [{
+                "text": f"A person {first['decision'].lower()} an earlier case with the same pattern.",
+                "cites": [first["id"]]}]
+        return type(res)(json.dumps(data), res.seconds, res.model)

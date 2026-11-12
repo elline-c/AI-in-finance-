@@ -124,7 +124,7 @@ def test_ai_notes_are_labelled_advisory_and_show_their_evidence(env):
     assert 'id="reviewer-notes"' in html and "AI-generated · advisory" in html
     assert "never change a score or a routing" in html
     assert "FL_BALANCE_BREAK" in html                       # a citation chip with its label
-    assert "model perfect:1b" in html and "prompt reviewer-v7" in html
+    assert "model perfect:1b" in html and "prompt reviewer-v9" in html
     assert "Template text" not in html
 
 

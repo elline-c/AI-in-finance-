@@ -573,3 +573,93 @@ def test_a_starting_point_is_not_mistaken_for_the_final_score(tctx, good, report
         assert validator.CONSISTENCY_SCORE not in kinds(validator.validate(ok, tctx)), text
     wrong = with_claim(good, "confidence_reading", Claim(text="Confidence is 85.", cites=["A1"]))
     assert validator.CONSISTENCY_SCORE in kinds(validator.validate(wrong, tctx))
+
+
+# --------------------------------------------------------------------------- #
+# Regressions from the held-out run (two validator false positives)
+# --------------------------------------------------------------------------- #
+def _with_cases(reports):
+    from fraud_detect.reviewer.context import SimilarCase
+    cases = [SimilarCase(case_id=f"CASE-{n}", decision="REJECTED" if n % 2 else "APPROVED", score=0.7,
+                         shared_codes=("FL_BALANCE_BREAK",), reason="Invoices were produced.")
+             for n in range(1, 4)]
+    ctx = context.build_context(reports["tampered"], cases=cases)
+    return ctx, baseline.build_baseline(ctx)
+
+
+def test_a_citation_id_is_not_a_page_number(reports):
+    """Held-out failure: 'Past case P1 ...' was read as 'page 1' and the answer was thrown away."""
+    ctx, n = _with_cases(reports)
+    text = ("Past case P1 was rejected after edited amounts were confirmed. Past cases P2 and P3 "
+            "were approved once invoices arrived.")
+    ok = with_claim(n, "similar_cases", Claim(text=text, cites=["P1", "P2", "P3"]), 0)
+    assert not [v for v in validator.validate(ok, ctx) if v.kind == validator.FAITHFUL_PAGE]
+
+
+def test_real_page_references_are_still_checked(reports):
+    ctx, n = _with_cases(reports)
+    for text in ("P1 was rejected; see page 9.", "P1 was rejected (p. 9).", "P1 was rejected, pp. 8-9."):
+        bad = with_claim(n, "similar_cases", Claim(text=text, cites=["P1"]), 0)
+        assert validator.FAITHFUL_PAGE in kinds(validator.validate(bad, ctx)), text
+
+
+def test_a_bare_p_followed_by_digits_is_never_a_page():
+    from fraud_detect.reviewer.context import page_numbers
+    assert page_numbers("P1 and p3 and P12") == set()
+    assert page_numbers("page 3, p. 4 and pp. 6-7") == {3, 4, 6, 7}
+
+
+@pytest.mark.parametrize("text", [
+    "Compare the reported turnover with external records such as tax filings or supplier invoices to "
+    "verify if the jump in credits is legitimate.",
+    "Check whether the payments are genuine instalments of one invoice.",
+    "Request the invoices to confirm the deposits are genuine.",
+    "It is unclear whether the figures are authentic.",
+])
+def test_checking_wording_is_not_a_verdict(good, tctx, text):
+    ok = with_claim(good, "headline", Claim(text=text, cites=["ROUTE"]))
+    assert validator.VERDICT not in kinds(validator.validate(ok, tctx)), text
+
+
+@pytest.mark.parametrize("text", [
+    "The payments are genuine.",
+    "Check the file against the bank copy. The statement is genuine.",
+    "We checked it; the figures are fake.",
+    "Verify the owner. The document was forged.",
+])
+def test_an_assertion_is_still_a_verdict_even_next_to_a_check(good, tctx, text):
+    bad = with_claim(good, "headline", Claim(text=text, cites=["ROUTE"]))
+    assert validator.VERDICT in kinds(validator.validate(bad, tctx)), text
+
+
+# --------------------------------------------------------------------------- #
+# Reporting what a person decided about an earlier case is not a verdict
+# --------------------------------------------------------------------------- #
+def test_reporting_an_earlier_decision_is_not_a_verdict(reports):
+    """Held-out failure: 'A third past case approved the application after ...' (cited case was approved)."""
+    ctx, n = _with_cases(reports)
+    ok = with_claim(n, "similar_cases", Claim(
+        text="A third past case approved the application after confirming that flagged rows were bank fees.",
+        cites=["P2"]), 0)                                   # P2 is APPROVED in _with_cases
+    assert validator.VERDICT not in kinds(validator.validate(ok, ctx))
+
+
+@pytest.mark.parametrize("text", [
+    "A person approved this application after checking the invoices.",         # "this", not "the"
+    "The earlier case was rejected, so reject this application too.",          # imperative, base form
+    "Earlier cases were approved; this one should be approved.",               # a different pattern
+    "The reviewer approved the application.",                                  # no past-case word
+])
+def test_a_verdict_about_the_current_case_is_still_a_verdict_in_a_similar_case_claim(reports, text):
+    ctx, n = _with_cases(reports)
+    bad = with_claim(n, "similar_cases", Claim(text=text, cites=["P2"]), 0)
+    assert validator.VERDICT in kinds(validator.validate(bad, ctx)), text
+
+
+def test_the_past_decision_exemption_applies_only_to_similar_case_claims(reports):
+    ctx, n = _with_cases(reports)
+    text = "A past case approved the application after confirming bank fees."
+    elsewhere = with_claim(n, "headline", Claim(text=text, cites=["ROUTE"]))
+    assert validator.VERDICT in kinds(validator.validate(elsewhere, ctx))
+    no_case = with_claim(n, "similar_cases", Claim(text=text, cites=["ROUTE"]), 0)
+    assert validator.VERDICT in kinds(validator.validate(no_case, ctx))

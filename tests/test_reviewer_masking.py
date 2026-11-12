@@ -105,7 +105,7 @@ def test_prompt_forbids_page_guesses_and_judging_genuineness():
     text = prompt.SYSTEM_PROMPT
     assert 'If its "page" is null, do not mention any page' in text
     assert "do not judge whether the statement or any figure is genuine" in text
-    assert prompt.PROMPT_VERSION == "reviewer-v7"
+    assert prompt.PROMPT_VERSION == "reviewer-v9"
 
 
 def test_prompt_forbids_counting_and_totals():
@@ -155,3 +155,30 @@ def test_scores_and_routing_are_given_as_plain_phrases():
     assert data["route"]["cause"] == "a MEDIUM or HIGH finding is present"
     clean = prompt.case_data(context.build_context(make_report([])))
     assert clean["scores"]["routing"] == "auto-cleared with an approval recommendation"
+
+
+def test_prompt_keeps_citation_ids_out_of_prose_and_checks_phrased_as_actions():
+    text = prompt.SYSTEM_PROMPT
+    assert 'Never write citation ids inside a text field; they belong only in "cites"' in text
+    assert "Start each with an action verb such as Check, Compare, Ask or Request" in text
+    assert "Never state or imply that anything is, or is not, genuine" in text
+    assert prompt.PROMPT_VERSION == "reviewer-v9"
+
+
+def test_prompt_separates_general_policy_from_what_happened_in_this_case():
+    text = prompt.SYSTEM_PROMPT
+    assert "general_policy explains how the system works in general" in text
+    assert "Only the items listed in findings, score_components and confidence_adjustments happened here" in text
+    assert "do not repeat figures that appear only in general_policy" in text
+    data = prompt.case_data(context.build_context(make_report([finding()]),
+                                                  knowledge=[context.KnowledgeDoc("POL-X", "Title", "Body 20 and 40.")]))
+    assert "general_policy" in data and "policy" not in data
+    assert data["general_policy"][0]["id"] == "K1"
+
+
+def test_prompt_says_what_each_kind_of_id_stands_for():
+    text = prompt.SYSTEM_PROMPT
+    for needle in ("F3 is a finding", "A2 is a confidence adjustment", "A1 is the starting point of confidence",
+                   "K1 is policy text", "P1 is an earlier decided case"):
+        assert needle in text, needle
+    assert 'Say "an earlier case" or "the first finding" instead' not in text    # the wording that misled the model

@@ -82,6 +82,67 @@ def assess(feats: dict, model) -> dict:
     return {"prob": prob, "abstain": False, "outside": [], "medium": medium, "high": high}
 
 
+def assess_by_month(segments: list[dict], model) -> dict:
+    """Score a long statement one calendar month at a time and keep the highest score.
+
+    ``segments`` comes from ``statement_features.month_segments``. Each month is
+    scored with ``assess``, so the size guard still applies to every month: a month
+    that is itself too small or too large abstains and is left out. If every month
+    abstains the result abstains. The cutoffs are the bundle's ``multi_month_thresholds``
+    when present (the maximum of several scores needs higher cutoffs than a single
+    score to keep the same false-alarm rate), otherwise its ordinary ``thresholds``.
+
+    Returns the ``assess`` fields plus ``months`` (months in the statement),
+    ``scored`` (months actually scored), ``worst`` (label of the highest month) and
+    ``worst_feats`` (that month's features).
+    """
+    bundle = model if isinstance(model, dict) else {}
+    results = [(s, assess(s["features"], model)) for s in segments]
+    scored = [(s, r) for s, r in results if not r["abstain"]]
+    first = results[0][1] if results else {"medium": _MEDIUM_PROB, "high": _HIGH_PROB}
+    medium, high = first["medium"], first["high"]
+    mm = bundle.get("multi_month_thresholds")
+    if mm:
+        medium, high = float(mm.get("medium", medium)), float(mm.get("high", high))
+    base = {"months": len(segments), "scored": len(scored), "worst": None,
+            "worst_feats": None, "medium": medium, "high": high}
+    if not scored:
+        outside = sorted({n for _, r in results for n in r["outside"]})
+        return {**base, "prob": None, "abstain": True, "outside": outside}
+    seg, best = max(scored, key=lambda sr: sr[1]["prob"])
+    return {**base, "prob": best["prob"], "abstain": False, "outside": [],
+            "worst": seg["label"], "worst_feats": seg["features"]}
+
+
+def assess_document(path: str, feats: dict, model) -> dict:
+    """Score the whole document; if it is longer than the single-month documents the
+    model was trained on, score it month by month instead (see ``assess_by_month``).
+
+    Month-by-month scoring runs only for a bundle that carries
+    ``multi_month_thresholds``, i.e. cutoffs calibrated on genuine multi-month
+    statements (``python -m fraud_detect.ml.calibrate_statement_months``). Without them the node keeps
+    abstaining on long statements: measured on ``data/corpus_large`` the current
+    model scores genuine months as high as tampered ones (no cutoff keeps false
+    alarms below 10% and still catches anything), so using the ordinary cutoffs on
+    the maximum month would flag almost every genuine long statement.
+
+    A document that fits the trained sizes is scored exactly as before. The result
+    always carries ``months`` / ``scored`` / ``worst`` / ``worst_feats`` (``None`` when
+    the whole document was scored)."""
+    result = assess(feats, model)
+    result.update({"months": None, "scored": None, "worst": None, "worst_feats": None})
+    if not result["abstain"]:
+        return result
+    if not (isinstance(model, dict) and model.get("multi_month_thresholds")):
+        return result
+    segments = sf.month_segments(path)
+    if len(segments) < 2:
+        return result
+    by_month = assess_by_month(segments, model)
+    # Nothing scorable per month either: keep the whole-document reason for abstaining.
+    return result if by_month["abstain"] else by_month
+
+
 def analyze(ing: IngestionResult, model=None) -> AgentReport:
     findings: list[Finding] = []
     if model is None:
@@ -92,7 +153,7 @@ def analyze(ing: IngestionResult, model=None) -> AgentReport:
         return AgentReport(agent=AGENT, findings=findings)
 
     try:
-        result = assess(feats, model)
+        result = assess_document(ing.source_path, feats, model)
     except Exception:
         return AgentReport(agent=AGENT, findings=findings)
 
@@ -101,6 +162,13 @@ def analyze(ing: IngestionResult, model=None) -> AgentReport:
         return AgentReport(agent=AGENT, findings=findings)
 
     prob = result["prob"]
+    where = ""
+    if result["worst"] is not None:
+        feats = result["worst_feats"]
+        where = (f" The statement is longer than the single-month documents the model was "
+                 f"trained on, so it was scored month by month ({result['scored']} of "
+                 f"{result['months']} months scorable); this is the highest month, "
+                 f"{result['worst']}.")
     if prob >= result["high"]:
         sev, weight = Severity.HIGH, 24
     elif prob >= result["medium"]:
@@ -113,7 +181,7 @@ def analyze(ing: IngestionResult, model=None) -> AgentReport:
         title="Model flags elevated statement-forgery likelihood",
         severity=sev, weight=weight,
         evidence=(f"Forgery classifier scored this document {prob:.0%} likely "
-                  f"tampered. Strongest file-derived signals: {_top_signals(feats)}. "
+                  f"tampered. Strongest file-derived signals: {_top_signals(feats)}.{where} "
                   f"Evidence for a reviewer; never an automatic rejection."),
     ))
     return AgentReport(agent=AGENT, findings=findings)

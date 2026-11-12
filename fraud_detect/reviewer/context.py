@@ -34,7 +34,8 @@ KIND_KNOWLEDGE = "knowledge"
 KIND_CASE = "case"
 
 _ROW_RE = re.compile(r"\brow\s+(\d+)\b", re.IGNORECASE)
-PAGE_RE = re.compile(r"\b(?:pages?|pp?\.?)\s*(\d+)(?:\s*(?:-|\u2013|to)\s*(\d+))?\b", re.IGNORECASE)
+# "page 3", "p. 4", "pp. 2-5". A bare "p3" / "P1" is NOT a page: P1 is a citation id (past case 1).
+PAGE_RE = re.compile(r"\b(?:pages?|pp?\.)\s*(\d+)(?:\s*(?:-|\u2013|to)\s*(\d+))?\b", re.IGNORECASE)
 NUM_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 

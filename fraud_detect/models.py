@@ -305,6 +305,8 @@ class ReviewerNotes(BaseModel):
     case_ids: list[str] = Field(default_factory=list)        # past decided cases retrieved
     citations: dict[str, str] = Field(default_factory=dict)  # citation id -> readable label
     fallback_reason: Optional[str] = None        # why the template was used instead of the LLM
+    # Citation fixes applied to the model's answer before it was validated (see reviewer.repair).
+    repairs: list[str] = Field(default_factory=list)
     seconds: Optional[float] = None
     generated_at: datetime = Field(default_factory=datetime.utcnow)
 

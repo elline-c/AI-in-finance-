@@ -84,6 +84,7 @@ def _metadata_features(path: str) -> dict:
     prod = creator = ""
     created = mod = None
     n_streams = 0
+    page_streams: list[int] = []
     try:
         reader = PdfReader(path)
         meta = reader.metadata or {}
@@ -94,11 +95,14 @@ def _metadata_features(path: str) -> dict:
         for page in reader.pages:
             contents = page.get("/Contents")
             if contents is None:
+                page_streams.append(0)
                 continue
             try:
-                n_streams += len(contents) if isinstance(contents, list) else 1
+                n = len(contents) if isinstance(contents, list) else 1
             except TypeError:
-                n_streams += 1
+                n = 1
+            n_streams += n
+            page_streams.append(n)
     except Exception:
         pass
 
@@ -109,6 +113,7 @@ def _metadata_features(path: str) -> dict:
         "has_editing_software": has_editor,
         "moddate_after_creation": mod_after,
         "n_content_streams": float(n_streams),
+        "page_streams": page_streams,
     }
 
 
@@ -139,23 +144,32 @@ def _reconcile_rows(lines: list[str]) -> tuple[int, float]:
     mis-paired the header summary and so reported many "breaks" on genuine
     documents.
     """
-    prev: Optional[float] = None
-    checked = breaks = 0
-    for line in lines:
-        vals = [v for v in (_money_to_float(t) for t in _MONEY_RE.findall(line)) if v is not None]
-        if not vals:
-            continue
-        if _OPENING_LINE_RE.search(line):
-            prev = vals[0]
-            continue
-        if len(vals) >= 2 and _ANY_DATE_RE.search(line):
-            amount, balance = abs(vals[-2]), vals[-1]
-            if prev is not None:
-                checked += 1
-                if not (abs(prev + amount - balance) <= 0.01 or abs(prev - amount - balance) <= 0.01):
-                    breaks += 1
-            prev = balance
+    flags = _reconcile_flags(lines)
+    checked = sum(1 for f in flags if f is not None)
+    breaks = sum(1 for f in flags if f)
     return breaks, (breaks / checked if checked else 0.0)
+
+
+def _reconcile_flags(lines: list[str]) -> list[Optional[bool]]:
+    """Per-line reconciliation result: ``None`` = line not checked, ``True`` = break,
+    ``False`` = row reconciles. The running balance is carried across the whole list,
+    so splitting the lines into months afterwards keeps the cross-month check."""
+    prev: Optional[float] = None
+    flags: list[Optional[bool]] = []
+    for line in lines:
+        flag: Optional[bool] = None
+        vals = [v for v in (_money_to_float(t) for t in _MONEY_RE.findall(line)) if v is not None]
+        if vals:
+            if _OPENING_LINE_RE.search(line):
+                prev = vals[0]
+            elif len(vals) >= 2 and _ANY_DATE_RE.search(line):
+                amount, balance = abs(vals[-2]), vals[-1]
+                if prev is not None:
+                    flag = not (abs(prev + amount - balance) <= 0.01
+                                or abs(prev - amount - balance) <= 0.01)
+                prev = balance
+        flags.append(flag)
+    return flags
 
 
 def _reconcile_rate(amounts: list[float], balances: list[float]) -> tuple[int, float]:
@@ -251,6 +265,148 @@ def extract_features(path: str) -> Optional[dict[str, float]]:
         "duplicate_amount_overlap": dup_overlap,
     }
     return feats
+
+
+_MONTHS = {m: i for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], start=1)}
+
+# (pattern, builder) in priority order; the earliest match in the line wins and the
+# order breaks ties (so "1 Sep 2025" is read as a full date, not as "1 Sep").
+_ROW_DATE_PARSERS = [
+    (re.compile(r"\b(\d{2})/(\d{2})/(\d{4})\b"), lambda m: (int(m[3]), int(m[2]))),
+    (re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b"), lambda m: (int(m[1]), int(m[2]))),
+    (re.compile(r"\b(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})\b"),
+     lambda m: (int(m[3]), _MONTHS.get(m[2].lower(), 0))),
+    (re.compile(r"\b(\d{2})-(\d{2})-(\d{2})\b"), lambda m: (2000 + int(m[3]), int(m[2]))),
+    (re.compile(r"\b(\d{1,2})\s+([A-Za-z]{3})\b"), lambda m: (0, _MONTHS.get(m[2].lower(), 0))),
+]
+
+
+def _row_month(line: str) -> Optional[tuple[int, int]]:
+    """``(year, month)`` of a transaction row, or ``None`` if the line is not one.
+
+    A transaction row carries a date and at least two money values (the same test
+    ``_reconcile_rows`` uses), so the "Statement Period: 01/03/2025 to 31/08/2025"
+    header, opening/closing lines and page footers are never read as rows. Year is
+    0 for layouts that print day and month only; those still split correctly
+    because only a change of month matters.
+    """
+    if len(_MONEY_RE.findall(line)) < 2:
+        return None
+    best: Optional[tuple[int, int, tuple[int, int]]] = None
+    for order, (pat, build) in enumerate(_ROW_DATE_PARSERS):
+        m = pat.search(line)
+        if not m:
+            continue
+        key = build(m)
+        if not 1 <= key[1] <= 12:
+            continue
+        if best is None or (m.start(), order) < (best[0], best[1]):
+            best = (m.start(), order, key)
+    return best[2] if best else None
+
+
+def month_segments(path: str) -> list[dict]:
+    """Split one statement into calendar-month segments and describe each one with
+    the same feature vector the model was trained on (one month per document).
+
+    Lines are assigned to the month of the most recent transaction row, so headers,
+    page footers and closing lines stay with the month they sit in. Balance
+    reconciliation runs once over the whole statement and is then divided up, so a
+    break at a month boundary is still caught. Page-structure counts
+    (``n_pages``, ``n_content_streams``) cover only the pages a month appears on.
+    Document-wide signals (editor software, ModDate) are repeated on every month.
+
+    Returns ``[{"label": "YYYY-MM", "features": {...}}, ...]``; an empty list when the
+    file cannot be read or no transaction rows with dates are found.
+    """
+    try:
+        with pdfplumber.open(path) as pdf:
+            entries: list[tuple[int, str, list]] = []
+            for pi, page in enumerate(pdf.pages):
+                lines = page.extract_text_lines(return_chars=False)
+                bucket: list[list] = [[] for _ in lines]
+                # Count glyphs from ``page.chars`` (what the whole-document features
+                # use; the line extractor drops some) and give each to the line whose
+                # vertical band contains its centre.
+                for ch in page.chars:
+                    mid = (ch["top"] + ch["bottom"]) / 2.0
+                    best, best_d = None, None
+                    for li, ln in enumerate(lines):
+                        d = 0.0 if ln["top"] <= mid <= ln["bottom"] else min(
+                            abs(mid - ln["top"]), abs(mid - ln["bottom"]))
+                        if best_d is None or d < best_d:
+                            best, best_d = li, d
+                            if d == 0.0:
+                                break
+                    if best is not None:
+                        bucket[best].append(ch)
+                for ln, chars in zip(lines, bucket):
+                    entries.append((pi, ln["text"], chars))
+    except Exception:
+        return []
+
+    keys: list[tuple[int, int]] = []
+    seg_of: list[int] = []
+    cur = 0
+    for _, text, _ in entries:
+        k = _row_month(text)
+        if k is not None and (not keys or k != keys[-1]):
+            keys.append(k)
+            cur = len(keys) - 1
+        seg_of.append(cur)
+    if not keys:
+        return []
+
+    flags = _reconcile_flags([t for _, t, _ in entries])
+    meta = _metadata_features(path)
+    page_streams = meta["page_streams"]
+
+    out: list[dict] = []
+    for si, key in enumerate(keys):
+        idx = [i for i, s in enumerate(seg_of) if s == si]
+        text = "\n".join(entries[i][1] for i in idx)
+        pages = sorted({entries[i][0] for i in idx})
+        font_counts: dict[str, int] = {}
+        n_chars = 0
+        for i in idx:
+            for ch in entries[i][2]:
+                name = (ch.get("fontname", "unknown") or "unknown").split("+")[-1]
+                font_counts[name] = font_counts.get(name, 0) + 1
+            n_chars += len(entries[i][2])
+        total = sum(font_counts.values()) or 1
+        seg_flags = [flags[i] for i in idx if flags[i] is not None]
+        breaks = sum(1 for f in seg_flags if f)
+        styles = set()
+        if re.search(r"\bSGD\b", text):
+            styles.add("SGD")
+        if re.search(r"S\$", text):
+            styles.add("S$")
+        if re.search(r"(?<![A-Za-z])\$", text):
+            styles.add("$")
+        from collections import Counter
+        money_tokens = _MONEY_RE.findall(text)
+        counts = Counter(money_tokens)
+        out.append({
+            "label": f"{key[0]:04d}-{key[1]:02d}" if key[0] else f"month {key[1]:02d}",
+            "features": {
+                "n_pages": float(len(pages)),
+                "n_text_objects": float(n_chars),
+                "n_distinct_fonts": float(len(font_counts)),
+                "minor_font_share": (min(font_counts.values()) / total) if font_counts else 0.0,
+                "n_content_streams": float(sum(page_streams[p] for p in pages if p < len(page_streams))),
+                "has_editing_software": meta["has_editing_software"],
+                "moddate_after_creation": meta["moddate_after_creation"],
+                "n_distinct_date_formats": float(sum(1 for pat in _DATE_PATTERNS.values()
+                                                     if re.search(pat, text))),
+                "n_money_tokens": float(len(money_tokens)),
+                "balance_reconcile_breaks": float(breaks),
+                "balance_reconcile_rate": float(breaks / len(seg_flags)) if seg_flags else 0.0,
+                "n_currency_styles": float(len(styles)),
+                "duplicate_amount_overlap": float(sum(c - 1 for c in counts.values() if c > 1)),
+            },
+        })
+    return out
 
 
 def to_row(path: str) -> Optional[list[float]]:

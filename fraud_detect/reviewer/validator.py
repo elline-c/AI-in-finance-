@@ -81,7 +81,7 @@ _OUTPUT_INSTRUCTION_PATTERNS = [(c, l, rx) for c, l, rx in _INSTRUCTION_PATTERNS
 _ID_RE = re.compile(r"\b(?:[FAKP]\d+|BONUS|FLOOR|ROUTE)\b")
 _CODE_RE = re.compile(r"\b(?:DQ|FL|VF|MEM|ML|SEC|CONF|POL)_[A-Z0-9_]+\b")
 _PAGE_RE = PAGE_RE
-_ROW_RE = re.compile(r"\brows?\s*#?\s*(\d+)\b", re.IGNORECASE)
+ROW_RE = _ROW_RE = re.compile(r"\brows?\s*#?\s*(\d+)\b", re.IGNORECASE)
 # Internal labels that must not leak into prose. Finding codes (FL_, VF_, ...) are fine; these
 # are enum names such as VERY_HIGH, which no analyst should have to read.
 _RAW_LABEL_RE = re.compile(
@@ -104,14 +104,48 @@ _BAND_RE = {
                    re.compile(rf"\b{_BAND_WORDS}[\s-]+confidence\b", re.IGNORECASE)),
 }
 
-_VERDICT_RES = [re.compile(p, re.IGNORECASE) for p in (
+# "The statement is genuine." is a verdict; "genuine instalments" is just an adjective, so the
+# word must end its clause. "Check whether the payments are genuine." is a suggested check, not a
+# verdict: a conditional or verifying sentence is exempt (see _is_conditional).
+_STATE_VERDICT_RE = re.compile(
+    r"\b(?:is|are|was|were)\s+(?:\w+\s+)?(?:fraudulent|forged|fake|genuine|authentic|legitimate)"
+    r"(?=\s*(?:[.,;:!?)]|$|\band\b|\bbut\b|\bor\b))", re.IGNORECASE)
+_CONDITIONAL_RE = re.compile(
+    r"\b(?:whether|if|verify|verifies|verifying|confirm|confirms|confirming|check|checks|checking|"
+    r"determine|establish|assess|ascertain|ensure|test|unclear|unknown)\b", re.IGNORECASE)
+
+
+# "A past case approved the application after checking invoices" reports what a person decided
+# about an EARLIER case. That is checked against the cited case's decision (FAITHFUL_OUTCOME);
+# it is not a verdict on the application being screened. Only the past tense, with "the" (not
+# "this") and an explicit past-case word in the same sentence, is exempt.
+_PAST_DECISION_RE = re.compile(
+    r"\b(?:approved|rejected|declined|denied)\s+the\s+(?:loan|application|applicant|customer|case|"
+    r"statement|company)\b", re.IGNORECASE)
+_PAST_CASE_WORD_RE = re.compile(r"\b(?:case|cases|earlier|previous|past|prior)\b", re.IGNORECASE)
+
+
+def _is_report_of_a_past_decision(role: str, claim: Claim, ctx: ExplainContext, text: str, m) -> bool:
+    if role != "similar_cases" or not _PAST_DECISION_RE.fullmatch(m.group(0)):
+        return False
+    if not any(x in ctx.sources and ctx.sources[x].kind == KIND_CASE for x in claim.cites):
+        return False
+    start = max(text.rfind(ch, 0, m.start()) for ch in ".;!?") + 1
+    end_candidates = [i for i in (text.find(ch, m.end()) for ch in ".;!?") if i != -1]
+    sentence = text[start:min(end_candidates) if end_candidates else len(text)]
+    return bool(_PAST_CASE_WORD_RE.search(sentence))
+
+
+def _is_conditional(text: str, pos: int) -> bool:
+    """True when the sentence containing ``pos`` is asking or checking, not asserting."""
+    start = max(text.rfind(ch, 0, pos) for ch in ".;!?") + 1
+    return bool(_CONDITIONAL_RE.search(text[start:pos]))
+
+
+_VERDICT_RES = [_STATE_VERDICT_RE] + [re.compile(p, re.IGNORECASE) for p in (
     r"\b(?:approve|approved|approving|reject|rejected|rejecting|decline|declined|declining|deny|denied)\s+(?:the|this)\s+(?:loan|application|applicant|customer|case|statement|company)\b",
     r"\bshould\s+(?:be\s+)?(?:approved|rejected|declined|denied|cleared)\b",
     r"\brecommend(?:s|ed)?\s+(?:approv|reject|declin|den|clear)\w*",
-    # "The statement is genuine." is a verdict; "genuine instalments" is just an adjective,
-    # so the word must end its clause.
-    r"\b(?:is|are|was|were)\s+(?:\w+\s+)?(?:fraudulent|forged|fake|genuine|authentic|legitimate)"
-    r"(?=\s*(?:[.,;:!?)]|$|\band\b|\bbut\b|\bor\b))",
     r"\bsafe\s+to\s+(?:approve|clear|proceed|lend)\b",
 )]
 _HUMAN_REVIEW_CONTRADICTIONS = [re.compile(p, re.IGNORECASE) for p in (
@@ -322,7 +356,7 @@ def _check_faithfulness(n: ReviewerNarrative, ctx: ExplainContext) -> list[Viola
         for code in sorted(set(_CODE_RE.findall(text))):
             if code not in blob:
                 out.append(Violation(FAITHFUL_CODE, where, f"{code} is not in the cited sources"))
-        for m in _PAGE_RE.finditer(text):
+        for m in _PAGE_RE.finditer(_ID_RE.sub(" ", text)):
             nums = {int(m.group(1))}
             if m.group(2):
                 nums |= set(range(int(m.group(1)), min(int(m.group(2)), int(m.group(1)) + 50) + 1))
@@ -369,7 +403,7 @@ def _check_consistency(n: ReviewerNarrative, ctx: ExplainContext) -> list[Violat
     r = ctx.report
     actual = {"risk": (r.risk_score, r.risk_band.value),
               "confidence": (r.confidence_score, r.confidence_band.value)}
-    for where, _role, c in _claims(n):
+    for where, role, c in _claims(n):
         text, _ = _visible(c, ctx)
         for what, rx in _SCORE_RE.items():
             for m in rx.finditer(text):
@@ -392,9 +426,13 @@ def _check_consistency(n: ReviewerNarrative, ctx: ExplainContext) -> list[Violat
                 out.append(Violation(CONSISTENCY_ROUTING, where,
                                      f"contradicts the routing ({r.routing.value})"))
         for rx in _VERDICT_RES:
-            m = rx.search(text)
-            if m:
+            for m in rx.finditer(text):
+                if rx is _STATE_VERDICT_RE and _is_conditional(text, m.start()):
+                    continue
+                if _is_report_of_a_past_decision(role, c, ctx, text, m):
+                    continue
                 out.append(Violation(VERDICT, where, f"gives a verdict: {m.group(0)!r}"))
+                break
         out += _check_direction(where, text, c, ctx)
     return out
 

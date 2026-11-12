@@ -70,7 +70,8 @@ def check_local(url: str, allow_remote: bool = False) -> str:
 class OllamaClient:
     def __init__(self, base_url: Optional[str] = None, model: Optional[str] = None,
                  timeout: Optional[float] = None, allow_remote: Optional[bool] = None,
-                 opener=None, env: Optional[Mapping[str, str]] = None) -> None:
+                 opener=None, env: Optional[Mapping[str, str]] = None,
+                 temperature: float = 0.0, seed: int = 7) -> None:
         env = os.environ if env is None else env
         self.allow_remote = _truthy(env.get(REMOTE_ENV)) if allow_remote is None else allow_remote
         self.base_url = check_local(base_url or env.get(URL_ENV) or DEFAULT_URL, self.allow_remote)
@@ -80,6 +81,8 @@ class OllamaClient:
                                  else env.get(TIMEOUT_ENV, DEFAULT_TIMEOUT_S))
         except ValueError:
             self.timeout = DEFAULT_TIMEOUT_S
+        self.temperature = temperature      # 0 in production; the stability probe raises it
+        self.seed = seed
         self._opener = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
     # ------------------------------------------------------------------ #
@@ -97,13 +100,14 @@ class OllamaClient:
         except ValueError as exc:
             raise LLMError("response is not JSON") from exc
 
-    def chat_json(self, messages: list[dict], schema: dict, *, seed: int = 7,
+    def chat_json(self, messages: list[dict], schema: dict, *, seed: Optional[int] = None,
                   max_tokens: int = 1200, num_ctx: int = 8192) -> LLMResult:
         """One non-streaming chat call whose answer must follow ``schema``."""
         payload = {
             "model": self.model, "messages": messages, "stream": False,
             "format": schema, "think": False, "keep_alive": "10m",
-            "options": {"temperature": 0, "seed": seed, "num_predict": max_tokens,
+            "options": {"temperature": self.temperature,
+                        "seed": self.seed if seed is None else seed, "num_predict": max_tokens,
                         "num_ctx": num_ctx},
         }
         started = time.monotonic()

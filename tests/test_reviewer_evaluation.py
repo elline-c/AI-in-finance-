@@ -234,3 +234,8 @@ def test_wrong_direction_defects_are_in_the_red_team_set_and_caught(offline):
     assert rows and all(r.caught and "consistency" in r.violation_families for r in rows)
     # clean statements have no adjustment to contradict, so those defects are skipped there
     assert not [r for r in rows if r.doc == "clean"]
+
+
+def test_the_asserts_genuine_defect_is_in_the_red_team_set(offline):
+    rows = [r for r in offline.red_team if r.defect == "asserts_genuine_after_a_check"]
+    assert rows and all(r.caught and "consistency" in r.violation_families for r in rows)

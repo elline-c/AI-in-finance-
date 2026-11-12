@@ -163,7 +163,8 @@ class CaseStore:
                     f"prompt={notes.prompt_version}; "
                     f"knowledge={notes.knowledge_version or '-'}:{','.join(notes.knowledge_ids) or '-'}; "
                     f"cases={','.join(notes.case_ids) or '-'}"
-                    + (f"; fallback={notes.fallback_reason}" if notes.fallback_reason else ""))
+                    + (f"; fallback={notes.fallback_reason}" if notes.fallback_reason else "")
+                    + (f"; repairs={len(notes.repairs)} ({' | '.join(notes.repairs)})" if notes.repairs else ""))
                 case.audit_log.append({"ts": ts, "event": "EXPLAINER", "detail": x_detail})
                 self._audit.append(case_id=case.case_id, event="EXPLAINER",
                                    detail=x_detail, ts=ts)

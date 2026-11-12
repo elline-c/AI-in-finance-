@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Mapping, Optional, Protocol
 
 from ..models import ReviewerNarrative, ReviewerNotes, RiskReport
-from . import baseline, context, prompt, validator
+from . import baseline, context, prompt, repair, validator
 from .context import KnowledgeDoc, SimilarCase
 from .llm_client import LLMError, LLMUnavailable, OllamaClient
 
@@ -55,6 +55,7 @@ class Outcome:
     raw: Optional[str] = None                # the model's raw answer
     schema_ok: Optional[bool] = None         # None when no answer came back
     violations: list[validator.Violation] = field(default_factory=list)   # of the model's answer
+    repairs: list[str] = field(default_factory=list)       # citation fixes applied before validation
 
 
 class Explainer:
@@ -104,13 +105,15 @@ class Explainer:
                        report.case_id, validator.summarise(template_violations))
 
         def notes(source: str, narrative: ReviewerNarrative, *, reason: Optional[str] = None,
-                  seconds: Optional[float] = None, model: Optional[str] = None) -> ReviewerNotes:
+                  seconds: Optional[float] = None, model: Optional[str] = None,
+                  repairs: Optional[list[str]] = None) -> ReviewerNotes:
             return ReviewerNotes(
                 source=source, narrative=narrative, model=model,
                 prompt_version=prompt.PROMPT_VERSION,
                 knowledge_version=getattr(self.knowledge, "version", None),
                 knowledge_ids=[d.doc_id for d in docs], case_ids=[c.case_id for c in cases],
-                citations=baseline.citation_labels(ctx), fallback_reason=reason, seconds=seconds)
+                citations=baseline.citation_labels(ctx), fallback_reason=reason, seconds=seconds,
+                repairs=repairs or [])
 
         # The prompt is built even with no model attached, so the evaluation can inspect
         # exactly what a model would be shown.
@@ -141,15 +144,17 @@ class Explainer:
                                   started, model=result.model)
         out.schema_ok = True
 
+        narrative, out.repairs = repair.repair_narrative(narrative, ctx)
         out.violations = validator.validate(narrative, ctx)
         if out.violations:
             return self._fallback(out, notes,
                                   "model answer failed validation: " + validator.summarise(out.violations),
                                   started, model=result.model)
-        out.notes = notes("LLM", narrative, seconds=result.seconds, model=result.model)
-        _log.info("reviewer: case=%s source=LLM model=%s prompt=%s knowledge=%s cases=%s secs=%.1f",
+        out.notes = notes("LLM", narrative, seconds=result.seconds, model=result.model,
+                          repairs=out.repairs)
+        _log.info("reviewer: case=%s source=LLM model=%s prompt=%s knowledge=%s cases=%s secs=%.1f repairs=%d",
                   report.case_id, result.model, prompt.PROMPT_VERSION, out.notes.knowledge_ids,
-                  out.notes.case_ids, result.seconds)
+                  out.notes.case_ids, result.seconds, len(out.repairs))
         return out
 
     def _fallback(self, out: Outcome, make_notes, reason: str, started: float, *,
